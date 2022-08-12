@@ -1,8 +1,11 @@
 #  Author: Kay Hartmann <kg.hartma@gmail.com>
 import os
-
 import joblib
 from ignite.engine import Events
+import sys
+
+# setting path
+sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
 from eeggan.examples.high_gamma.high_gamma_rest_right_10_20.make_data import FS, N_PROGRESSIVE_STAGES, INPUT_LENGTH
 from eeggan.examples.high_gamma.models.baseline import Baseline
@@ -80,3 +83,4 @@ def run(subj_ind: int, result_name: str, dataset_path: str, deep4_path: str, res
     train(subj_ind, dataset_path, deep4_path, result_path_subj, progression_handler, trainer, config['n_batch'],
           config['lr_d'], config['lr_g'], config['betas'], config['n_epochs_per_stage'], config['n_epochs_metrics'],
           config['plot_every_epoch'], config['orig_fs'])
+
