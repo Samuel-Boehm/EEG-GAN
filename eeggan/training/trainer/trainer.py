@@ -1,4 +1,4 @@
-#  Author: Kay Hartmann <kg.hartma@gmail.com>
+# Author: Kay Hartmann <kg.hartma@gmail.com>
 
 from abc import ABCMeta
 from typing import List
@@ -76,7 +76,6 @@ class Trainer(Engine, metaclass=ABCMeta):
                                                       *self.generator.create_latent_input(self.rng, len(batch_real.X)))
             X_fake = self.generator(latent, y=y_fake, y_onehot=y_onehot_fake)
             batch_fake: Data[torch.Tensor] = Data(X_fake, y_fake, y_onehot_fake)
-
         batch_real, batch_fake, latent = detach_all(batch_real, batch_fake, latent)
         return BatchOutput(engine.state.iteration, engine.state.epoch, batch_real, batch_fake, latent, loss_d, loss_g)
 
@@ -87,8 +86,8 @@ class Trainer(Engine, metaclass=ABCMeta):
         i = engine.state.iteration
         print("Epoch {}/{} : {} - loss_d: {} loss_g: {}".format(e, n, i, batch_out.loss_d, batch_out.loss_g))
 
-    def train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], latent: torch.Tensor):
-        raise NotImplementedError
+    # def train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], latent: torch.Tensor):
+    #    raise NotImplementedError
 
-    def train_generator(self, batch_real: Data[torch.Tensor]):
-        raise NotImplementedError
+    # def train_generator(self, batch_real: Data[torch.Tensor]):
+    #    raise NotImplementedError
