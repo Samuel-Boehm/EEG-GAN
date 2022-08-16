@@ -16,6 +16,11 @@ from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 
 n_epochs_per_stage = 2000
+
+SUBJECT_ID = 1
+DATAPATH = '/home/boehms/eeg-gan/EEG-GAN/Data'
+MODELPATH = '/home/boehms/eeg-gan/EEG-GAN/Data/Models'
+
 default_config = dict(
     n_chans=21,  # number of channels in data
     n_classes=2,  # number of classes in data
@@ -83,4 +88,10 @@ def run(subj_ind: int, result_name: str, dataset_path: str, deep4_path: str, res
     train(subj_ind, dataset_path, deep4_path, result_path_subj, progression_handler, trainer, config['n_batch'],
           config['lr_d'], config['lr_g'], config['betas'], config['n_epochs_per_stage'], config['n_epochs_metrics'],
           config['plot_every_epoch'], config['orig_fs'])
+          
+if __name__ == "__main__":
+	run(subject_ind=SUBJECT_ID,
+		result_name='baseline',
+		dataset_path=
+	)
 
