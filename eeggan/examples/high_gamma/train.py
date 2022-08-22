@@ -86,7 +86,6 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
         train_loader = DataLoader(train_data_tensor, batch_size=n_batch, shuffle=True)
 
         # train stage
-
         state = trainer.run(train_loader, (stage + 1) * n_epochs_per_stage)
         trainer.remove_event_handler(spectral_plot, event_name)  # spectral_handler.remove() does not work :(
 

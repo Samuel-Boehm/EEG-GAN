@@ -37,10 +37,10 @@ def run(subj_ind: int = SUBJ_ID,
 
     make_dataset_for_subj(subj_ind=subj_ind, dataset_path=dataset_path,
                           channels=channels, classdict=classdict,
-                          fs=fs, interval_times=interval_times)
+                          fs=fs, interval_times=interval_times, verbose='DEBUG')
 
-    make_deep4_for_subj(subj_ind=subj_ind, dataset_path=dataset_path, deep4_path=deep4_path,
-                        n_progressive=n_progressive, n_deep4=n_deep)
+    # make_deep4_for_subj(subj_ind=subj_ind, dataset_path=dataset_path, deep4_path=deep4_path,
+    #                     n_progressive=n_progressive, n_deep4=n_deep, verbose='INFO')
 
 
 if __name__ == "__main__":

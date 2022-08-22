@@ -18,7 +18,7 @@ class Formatter(logging.Formatter):
         return super().format(record)
 
 
-def set_level(logger, level='WARNING'):
+def set_logger_level(logger, level='WARNING'):
 
     if level == 'INFO':
         logger.setLevel(level=logging.INFO)
@@ -34,7 +34,7 @@ def set_level(logger, level='WARNING'):
 def init_logger(logger, level='WARNING'):
     """Sets the logging formatter and level for a given logger"""
 
-    set_level(logger=logger, level=level)
+    set_logger_level(logger=logger, level=level)
 
     handler = logging.StreamHandler()
     handler.setFormatter(Formatter())

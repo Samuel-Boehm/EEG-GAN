@@ -3,7 +3,6 @@
 import numpy as np
 from braindecode.models.deep4 import Deep4Net
 from braindecode.models.util import to_dense_prediction_model
-from numpy.random.mtrand import RandomState
 from torch.optim import AdamW
 from torch.nn import NLLLoss
 from torch.utils.data import DataLoader
@@ -11,6 +10,7 @@ import torch
 
 
 def build_model(input_time_length, n_channels, n_classes, cropped=False):
+
     model = Deep4Net(in_chans=n_channels,
                      n_classes=n_classes,
                      input_window_samples=input_time_length,

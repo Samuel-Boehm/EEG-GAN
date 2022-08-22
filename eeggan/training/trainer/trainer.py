@@ -15,6 +15,12 @@ from eeggan.training.discriminator import Discriminator
 from eeggan.training.generator import Generator
 from eeggan.training.trainer.utils import detach_all
 
+import logging
+from eeggan.eeggan_logger import set_logger_level, init_logger
+
+logger = logging.getLogger(__name__)
+init_logger(logger, level='INFO')
+
 
 class BatchOutput:
     def __init__(self, i_iteration: int, i_epoch: int, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor],
@@ -61,9 +67,12 @@ class Trainer(Engine, metaclass=ABCMeta):
         with torch.no_grad():
             batch_real: Data[torch.Tensor] = Data(batch[0], batch[1], batch[2])
 
+            logger.debug(f'X_real shape: {batch_real.X.shape }')
+
             latent, y_fake, y_onehot_fake = to_device(batch_real.X.device,
                                                       *self.generator.create_latent_input(self.rng, len(batch_real.X)))
             X_fake = self.generator(latent, y=y_fake, y_onehot=y_onehot_fake)
+            logger.debug(f'X_fake shape: {X_fake.shape}')
             batch_fake: Data[torch.Tensor] = Data(X_fake, y_fake, y_onehot_fake)
 
         batch_real, batch_fake, latent = detach_all(batch_real, batch_fake, latent)
