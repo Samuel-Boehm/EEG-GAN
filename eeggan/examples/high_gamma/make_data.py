@@ -97,10 +97,10 @@ def make_deep4_for_subj(subj_ind: int, dataset_path: str, deep4_path: str, n_pro
         train_set_stage = copy.copy(dataset.train_data)
         test_set_stage = copy.copy(dataset.test_data)
 
-        logger.info('make data for stage...')
+        logger.info(f'make data for stage {i_stage}')
 
-        # train_set_stage.X = make_data_for_stage(train_set_stage.X, i_stage, n_progressive - 1)
-        # test_set_stage.X = make_data_for_stage(test_set_stage.X, i_stage, n_progressive - 1)
+        train_set_stage.X = make_data_for_stage(train_set_stage.X, i_stage, n_progressive - 1)
+        test_set_stage.X = make_data_for_stage(test_set_stage.X, i_stage, n_progressive - 1)
         logger.debug(f'trainset got downsampled from shape {dataset.train_data.X.shape} to '
                      f'shape {train_set_stage.X.shape}')
 
@@ -113,8 +113,8 @@ def make_deep4_for_subj(subj_ind: int, dataset_path: str, deep4_path: str, n_pro
 
 def make_data_for_stage(X, i_stage, max_stage):
     down = downsample(X, 2 ** (max_stage - i_stage), axis=2)
-    up = upsample(down, 2 ** (max_stage - i_stage), axis=2)
-    return downsample(up, 2 ** (max_stage - i_stage), axis=2)
+    # up = upsample(down, 2 ** (max_stage - i_stage), axis=2)
+    return upsample(down, 2 ** (max_stage - i_stage), axis=2)
 
 
 def make_deep4(train_set, test_set, n_classes, n_chans):

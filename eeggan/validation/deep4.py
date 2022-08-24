@@ -87,7 +87,7 @@ def train_model(model, train_dataloader, loss, optimizer, n_epochs=10, cuda=True
         accu = 100. * correct / total
 
         if (i + 1) % 10 == 0 or i == 0:
-            print(f'Epoch {i + 1} - mean training loss: {np.mean(loss_vals)} - Acc %: {accu:.2f}')
+            print(f'Epoch {i + 1} - mean training loss: {np.mean(loss_vals):.3f} - Acc %: {accu:.2f}')
 
     return model
 

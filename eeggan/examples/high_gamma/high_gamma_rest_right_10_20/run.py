@@ -4,7 +4,6 @@ from re import X
 import joblib
 from ignite.engine import Events
 import sys
-from torch.utils.tensorboard import SummaryWriter
 import torch
 from numpy.random.mtrand import RandomState
 # setting path
@@ -20,7 +19,7 @@ from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 from eeggan.training.trainer.utils import detach_all
 from eeggan.cuda import to_device
 
-writer = SummaryWriter('/home/boehms/eeg-gan/EEG-GAN/Data/Tensorboard')
+
 
 n_epochs_per_stage = 2000
 
@@ -100,16 +99,12 @@ def run(subj_ind: int, result_name: str, dataset_path: str, deep4_path: str, res
 
 if __name__ == "__main__":
 
-    '''
+    
     run(subj_ind=SUBJECT_ID,
-        result_name='baseline',
+        result_name='test',
         dataset_path=DATAPATH,
         deep4_path=MODELPATH,
         result_path=RESULTPATH,
         config=DEFAULT_CONFIG,
         model_builder=default_model_builder)
-    '''
-
-
-
     
