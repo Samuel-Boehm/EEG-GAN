@@ -1,4 +1,5 @@
 #  Author: Kay Hartmann <kg.hartma@gmail.com>
+#          Samuel Böhm  <samuel-boehm@web.de>
 
 import numpy as np
 from braindecode.models.deep4 import Deep4Net
@@ -7,7 +8,8 @@ from torch.optim import AdamW
 from torch.nn import NLLLoss
 from torch.utils.data import DataLoader
 import torch
-
+import joblib
+import os 
 
 def build_model(input_time_length, n_channels, n_classes, cropped=False):
 
@@ -31,7 +33,12 @@ def build_model(input_time_length, n_channels, n_classes, cropped=False):
     return model, loss, optimizer
 
 
-def train_model(model, train_dataloader, loss, optimizer, n_epochs=10, cuda=True):
+def train_model(model: torch.nn.Module,
+                train_dataloader: DataLoader,
+                loss,
+                optimizer,
+                n_epochs:int,
+                cuda:bool):
     """Run training loop.
 
     Parameters
@@ -48,23 +55,25 @@ def train_model(model, train_dataloader, loss, optimizer, n_epochs=10, cuda=True
         Number of epochs to train the model for.
     cuda : bool
         If True, move X and y to CUDA device.
-
+        
     Returns
     -------
     model : torch.nn.Module
         Trained model.
+    deep4_dict: dict
+        dict with training logs
     """
 
     correct = 0
     total = 0
+
+    deep4_dict = {'training_acc': list(), 'loss': list(), 'epoch': list(), 'test_acc': list()}
 
     for i in range(n_epochs):
         loss_vals = list()
         for X, y, _ in train_dataloader:
             model.train()
             model.zero_grad()
-
-            # y = y.long()
             if cuda:
                 X, y = X.cuda(), y.cuda()
                 model = model.cuda()
@@ -86,19 +95,23 @@ def train_model(model, train_dataloader, loss, optimizer, n_epochs=10, cuda=True
 
         accu = 100. * correct / total
 
-        if (i + 1) % 10 == 0 or i == 0:
+        if (i + 1) % 10 == 0 or i == 0 or i == n_epochs:
             print(f'Epoch {i + 1} - mean training loss: {np.mean(loss_vals):.3f} - Acc %: {accu:.2f}')
+            deep4_dict['training_acc'].append(accu.item())
+            deep4_dict['loss'].append(np.mean(loss_vals))
+            deep4_dict['epoch'].append(i + 1)
 
-    return model
+    return model, deep4_dict
 
 
-def train_completetrials(train_set, test_set, n_classes, n_chans, n_epochs=100, batch_size=60, cuda=True):
+def train_completetrials(train_set, test_set, n_classes, n_chans, deep4_path:str, n_epochs=100, 
+                         batch_size=60, cuda=True):
 
     input_time_length = train_set.X.shape[2]
     train_dataloader = DataLoader(train_set, batch_size=batch_size, shuffle=False)
     model, loss, optimizer = build_model(input_time_length, n_chans, n_classes, cropped=False)
 
-    trained_model = train_model(model=model, train_dataloader=train_dataloader,
+    trained_model, log_dict  = train_model(model=model, train_dataloader=train_dataloader,
                           loss=loss, optimizer=optimizer, n_epochs=n_epochs, cuda=cuda)
 
     # Calculate Acc on Test set:
@@ -112,6 +125,12 @@ def train_completetrials(train_set, test_set, n_classes, n_chans, n_epochs=100, 
 
     correct = (predicted.cpu() == y.cpu()).sum()
     accu = 100. * correct / total
+
     print(f'Accuracy on testset %: {accu:.3f}')
+
+    # Append test_set accuracy to log dict
+    log_dict['test_acc'].append(accu.item())
+
+    joblib.dump(log_dict, (deep4_path+'deep4_log.dict'))
 
     return trained_model

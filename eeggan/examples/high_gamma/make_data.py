@@ -75,7 +75,7 @@ def make_dataset_for_subj(subj_ind: int, dataset_path: str,
 
 
 def make_deep4_for_subj(subj_ind: int, dataset_path: str, deep4_path: str, n_progressive: int, n_deep4: int,
-                        verbose='INFO'):
+                        verbose='INFO', n_epochs: int=100):
 
     set_logger_level(logger, level=verbose)
 
@@ -104,8 +104,9 @@ def make_deep4_for_subj(subj_ind: int, dataset_path: str, deep4_path: str, n_pro
         logger.debug(f'trainset got downsampled from shape {dataset.train_data.X.shape} to '
                      f'shape {train_set_stage.X.shape}')
 
-        for i in range(n_deep4):
-            mod = make_deep4(train_set_stage, test_set_stage, n_classes, n_chans)
+        for i_deep4 in range(n_deep4):
+            deep4_dict_path = f'{deep4_path}/{i_stage}{i_deep4}' 
+            mod = make_deep4(train_set_stage, test_set_stage, n_classes, n_chans, deep4_dict_path, n_epochs)
             models.append(mod)
 
         joblib.dump(models, os.path.join(deep4_path, '%s_stage%s.deep4' % (subj_ind, i_stage)), compress=True)
@@ -113,16 +114,16 @@ def make_deep4_for_subj(subj_ind: int, dataset_path: str, deep4_path: str, n_pro
 
 def make_data_for_stage(X, i_stage, max_stage):
     down = downsample(X, 2 ** (max_stage - i_stage), axis=2)
-    # up = upsample(down, 2 ** (max_stage - i_stage), axis=2)
     return upsample(down, 2 ** (max_stage - i_stage), axis=2)
 
 
-def make_deep4(train_set, test_set, n_classes, n_chans):
-    n_epochs = 100
+def make_deep4(train_set, test_set, n_classes, n_chans, deep4_path, n_epochs):
+
     batch_size = train_set.X.shape[0] // n_epochs
 
-    model = train_completetrials(train_set, test_set, n_classes, n_chans,
-                                 n_epochs=n_epochs, batch_size=batch_size, cuda=True)
+    model = train_completetrials(train_set, test_set, n_classes, n_chans, deep4_path,
+                                 n_epochs=n_epochs, batch_size=batch_size, 
+                                 cuda=True)
     model = model.cpu().eval()
     return model
 
@@ -168,8 +169,9 @@ def _preprocess_and_stack(raw, channels, interval_times, fs, mapping):
     events, events_id = mne.events_from_annotations(raw, mapping)
 
     start_in_seconds = interval_times[0]
-    stop_in_seconds = (interval_times[1] * fs) - 1
-    stop_in_seconds = stop_in_seconds / fs
+
+    # Remove one timepoint from stop: 
+    stop_in_seconds = interval_times[1] - (1/fs)
 
     mne_epochs = mne.Epochs(raw, events, event_id=events_id, tmin=start_in_seconds, tmax=stop_in_seconds, baseline=None)
     mne_epochs.drop_bad()
