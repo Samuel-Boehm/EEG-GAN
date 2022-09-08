@@ -17,13 +17,15 @@ from eeggan.validation.metrics.inception import calculate_inception_score
 from eeggan.validation.metrics.wasserstein import create_wasserstein_transform_matrix, \
     calculate_sliced_wasserstein_distance
 from eeggan.validation.validation_helper import logsoftmax_act_to_softmax
+from torch.utils.tensorboard import SummaryWriter
 
 T = TypeVar('T')
 
 
 class ListMetric(Metric, Generic[T], metaclass=ABCMeta):
-    def __init__(self):
+    def __init__(self, tb_writer: SummaryWriter = None):
         self.values: List[Tuple[int, T]]
+        self.tb_writer = tb_writer
         Metric.__init__(self)
 
     def reset(self) -> None:
@@ -38,11 +40,11 @@ class ListMetric(Metric, Generic[T], metaclass=ABCMeta):
 
 class WassersteinMetric(ListMetric[float]):
 
-    def __init__(self, n_projections: int, n_features: int):
+    def __init__(self, n_projections: int, n_features: int, *args, **kwargs):
         self.n_projections = n_projections
         self.n_features = n_features
         self.w_transform: np.ndarray
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def reset(self) -> None:
         super().reset()
@@ -55,15 +57,18 @@ class WassersteinMetric(ListMetric[float]):
         distance = calculate_sliced_wasserstein_distance(X_real, X_fake, self.w_transform)
         self.append((epoch, distance))
 
+        if self.tb_writer:
+            self.tb_writer.add_scalar('Sliced WD', distance, epoch)
+
 
 class InceptionMetric(ListMetric[Tuple[float, float]]):
 
-    def __init__(self, deep4s: List[Module], upsample_factor: float, splits: int = 1, repetitions: int = 100):
+    def __init__(self, deep4s: List[Module], upsample_factor: float, splits: int = 1, repetitions: int = 100, *args, **kwargs):
         self.deep4s = deep4s
         self.upsample_factor = upsample_factor
         self.splits = splits
         self.repetitions = repetitions
-        super().__init__()
+        super(InceptionMetric, self).__init__(*args, **kwargs)
 
     def reset(self) -> None:
         super().reset()
@@ -84,14 +89,17 @@ class InceptionMetric(ListMetric[Tuple[float, float]]):
             score_means.append(score_mean)
             score_stds.append(score_std)
         self.append((epoch, (np.mean(score_means).item(), np.mean(score_stds).item())))
+        if self.tb_writer:
+            self.tb_writer.add_scalar('Inception score mean', np.mean(score_means).item(), epoch)
+        
 
 
 class FrechetMetric(ListMetric[Tuple[float, float]]):
 
-    def __init__(self, deep4s: List[Module], upsample_factor: float):
+    def __init__(self, deep4s: List[Module], upsample_factor: float, *args, **kwargs):
         self.deep4s = deep4s
         self.upsample_factor = upsample_factor
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def reset(self) -> None:
         super().reset()
@@ -118,13 +126,16 @@ class FrechetMetric(ListMetric[Tuple[float, float]]):
                 dists.append(dist)
             self.append((epoch, (np.mean(dists).item(), np.std(dists).item())))
 
+        if self.tb_writer:
+            self.tb_writer.add_scalar('Frechet mean', np.mean(dists).item(), epoch)
+
 
 class ClassificationMetric(ListMetric[Tuple[float, float]]):
 
-    def __init__(self, deep4s: List[Module], upsample_factor: float):
+    def __init__(self, deep4s: List[Module], upsample_factor: float, *args, **kwargs):
         self.deep4s = deep4s
         self.upsample_factor = upsample_factor
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def reset(self) -> None:
         super().reset()
@@ -144,14 +155,23 @@ class ClassificationMetric(ListMetric[Tuple[float, float]]):
                 accuracies.append(accuracy.item())
         self.append((epoch, (np.mean(accuracies).item(), np.std(accuracies).item())))
 
+        if self.tb_writer:
+            self.tb_writer.add_scalar('Classification', np.mean(accuracies).item(), epoch)
+
 
 class LossMetric(ListMetric[Dict]):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def reset(self) -> None:
         super().reset()
 
     def update(self, batch_output: BatchOutput) -> None:
         self.append((batch_output.i_epoch, {"loss_d": batch_output.loss_d, "loss_g": batch_output.loss_g}))
+
+        if self.tb_writer:
+            self.tb_writer.add_scalar('loss Discriminator real', batch_output.loss_d['loss_real'], batch_output.i_epoch)
+            self.tb_writer.add_scalar('loss Discriminator fake', batch_output.loss_d['loss_fake'], batch_output.i_epoch)
+            self.tb_writer.add_scalar('loss Generator', batch_output.loss_g, batch_output.i_epoch)
+
