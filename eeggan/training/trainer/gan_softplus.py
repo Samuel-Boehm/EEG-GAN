@@ -79,6 +79,7 @@ class GanSoftplusTrainer(Trainer):
                                 y_onehot=y_onehot_fake.requires_grad_(False))
         batch_fake = Data[torch.Tensor](X_fake, y_fake, y_onehot_fake)
 
+
         fx_fake = self.discriminator(batch_fake.X.requires_grad_(True), y=batch_fake.y.requires_grad_(True),
                                      y_onehot=batch_fake.y_onehot.requires_grad_(True))
         loss = softplus(-fx_fake).mean()

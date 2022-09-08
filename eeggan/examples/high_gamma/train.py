@@ -21,12 +21,15 @@ from eeggan.training.handlers.metrics import WassersteinMetric, InceptionMetric,
 from eeggan.training.handlers.plots import SpectralPlot
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.trainer import Trainer
+from torch.utils.tensorboard import SummaryWriter
 
 
 def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
           progression_handler: ProgressionHandler, trainer: Trainer, n_batch: int, lr_d: float, lr_g: float,
           betas: Tuple[float, float], n_epochs_per_stage: int, n_epochs_metrics: int, plot_every_epoch: int,
-          orig_fs: float):
+          orig_fs: float, tensorboard_writer: SummaryWriter
+    ):
+
     plot_path = os.path.join(result_path, "plots")
     os.makedirs(plot_path, exist_ok=True)
 
@@ -40,6 +43,7 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
     generator = progression_handler.generator
     discriminator, generator = to_cuda(discriminator, generator)
 
+        
     # usage to update every epoch and compute once at end of stage
     usage_metrics = MetricUsage(Events.STARTED, Events.EPOCH_COMPLETED(every=n_epochs_per_stage),
                                 Events.EPOCH_COMPLETED(every=n_epochs_metrics))
@@ -71,13 +75,13 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
         spectral_handler = trainer.add_event_handler(event_name, spectral_plot)
 
         # initiate metrics
-        metric_wasserstein = WassersteinMetric(100, np.prod(X_block.shape[1:]).item())
-        metric_inception = InceptionMetric(deep4s, sample_factor)
-        metric_frechet = FrechetMetric(deep4s, sample_factor)
-        metric_loss = LossMetric()
-        metric_classification = ClassificationMetric(deep4s, sample_factor)
-        metrics = [metric_wasserstein, metric_inception, metric_frechet, metric_loss, metric_classification]
-        metric_names = ["wasserstein", "inception", "frechet", "loss", "classification"]
+        metric_wasserstein = WassersteinMetric(100, np.prod(X_block.shape[1:]).item(), tb_writer=tensorboard_writer)
+        metric_inception = InceptionMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
+        # metric_frechet = FrechetMetric(deep4s, sample_factor, tb_writer=tensorboard_writer) -> Does not work becaus of GPU memory overload :( 
+        metric_loss = LossMetric(tb_writer=tensorboard_writer)
+        metric_classification = ClassificationMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
+        metrics = [metric_wasserstein, metric_inception, metric_loss, metric_classification]
+        metric_names = ["wasserstein", "inception", "loss", "classification"]
         trainer.attach_metrics(metrics, metric_names, usage_metrics)
 
         # wrap into cuda loader
@@ -86,7 +90,6 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
         train_loader = DataLoader(train_data_tensor, batch_size=n_batch, shuffle=True)
 
         # train stage
-
         state = trainer.run(train_loader, (stage + 1) * n_epochs_per_stage)
         trainer.remove_event_handler(spectral_plot, event_name)  # spectral_handler.remove() does not work :(
 
@@ -96,6 +99,7 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
                    os.path.join(result_path, 'states_stage_%d.pt' % stage))
         torch.save(trainer.state.metrics, os.path.join(result_path, 'metrics_stage_%d.pt' % stage))
 
+        
         # advance stage if not last
         trainer.detach_metrics(metrics, usage_metrics)
         if stage != progression_handler.n_stages - 1:

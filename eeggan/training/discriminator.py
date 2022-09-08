@@ -6,6 +6,9 @@ from eeggan.pytorch.modules.module import Module
 
 
 class Discriminator(Module, metaclass=ABCMeta):
+    """
+    Base descriminator Class
+    """
     def __init__(self, n_samples, n_channels, n_classes):
         super().__init__()
         self.n_samples = n_samples

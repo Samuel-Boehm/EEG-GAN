@@ -1,8 +1,12 @@
 #  Author: Kay Hartmann <kg.hartma@gmail.com>
+#          Samuel Böhm  <samuel-boehm@web.de>
 
 import os
 
 import torch
+
+import GPUtil
+
 
 activate_cuda: bool = False
 
@@ -39,3 +43,15 @@ def to_cuda(*elements):
 
 def to_device(device, *elements):
     return [element.to(device) for element in elements]
+
+
+def display_GPU_load(infostring:str = 'GPU Info'):
+    
+    GPU_idx = torch.cuda.current_device()
+    
+    GPUs = GPUtil.getGPUs()
+
+    print(infostring)
+    print('GPU ID: ', GPU_idx)
+    print(f'Used Memory {GPUs[GPU_idx].memoryUsed} / {GPUs[GPU_idx].memoryTotal} -> Free: {GPUs[GPU_idx].memoryFree}')
+    print(' ')

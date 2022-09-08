@@ -1,4 +1,5 @@
-#  Author: Kay Hartmann <kg.hartma@gmail.com>
+#  Authors: Kay Hartmann <kg.hartma@gmail.com>
+#           Samuel Böhm <samuel-boehm@web.de>
 
 import numpy as np
 from torch import nn
@@ -17,6 +18,20 @@ from eeggan.training.progressive.generator import ProgressiveGeneratorBlock, Pro
 
 
 class Baseline(ProgressiveModelBuilder):
+    """Baseline Model for EEG-GAN
+
+    Args:
+        n_stages (int): number of progressive stages
+        n_latent (int): number of latent variables for generator
+        n_time (int): number of timepoints (length of signal)
+        n_channels(int): number of channels to generate (e.q. EEG channels)
+        n_classes(int): number of different classes (e.q. right_hand, left_hand, rest ...)
+        n_filters (int): number of filters ??? #
+        upsampling (str): upsampling method (default: linear, options: nearest, linear, area, cubic, conv)
+        downsampling (str): downsampling method (default: linear, options: nearest, linear, area, cubic, conv)
+        discfading (str): fading method (default: linear)
+        genfading (str): ???
+    """
     def __init__(self, n_stages: int, n_latent: int, n_time: int, n_channels: int, n_classes: int, n_filters: int,
                  upsampling: str = 'linear', downsampling: str = 'linear', discfading: str = 'linear',
                  genfading: str = 'linear'):
@@ -33,6 +48,8 @@ class Baseline(ProgressiveModelBuilder):
         self.genfading = genfading
 
     def build_disc_downsample_sequence(self) -> nn.Module:
+        # Builds a downsampling layer depending on the chosen algorithm.
+        # Layer downsamples to half the samples (downsampling factor = 0.5)
         if self.downsampling in ['nearest', 'linear', 'area', 'cubic']:
             return build_interpolate(0.5, self.downsampling)
         if self.downsampling == 'conv':
@@ -44,6 +61,8 @@ class Baseline(ProgressiveModelBuilder):
             )
 
     def build_gen_upsample_sequence(self) -> nn.Module:
+        # Builds a upsamling layer depending on the chosen algorithm
+        # Layer upsamples to twice the samples (upsampling factor = 2)
         if self.upsampling in ['nearest', 'linear', 'area', 'cubic']:
             return build_interpolate(2, self.upsampling)
         if self.upsampling == 'conv':
@@ -54,6 +73,7 @@ class Baseline(ProgressiveModelBuilder):
             )
 
     def build_disc_conv_sequence(self, i_stage: int):
+        # Returns a MultiConv1d layer for the given stage.
         return Sequential(
             weight_scale(create_multiconv_for_stage(self.n_filters, i_stage),
                          gain=calculate_gain('leaky_relu')),
@@ -151,6 +171,15 @@ class Baseline(ProgressiveModelBuilder):
 
 
 def build_interpolate(scale_factor: float, mode: str):
+    """
+    Builds an interpolation layer for up/downsampling
+    Args:
+        scale_factor (float): factor by which the sequence is up/downsampled
+        mode (str): chosen algorithm 
+
+    Returns:
+        Interpolation layer
+    """
     if mode in ['nearest', 'linear', 'area']:
         return Interpolate(scale_factor=scale_factor, mode=mode)
     if mode == 'cubic':

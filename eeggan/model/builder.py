@@ -9,7 +9,9 @@ from eeggan.training.progressive.generator import ProgressiveGenerator
 
 
 class ModelBuilder(metaclass=ABCMeta):
-
+    """
+    Baseclass to build the EEG-GAN Model
+    """
     def build_discriminator(self) -> Discriminator:
         raise NotImplementedError
 
@@ -18,6 +20,8 @@ class ModelBuilder(metaclass=ABCMeta):
 
 
 class ProgressiveModelBuilder(ModelBuilder, metaclass=ABCMeta):
+    """Baseclass to build a progressive GAN Model"""
+
     def __init__(self, n_stages: int):
         self.n_stages = n_stages
 

@@ -1,4 +1,5 @@
-# Author: Kay Hartmann <kg.hartma@gmail.com>
+# Authors: Kay Hartmann <kg.hartma@gmail.com>
+#          Samuel Böhm  <samuel-boehm@web.de>
 
 from abc import ABCMeta
 from typing import List
@@ -9,11 +10,18 @@ from ignite.metrics import Metric, MetricUsage
 from numpy.random.mtrand import RandomState
 from torch.optim.optimizer import Optimizer
 
-from eeggan.cuda import to_device
+from eeggan.cuda import to_device, display_GPU_load
 from eeggan.data.dataset import Data
 from eeggan.training.discriminator import Discriminator
 from eeggan.training.generator import Generator
 from eeggan.training.trainer.utils import detach_all
+
+
+import logging
+from eeggan.eeggan_logger import set_logger_level, init_logger
+
+logger = logging.getLogger(__name__)
+init_logger(logger, level='INFO')
 
 
 class BatchOutput:
@@ -76,6 +84,7 @@ class Trainer(Engine, metaclass=ABCMeta):
                                                       *self.generator.create_latent_input(self.rng, len(batch_real.X)))
             X_fake = self.generator(latent, y=y_fake, y_onehot=y_onehot_fake)
             batch_fake: Data[torch.Tensor] = Data(X_fake, y_fake, y_onehot_fake)
+
         batch_real, batch_fake, latent = detach_all(batch_real, batch_fake, latent)
         return BatchOutput(engine.state.iteration, engine.state.epoch, batch_real, batch_fake, latent, loss_d, loss_g)
 
@@ -85,9 +94,11 @@ class Trainer(Engine, metaclass=ABCMeta):
         n = engine.state.max_epochs
         i = engine.state.iteration
         print("Epoch {}/{} : {} - loss_d: {} loss_g: {}".format(e, n, i, batch_out.loss_d, batch_out.loss_g))
+        # display_GPU_load(f'Load during Epoch {e}/{n}')
 
-    # def train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], latent: torch.Tensor):
-    #    raise NotImplementedError
 
-    # def train_generator(self, batch_real: Data[torch.Tensor]):
-    #    raise NotImplementedError
+    def train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], latent: torch.Tensor):
+        raise NotImplementedError
+
+    def train_generator(self, batch_real: Data[torch.Tensor]):
+        raise NotImplementedError

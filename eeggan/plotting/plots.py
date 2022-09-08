@@ -7,7 +7,7 @@ from eeggan.validation.validation_helper import compute_spectral_amplitude
 
 
 def labeled_plot(x, data_y, labels,
-                 title="", xlabel="", ylabel="", axes=None):
+                 title="", xlabel="", ylabel="", axes=None, autoscale = True):
     x = np.asarray(x)
     data_y = np.asarray(data_y)
     if axes is None:
@@ -19,12 +19,13 @@ def labeled_plot(x, data_y, labels,
     axes.set_xlabel(xlabel)
     axes.set_ylabel(ylabel)
     axes.set_xlim(x.min(), x.max())
-    axes.set_ylim(data_y.min(), data_y.max())
+    if autoscale:
+        axes.set_ylim(data_y.min(), data_y.max())
     axes.legend()
 
 
 def labeled_tube_plot(x, data_y, tube_y, labels,
-                      title="", xlabel="", ylabel="", axes=None):
+                      title="", xlabel="", ylabel="", axes=None,  autoscale = True):
     x = np.asarray(x)
     data_y = np.asarray(data_y)
     tube_y = np.asarray(tube_y)
@@ -43,9 +44,10 @@ def labeled_tube_plot(x, data_y, tube_y, labels,
 
     axes.set_title(title)
     axes.set_xlabel(xlabel)
-    axes.set_ylabel(ylabel)
+    if autoscale:
+        axes.set_ylabel(ylabel)
     axes.set_xlim(x.min(), x.max())
-    axes.set_ylim((data_y - tube_y).min(), (data_y + tube_y).max())
+    axes.set_ylim(np.nanmin(data_y - tube_y), np.nanmax(data_y + tube_y))
     axes.legend()
 
 

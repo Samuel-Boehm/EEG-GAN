@@ -4,12 +4,16 @@ from abc import ABCMeta
 
 from numpy.random.mtrand import RandomState
 from torch import Tensor
+from typing import Tuple
 
 from eeggan.data.preprocess.util import create_onehot_vector
 from eeggan.pytorch.modules.module import Module
 
 
 class Generator(Module, metaclass=ABCMeta):
+    """
+    Base Generator Class
+    """
     def __init__(self, n_samples, n_channels, n_classes, n_latent):
         super().__init__()
         self.n_samples = n_samples
@@ -17,7 +21,14 @@ class Generator(Module, metaclass=ABCMeta):
         self.n_classes = n_classes
         self.n_latent = n_latent
 
-    def create_latent_input(self, rng: RandomState, n_trials) -> (Tensor, Tensor, Tensor):
+    def create_latent_input(self, rng: RandomState, n_trials) -> Tuple[Tensor, Tensor, Tensor]:
+        """
+        Create latent input for generator
+        
+        Returns:
+            Tensor: z_latent, y_fake y_fake_onehot
+
+        """
         z_latent = rng.normal(0, 1, size=(n_trials, self.n_latent))
         y_fake = rng.randint(0, self.n_classes, size=n_trials)
         y_fake_onehot = create_onehot_vector(y_fake, self.n_classes)
