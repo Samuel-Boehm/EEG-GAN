@@ -1,4 +1,6 @@
 #  Author: Kay Hartmann <kg.hartma@gmail.com>
+#          Samuel Böhm  <samuel-boehm@web.de>
+
 from typing import List, Tuple
 from dataclasses import dataclass
 import numpy as np
@@ -41,4 +43,5 @@ class HighGammaDataset(Dataset[np.ndarray]):
                       f'channels: {self.channels}\n' \
                       f'classes: {self.classes}\n' \
                       f'fs: {self.fs}\n'
+                      
         return description
