@@ -9,6 +9,7 @@ import joblib
 import numpy as np
 import mne
 import logging
+from scipy import linalg
 from moabb.datasets import Schirrmeister2017
 from braindecode.preprocessing import exponential_moving_standardize
 
@@ -178,8 +179,37 @@ def _preprocess_and_stack(raw, channels, interval_times, fs, mapping):
 
     X = mne_epochs.get_data()
     X = X.astype(dtype=np.float32)
+    X = ZCA_whitening(X)
     annots = mne_epochs.get_annotations_per_epoch()
     labels = [x[0][-1] for x in annots]
     y = [mapping[k] for k in labels]
     return SignalAndTarget(X, np.array(y))
 
+def ZCA_whitening(X):
+    
+    '''
+    Applies zero component analysis whitening to the input X
+    X needs to be of shape (trials, channels, datapoints)
+    '''
+    X_whitened = np.zeros_like(X)
+
+    for i in range (X.shape[0]): 
+        # Zero center data
+        xc = X[i].T - np.mean(X[i].T, axis=0)
+        xc = xc.T
+
+        # Only pre trial onset data is used for the cov matrix
+        # because it gives a better estimation for a baseline
+        xcov = np.cov(xc, rowvar=True, bias=True)
+
+        # Calculate Eigenvalues and Eigenvectors
+        w, v = linalg.eig(xcov) # 
+        
+        # Create a diagonal matrix
+        diagw = np.diag(1/(w**0.5)) # or np.diag(1/((w+.1e-5)**0.5))
+        diagw = diagw.real.round(4) #convert to real and round off\
+
+        # Whitening transform using ZCA (Zero Component Analysis)
+
+        X_whitened[i] = np.dot(np.dot(np.dot(v, diagw), v.T), xc)
+    return X_whitened

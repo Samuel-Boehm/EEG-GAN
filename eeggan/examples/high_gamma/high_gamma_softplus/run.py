@@ -18,10 +18,10 @@ from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 
 from torch.utils.tensorboard import SummaryWriter
 
-n_epochs_per_stage = 4000
+n_epochs_per_stage = 2000
 
 VERSION = 'v1'
-EXPERIMENT = 'longrun'
+# EXPERIMENT = 'longrun'
 
 SUBJECT_ID = 1
 
