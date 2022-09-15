@@ -94,12 +94,15 @@ def run(subj_ind: int, result_name: str, dataset_path: str, deep4_path: str, res
     generator.load_state_dict(state_dict['generator'])
     discriminator.load_state_dict(state_dict['discriminator'])
 
+
+    
+
     # trainer engine
     trainer = GanSoftplusTrainer(10, discriminator, generator, config['r1_gamma'], config['r2_gamma'])
 
     # handles potential progression after each epoch
     progression_handler = ProgressionHandler(discriminator, generator, config['n_stages'], config['use_fade'],
-                                             config['n_epochs_fade'], freeze_stages=config['freeze_stages'])
+                                             config['n_epochs_fade'], freeze_stages=config['freeze_stages'], current_stage=stage)
     
     progression_handler.set_progression(stage, 1.)
     
@@ -108,6 +111,7 @@ def run(subj_ind: int, result_name: str, dataset_path: str, deep4_path: str, res
     print(progression_handler.generator.cur_block)
     print(progression_handler.discriminator.cur_block)
 
+    
     generator.train()
     discriminator.train()
 

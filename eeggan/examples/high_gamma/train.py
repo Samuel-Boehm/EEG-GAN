@@ -48,7 +48,9 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
     usage_metrics = MetricUsage(Events.STARTED, Events.EPOCH_COMPLETED(every=n_epochs_per_stage),
                                 Events.EPOCH_COMPLETED(every=n_epochs_metrics))
 
-    for stage in range(progression_handler.n_stages):
+    for stage in range(progression_handler.current_stage, progression_handler.n_stages):
+
+    
         # optimizer
         optim_discriminator = optim.Adam(progression_handler.get_trainable_discriminator_parameters(), lr=lr_d,
                                          betas=betas)
@@ -88,7 +90,7 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
         train_data_tensor: Data[Tensor] = Data(
             *to_cuda(Tensor(X_block), Tensor(train_data.y), Tensor(train_data.y_onehot)))
         train_loader = DataLoader(train_data_tensor, batch_size=n_batch, shuffle=True)
-
+        
         # train stage
         state = trainer.run(train_loader, (stage + 1) * n_epochs_per_stage)
         trainer.remove_event_handler(spectral_plot, event_name)  # spectral_handler.remove() does not work :(
