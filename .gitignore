@@ -129,7 +129,6 @@ dmypy.json
 .pyre/
 
 # Jupyter notebooks temps
-EEG_GAN_Notebook.ipynb
 .idea/ 
 
 # ???
