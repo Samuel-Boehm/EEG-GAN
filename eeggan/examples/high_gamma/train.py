@@ -17,7 +17,7 @@ from eeggan.data.dataset import Data
 from eeggan.data.preprocess.resample import downsample
 from eeggan.examples.high_gamma.make_data import load_dataset, load_deeps4
 from eeggan.training.handlers.metrics import WassersteinMetric, InceptionMetric, FrechetMetric, LossMetric, \
-    ClassificationMetric
+    ClassificationMetric, WassersteinMetricPOT, Old_WassersteinMetric
 from eeggan.training.handlers.plots import SpectralPlot
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.trainer import Trainer
@@ -27,7 +27,7 @@ from torch.utils.tensorboard import SummaryWriter
 def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
           progression_handler: ProgressionHandler, trainer: Trainer, n_batch: int, lr_d: float, lr_g: float,
           betas: Tuple[float, float], n_epochs_per_stage: int, n_epochs_metrics: int, plot_every_epoch: int,
-          orig_fs: float, tensorboard_writer: SummaryWriter
+          orig_fs: float, n_samples:int, tensorboard_writer: SummaryWriter
     ):
 
     plot_path = os.path.join(result_path, "plots")
@@ -36,7 +36,20 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
     init_cuda()  # activate cuda
 
     dataset = load_dataset(subj_ind, dataset_path)
+    
+    # Pool Train and Test
+    dataset.train_data.X = np.concatenate((dataset.train_data.X[:], dataset.test_data.X[:]), axis=0)
+    dataset.train_data.y = np.concatenate((dataset.train_data.y[:], dataset.test_data.y[:]), axis=0)
+    dataset.train_data.y_onehot = np.concatenate((dataset.train_data.y_onehot[:], dataset.test_data.y_onehot[:]), axis=0)
+
+    index = np.random.choice(range(dataset.train_data.X.shape[0]), n_samples, replace=False)
+
+    dataset.train_data.X = dataset.train_data.X[index]
+    dataset.train_data.y = dataset.train_data.y[index]
+    dataset.train_data.y_onehot = dataset.train_data.y_onehot[index]
+
     train_data = dataset.train_data
+    
     test_data = dataset.test_data
 
     discriminator = progression_handler.discriminator
@@ -48,7 +61,9 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
     usage_metrics = MetricUsage(Events.STARTED, Events.EPOCH_COMPLETED(every=n_epochs_per_stage),
                                 Events.EPOCH_COMPLETED(every=n_epochs_metrics))
 
-    for stage in range(progression_handler.n_stages):
+    for stage in range(progression_handler.current_stage, progression_handler.n_stages):
+
+    
         # optimizer
         optim_discriminator = optim.Adam(progression_handler.get_trainable_discriminator_parameters(), lr=lr_d,
                                          betas=betas)
@@ -80,15 +95,17 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
         # metric_frechet = FrechetMetric(deep4s, sample_factor, tb_writer=tensorboard_writer) -> Does not work becaus of GPU memory overload :( 
         metric_loss = LossMetric(tb_writer=tensorboard_writer)
         metric_classification = ClassificationMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
-        metrics = [metric_wasserstein, metric_inception, metric_loss, metric_classification]
-        metric_names = ["wasserstein", "inception", "loss", "classification"]
+        metric_POT_SWD = WassersteinMetricPOT(100, tb_writer=tensorboard_writer)
+        metric_old_swd = Old_WassersteinMetric(100, np.prod(X_block.shape[1:]).item(), tb_writer=tensorboard_writer)
+        metrics = [metric_wasserstein, metric_POT_SWD, metric_old_swd, metric_inception, metric_loss, metric_classification]
+        metric_names = ["wasserstein", "POT_SWD", 'old_swd', "inception", "loss", "classification"]
         trainer.attach_metrics(metrics, metric_names, usage_metrics)
 
         # wrap into cuda loader
         train_data_tensor: Data[Tensor] = Data(
             *to_cuda(Tensor(X_block), Tensor(train_data.y), Tensor(train_data.y_onehot)))
         train_loader = DataLoader(train_data_tensor, batch_size=n_batch, shuffle=True)
-
+        
         # train stage
         state = trainer.run(train_loader, (stage + 1) * n_epochs_per_stage)
         trainer.remove_event_handler(spectral_plot, event_name)  # spectral_handler.remove() does not work :(

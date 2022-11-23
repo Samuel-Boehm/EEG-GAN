@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Jupyter notebooks temps
+EEG_GAN_Notebook.ipynb
+.idea/ 
+
+# ???
+eeggan/examples/high_gamma/high_gamma_rest_right_10_20/.run.py.swp
+eeggan/examples/high_gamma/high_gamma_wgan/.run.py.swp
+

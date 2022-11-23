@@ -15,15 +15,18 @@ from eeggan.model.builder import ProgressiveModelBuilder
 from eeggan.pytorch.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
+from eeggan.examples.high_gamma.make_data import create_filename_from_subj_ind
 
 from torch.utils.tensorboard import SummaryWriter
 
-n_epochs_per_stage = 4000
+n_epochs_per_stage = 2000
 
-VERSION = 'v1'
-EXPERIMENT = 'longrun'
+nsamples = 6742
 
-SUBJECT_ID = 1
+VERSION = f'{nsamples}_samples'
+# EXPERIMENT = 'longrun'
+
+SUBJECT_ID = list(range(1,15))
 
 RESULTPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Results/{EXPERIMENT}'
 
@@ -38,8 +41,8 @@ DEFAULT_CONFIG = dict(
     n_batch=128,  # batch size
     n_stages=N_PROGRESSIVE_STAGES,  # number of progressive stages
     n_epochs_per_stage=n_epochs_per_stage,  # epochs in each progressive stage
-    n_epochs_metrics=50,
-    plot_every_epoch=100,
+    n_epochs_metrics=100,
+    plot_every_epoch=500,
     n_epochs_fade=int(0.1 * n_epochs_per_stage),
     use_fade=False,
     freeze_stages=True,
@@ -58,6 +61,7 @@ DEFAULT_CONFIG = dict(
     downsampling='conv',
     discfading='cubic',
     genfading='cubic',
+    n_samples=nsamples
 )
 
 default_model_builder = Baseline(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['n_latent'], DEFAULT_CONFIG['n_time'],
@@ -66,10 +70,10 @@ default_model_builder = Baseline(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['n_l
                                  discfading=DEFAULT_CONFIG['discfading'], genfading=DEFAULT_CONFIG['genfading'])
 
 
-def run(subj_ind: int, result_name: str, dataset_path: str, deep4_path: str, result_path: str,
+def run(subj_ind: list, result_name: str, dataset_path: str, deep4_path: str, result_path: str,
         config: dict = DEFAULT_CONFIG, model_builder: ProgressiveModelBuilder = default_model_builder):
 
-    result_path_subj = os.path.join(result_path, result_name, str(subj_ind))
+    result_path_subj = os.path.join(result_path, result_name, create_filename_from_subj_ind(subj_ind))
     
     os.makedirs(result_path_subj, exist_ok=True)
 
@@ -98,7 +102,7 @@ def run(subj_ind: int, result_name: str, dataset_path: str, deep4_path: str, res
 
     train(subj_ind, dataset_path, deep4_path, result_path_subj, progression_handler, trainer, config['n_batch'],
           config['lr_d'], config['lr_g'], config['betas'], config['n_epochs_per_stage'], config['n_epochs_metrics'],
-          config['plot_every_epoch'], config['orig_fs'], writer)
+          config['plot_every_epoch'], config['orig_fs'], config['n_samples'], writer)
 
 
 if __name__ == "__main__":

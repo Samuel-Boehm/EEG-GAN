@@ -15,11 +15,16 @@ from eeggan.training.trainer.trainer import BatchOutput
 from eeggan.validation.metrics.frechet import calculate_activation_statistics, calculate_frechet_distances
 from eeggan.validation.metrics.inception import calculate_inception_score
 from eeggan.validation.metrics.wasserstein import create_wasserstein_transform_matrix, \
-    calculate_sliced_wasserstein_distance
+    calculate_sliced_wasserstein_distance, calculated_wasserstein_distance_POT
 from eeggan.validation.validation_helper import logsoftmax_act_to_softmax
 from torch.utils.tensorboard import SummaryWriter
 
+### Testing old SWD ###
+from eeggan.validation.metrics.old_wasserstein import old_create_wasserstein_transform_matrix, \
+    old_calculate_sliced_wasserstein_distance
+
 T = TypeVar('T')
+
 
 
 class ListMetric(Metric, Generic[T], metaclass=ABCMeta):
@@ -54,11 +59,57 @@ class WassersteinMetric(ListMetric[float]):
         epoch = batch_output.i_epoch
         X_real = batch_output.batch_real.X.data.cpu().numpy()
         X_fake = batch_output.batch_fake.X.data.cpu().numpy()
-        distance = calculate_sliced_wasserstein_distance(X_real, X_fake, self.w_transform)
+        distances = []
+        for repeat in range(10):
+            self.w_transform = create_wasserstein_transform_matrix(self.n_projections, self.n_features)
+            distances.append(calculate_sliced_wasserstein_distance(X_real, X_fake, self.w_transform))
+
+        self.append((epoch, np.mean(distances)))
+
+        if self.tb_writer:
+            self.tb_writer.add_scalar('Sliced WD', np.mean(distances), epoch)
+
+class Old_WassersteinMetric(ListMetric[float]):
+
+    def __init__(self, n_projections: int, n_features: int, *args, **kwargs):
+        self.n_projections = n_projections
+        self.n_features = n_features
+        self.w_transform: np.ndarray
+        super().__init__(*args, **kwargs)
+
+    def reset(self) -> None:
+        super().reset()
+        self.w_transform = old_create_wasserstein_transform_matrix(self.n_projections, self.n_features)
+
+    def update(self, batch_output: BatchOutput) -> None:
+        epoch = batch_output.i_epoch
+        X_real = batch_output.batch_real.X.data.cpu().numpy()
+        X_fake = batch_output.batch_fake.X.data.cpu().numpy()
+        distance = old_calculate_sliced_wasserstein_distance(X_real, X_fake, self.w_transform)
         self.append((epoch, distance))
 
         if self.tb_writer:
-            self.tb_writer.add_scalar('Sliced WD', distance, epoch)
+            self.tb_writer.add_scalar('old - Sliced WD', distance, epoch)
+
+class WassersteinMetricPOT(ListMetric[float]):
+
+    def __init__(self, n_projections: int, *args, **kwargs):
+        self.n_projections = n_projections
+        super().__init__(*args, **kwargs)
+    
+    def reset(self) -> None:
+        super().reset()
+
+    def update(self, batch_output: BatchOutput) -> None:
+        epoch = batch_output.i_epoch
+        with torch.no_grad():
+            X_real = batch_output.batch_real.X.cpu().numpy()
+            X_fake = batch_output.batch_fake.X.cpu().numpy()
+        distance = calculated_wasserstein_distance_POT(X_real, X_fake, self.n_projections)
+        self.append((epoch, distance))
+        if self.tb_writer:
+            self.tb_writer.add_scalar('POT SWD', distance, epoch)
+
 
 
 class InceptionMetric(ListMetric[Tuple[float, float]]):
@@ -84,11 +135,11 @@ class InceptionMetric(ListMetric[Tuple[float, float]]):
         for deep4 in self.deep4s:
             with torch.no_grad():
                 preds = deep4(X_fake)[1]
-                preds = logsoftmax_act_to_softmax(preds)
+                preds = logsoftmax_act_to_softmax(preds)            
                 score_mean, score_std = calculate_inception_score(preds, self.splits, self.repetitions)
             score_means.append(score_mean)
             score_stds.append(score_std)
-        self.append((epoch, (np.mean(score_means).item(), np.mean(score_stds).item())))
+        self.append((epoch, (np.nanmean(score_means).item(), np.nanmean(score_stds).item())))
         if self.tb_writer:
             self.tb_writer.add_scalar('Inception score mean', np.mean(score_means).item(), epoch)
         
@@ -118,6 +169,7 @@ class FrechetMetric(ListMetric[Tuple[float, float]]):
             X_fake = X_fake[:, :, :, None]
             epoch = batch_output.i_epoch
             dists = []
+            print(len(self.deep4s))
             for deep4 in self.deep4s:
                 mu_real, sig_real = calculate_activation_statistics(deep4(X_real)[0])
                 mu_fake, sig_fake = calculate_activation_statistics(deep4(X_fake)[0])

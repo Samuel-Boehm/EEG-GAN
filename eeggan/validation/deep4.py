@@ -9,7 +9,7 @@ from torch.nn import NLLLoss
 from torch.utils.data import DataLoader
 import torch
 import joblib
-import os 
+
 
 def build_model(input_time_length, n_channels, n_classes, cropped=False):
 
@@ -87,7 +87,7 @@ def train_model(model: torch.nn.Module,
             total += y.size(0)
             correct += (predicted.cpu() == y.cpu()).sum()
 
-            loss_val = loss(model(X), y)
+            loss_val = loss(outputs, y)
             loss_vals.append(loss_val.item())
 
             loss_val.backward()
@@ -131,6 +131,6 @@ def train_completetrials(train_set, test_set, n_classes, n_chans, deep4_path:str
     # Append test_set accuracy to log dict
     log_dict['test_acc'].append(accu.item())
 
-    joblib.dump(log_dict, (deep4_path+'deep4_log.dict'))
+    joblib.dump(log_dict, (deep4_path + 'deep4_log.dict'))
 
     return trained_model

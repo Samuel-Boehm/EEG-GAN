@@ -9,6 +9,7 @@ import joblib
 import numpy as np
 import mne
 import logging
+from scipy import linalg
 from moabb.datasets import Schirrmeister2017
 from braindecode.preprocessing import exponential_moving_standardize
 
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 init_logger(logger, level='INFO')
 
 
-def make_dataset_for_subj(subj_ind: int, dataset_path: str,
+def make_dataset_for_subj(subj_ind: list, dataset_path: str,
                           channels: List[str], classdict: OrderedDict,
                           fs: float, interval_times: Tuple[float, float], verbose='INFO'):
     """
@@ -50,7 +51,7 @@ def make_dataset_for_subj(subj_ind: int, dataset_path: str,
     if not os.path.exists(dataset_path):
         os.makedirs(dataset_path)
 
-    logger.info(f'Creating Dataset for Subject {subj_ind}')
+    logger.info(f'Creating Dataset for Subject(s) {subj_ind}')
     n_classes = len(classdict)
     data_collection = fetch_and_unpack_schirrmeister2017_moabb_data(
         subject_id=subj_ind,
@@ -70,9 +71,8 @@ def make_dataset_for_subj(subj_ind: int, dataset_path: str,
 
     dataset = HighGammaDataset(train_set, test_set, train_set[0][0].shape[1],
                                channels, [e for e in classdict.values()], fs)
-
-    joblib.dump(dataset, os.path.join(dataset_path, '%s.dataset' % subj_ind), compress=True)
-
+   
+    joblib.dump(dataset, os.path.join(dataset_path, f'{create_filename_from_subj_ind(subj_ind)}.dataset' ), compress=True)
 
 def make_deep4_for_subj(subj_ind: int, dataset_path: str, deep4_path: str, n_progressive: int, n_deep4: int,
                         verbose='INFO', n_epochs: int=100):
@@ -105,11 +105,11 @@ def make_deep4_for_subj(subj_ind: int, dataset_path: str, deep4_path: str, n_pro
                      f'shape {train_set_stage.X.shape}')
 
         for i_deep4 in range(n_deep4):
-            deep4_dict_path = f'{deep4_path}/{i_stage}{i_deep4}' 
+            deep4_dict_path = f'{deep4_path}/{create_filename_from_subj_ind(subj_ind)}_stage{i_stage}_{i_deep4}' 
             mod = make_deep4(train_set_stage, test_set_stage, n_classes, n_chans, deep4_dict_path, n_epochs)
             models.append(mod)
 
-        joblib.dump(models, os.path.join(deep4_path, '%s_stage%s.deep4' % (subj_ind, i_stage)), compress=True)
+        joblib.dump(models, os.path.join(deep4_path, f'{create_filename_from_subj_ind(subj_ind)}_stage{i_stage}.deep4'), compress=True)
 
 
 def make_data_for_stage(X, i_stage, max_stage):
@@ -129,40 +129,37 @@ def make_deep4(train_set, test_set, n_classes, n_chans, deep4_path, n_epochs):
 
 
 def load_dataset(index: int, path: str) -> HighGammaDataset:
-    return joblib.load(os.path.join(path, '%s.dataset' % index))
+    return joblib.load(os.path.join(path, f'{create_filename_from_subj_ind(index)}.dataset'))
 
 
 def load_deeps4(index, stage, path):
-    return joblib.load(os.path.join(path, '%s_stage%s.deep4' % (index, stage)))
+    return joblib.load(os.path.join(path, f'{create_filename_from_subj_ind(index)}_stage{stage}.deep4'))
 
 
-def fetch_and_unpack_schirrmeister2017_moabb_data(subject_id: int, channels: List[str],
+def fetch_and_unpack_schirrmeister2017_moabb_data(subject_id: list, channels: List[str],
                                                   interval_times: Tuple[float, float], fs: float, mapping: dict):
     # Get raw data from MOABB
-    data_set = dict()
-    subject_id = [subject_id]
+    DataSet = {'test': SignalAndTarget(np.array([]), np.array([])),
+               'train': SignalAndTarget(np.array([]), np.array([]))}
     mne.set_log_level('WARNING')
     data = Schirrmeister2017().get_data(subject_id)
     for subj_id, subj_data in data.items():
+        logger.info(f'Preprocessing Data for subj {subj_id}')
         for sess_id, sess_data in subj_data.items():
             for run_id, raw in sess_data.items():
-                data_set[run_id] = _preprocess_and_stack(raw, channels, interval_times, fs, mapping)
-    return data_set
+                X, y = _preprocess_and_stack(raw, channels, interval_times, fs, mapping)
+                DataSet[run_id].add_data(X, y)
+    return DataSet
 
 
 def _preprocess_and_stack(raw, channels, interval_times, fs, mapping):
-    logger.info(f'Preprocessing Data:')
-
     n_total_chs = len(raw.info['ch_names'])
-    logger.info(f'Selecting {len(channels)} out of {n_total_chs} channels...')
     raw = raw.pick(picks=channels)
     # Preprocess:
     raw.load_data()
     raw.set_eeg_reference('average', projection=False)
     old_fs = raw.info['sfreq']
-    logger.info(f'Resample from {old_fs}Hz to {fs}Hz...')
     raw.resample(fs)
-    logger.info(f'Applying standardization...')
     raw.apply_function(exponential_moving_standardize, channel_wise=False,
                        init_block_size=1000, factor_new=0.001, eps=1e-4)
     # Extract events (trials):
@@ -178,8 +175,56 @@ def _preprocess_and_stack(raw, channels, interval_times, fs, mapping):
 
     X = mne_epochs.get_data()
     X = X.astype(dtype=np.float32)
+    # X = ZCA_whitening(X)
     annots = mne_epochs.get_annotations_per_epoch()
     labels = [x[0][-1] for x in annots]
     y = [mapping[k] for k in labels]
-    return SignalAndTarget(X, np.array(y))
+    return X, np.array(y)
 
+def ZCA_whitening(X):
+    
+    '''
+    Applies zero component analysis whitening to the input X
+    X needs to be of shape (trials, channels, datapoints)
+    '''
+    X_whitened = np.zeros_like(X)
+
+    for i in range (X.shape[0]): 
+        # Zero center data
+        xc = X[i].T - np.mean(X[i].T, axis=0)
+        xc = xc.T
+
+        xcov = np.cov(xc, rowvar=True, bias=True)
+
+        # Calculate Eigenvalues and Eigenvectors
+        w, v = linalg.eig(xcov) # 
+        
+        # Create a diagonal matrix
+        diagw = np.diag(1/(w**0.5)) # or np.diag(1/((w+.1e-5)**0.5))
+        diagw = diagw.real.round(4) #convert to real and round off\
+
+        # Whitening transform using ZCA (Zero Component Analysis)
+
+        X_whitened[i] = np.dot(np.dot(np.dot(v, diagw), v.T), xc)
+    return X_whitened
+
+
+def range_extract(lst):
+    'Yield 2-tuple ranges or 1-tuple single elements from list of increasing ints'
+    lenlst = len(lst)
+    i = 0
+    while i< lenlst:
+        low = lst[i]
+        while i <lenlst-1 and lst[i]+1 == lst[i+1]: i +=1
+        hi = lst[i]
+        if   hi - low >= 2:
+            yield (low, hi)
+        elif hi - low == 1:
+            yield (low,)
+            yield (hi,)
+        else:
+            yield (low,)
+        i += 1
+        
+def create_filename_from_subj_ind(ids:list):
+    return ','.join( (('%i-%i' % r) if len(r) == 2 else '%i' % r) for r in range_extract(ids)) 

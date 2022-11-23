@@ -21,4 +21,5 @@ def calculate_inception_score(preds: Tensor, splits: int = 1, repititions: int =
                 kl = preds_step * (torch.log(preds_step) - torch.log(step_mean))
                 kl = torch.mean(torch.sum(kl, 1))
                 scores.append(torch.exp(kl).item())
-        return np.mean(scores).item(), np.std(scores).item()
+
+        return np.nanmean(scores).item(), np.nanstd(scores).item()
