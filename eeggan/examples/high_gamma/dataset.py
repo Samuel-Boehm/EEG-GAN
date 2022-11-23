@@ -42,6 +42,8 @@ class HighGammaDataset(Dataset[np.ndarray]):
                       f'n_time: {self.n_time}\n' \
                       f'channels: {self.channels}\n' \
                       f'classes: {self.classes}\n' \
-                      f'fs: {self.fs}\n'
+                      f'fs: {self.fs}\n' \
                       
         return description
+
+

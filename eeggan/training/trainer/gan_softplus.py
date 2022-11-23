@@ -31,6 +31,7 @@ class GanSoftplusTrainer(Trainer):
         super().__init__(i_logging, discriminator, generator)
 
     def train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], latent: torch.Tensor):
+        
         self.discriminator.zero_grad()
         self.optim_discriminator.zero_grad()
         self.discriminator.train(True)
@@ -48,6 +49,7 @@ class GanSoftplusTrainer(Trainer):
             loss_r1 = r1_penalty.item()
 
         has_r2 = self.r2_gamma > 0.
+        
         fx_fake = self.discriminator(batch_fake.X.requires_grad_(has_r2), y=batch_fake.y.requires_grad_(has_r2),
                                      y_onehot=batch_fake.y_onehot.requires_grad_(has_r2))
         loss_fake = softplus(fx_fake).mean()

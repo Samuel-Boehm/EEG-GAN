@@ -7,7 +7,9 @@ sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 from collections import OrderedDict
 from typing import Tuple, List
 import numpy as np
+import random
 from eeggan.cuda import init_cuda
+
 
 from eeggan.examples.high_gamma.make_data import make_dataset_for_subj, make_deep4_for_subj
 
@@ -24,11 +26,15 @@ N_EPOCHS = 100
 EXPERIMENT = 'ZCA_prewhitened'
 DATAPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/{EXPERIMENT}'
 MODELPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Models/{EXPERIMENT}'
-SUBJ_ID = 1
+SUBJ_ID = list(range(1,15))
+
+# Draw x random subjects:
+# SUBJ_ID = random.sample(SUBJ_ID, 8)
+
 RUN_ALL = False
 
 
-def run(subj_ind: int = SUBJ_ID,
+def run(subj_ind: list = SUBJ_ID,
         dataset_path: str = DATAPATH,
         deep4_path: str = MODELPATH,
         channels: List[str] = CHANNELS,

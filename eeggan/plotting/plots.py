@@ -46,8 +46,8 @@ def labeled_tube_plot(x, data_y, tube_y, labels,
     axes.set_xlabel(xlabel)
     if autoscale:
         axes.set_ylabel(ylabel)
-    axes.set_xlim(x.min(), x.max())
-    axes.set_ylim(np.nanmin(data_y - tube_y), np.nanmax(data_y + tube_y))
+        axes.set_xlim(x.min(), x.max())
+        axes.set_ylim(np.nanmin(data_y - tube_y), np.nanmax(data_y + tube_y))
     axes.legend()
 
 
