@@ -15,7 +15,7 @@ from eeggan.examples.high_gamma.make_data import make_dataset_for_subj, make_dee
 
 FS = 512.
 CLASSDICT_REST_RIGHT_HAND = OrderedDict([('rest', 3), ('right_hand', 1)])
-SEGMENT_IVAL = (-0.5, 4.00)
+SEGMENT_IVAL = (-0.5, 1.50)
 INPUT_LENGTH = int((SEGMENT_IVAL[1] - SEGMENT_IVAL[0]) * FS)
 N_PROGRESSIVE_STAGES = 6
 N_DEEP4 = 1
@@ -23,7 +23,7 @@ CHANNELS = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 
             'P8', 'O1', 'O2', 'M1', 'M2']
 SUBJ_INDECES = np.arange(1, 15)
 N_EPOCHS = 100
-EXPERIMENT = 'ZCA_prewhitened'
+EXPERIMENT = '0.5_1.50_window'
 DATAPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/{EXPERIMENT}'
 MODELPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Models/{EXPERIMENT}'
 SUBJ_ID = list(range(1,15))

@@ -4,11 +4,13 @@ from re import X
 import joblib
 from ignite.engine import Events
 import sys
+import argparse
+
 
 # setting path
 sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
-from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import FS, N_PROGRESSIVE_STAGES, INPUT_LENGTH, MODELPATH, DATAPATH, EXPERIMENT
+from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import FS, N_PROGRESSIVE_STAGES
 from eeggan.examples.high_gamma.models.baseline import Baseline
 from eeggan.examples.high_gamma.train import train
 from eeggan.model.builder import ProgressiveModelBuilder
@@ -19,12 +21,22 @@ from eeggan.examples.high_gamma.make_data import create_filename_from_subj_ind
 
 from torch.utils.tensorboard import SummaryWriter
 
-n_epochs_per_stage = 2000
+EXPERIMENT = 'ZCA_prewhitened'
 
-nsamples = 6742
+n_epochs_per_stage = 1000
 
-VERSION = f'{nsamples}_samples'
-# EXPERIMENT = 'longrun'
+parser = argparse.ArgumentParser(description='set number of samples')
+parser.add_argument('n_samples', metavar='samples',
+                 type=int, help='number of samples for training')
+args = parser.parse_args()
+n_samples = args.n_samples
+
+VERSION = f'{n_samples}_samples'
+
+SEGMENT_IVAL = (-0.5, 4)
+INPUT_LENGTH = int((SEGMENT_IVAL[1] - SEGMENT_IVAL[0]) * FS)
+MODELPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Models/{EXPERIMENT}'
+DATAPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/{EXPERIMENT}'
 
 SUBJECT_ID = list(range(1,15))
 
@@ -61,20 +73,22 @@ DEFAULT_CONFIG = dict(
     downsampling='conv',
     discfading='cubic',
     genfading='cubic',
-    n_samples=nsamples
+    n_samples=n_samples
 )
 
-default_model_builder = Baseline(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['n_latent'], DEFAULT_CONFIG['n_time'],
+model_builder = Baseline(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['n_latent'], DEFAULT_CONFIG['n_time'],
                                  DEFAULT_CONFIG['n_chans'], DEFAULT_CONFIG['n_classes'], DEFAULT_CONFIG['n_filters'],
                                  upsampling=DEFAULT_CONFIG['upsampling'], downsampling=DEFAULT_CONFIG['downsampling'],
                                  discfading=DEFAULT_CONFIG['discfading'], genfading=DEFAULT_CONFIG['genfading'])
 
 
 def run(subj_ind: list, result_name: str, dataset_path: str, deep4_path: str, result_path: str,
-        config: dict = DEFAULT_CONFIG, model_builder: ProgressiveModelBuilder = default_model_builder):
+        config: dict = DEFAULT_CONFIG, model_builder: ProgressiveModelBuilder = model_builder):
 
     result_path_subj = os.path.join(result_path, result_name, create_filename_from_subj_ind(subj_ind))
     
+    print(result_path)
+
     os.makedirs(result_path_subj, exist_ok=True)
 
     joblib.dump(config, os.path.join(result_path_subj, 'config.dict'), compress=False)
@@ -114,5 +128,5 @@ if __name__ == "__main__":
         deep4_path=MODELPATH,
         result_path=RESULTPATH,
         config=DEFAULT_CONFIG,
-        model_builder=default_model_builder)
+        model_builder=model_builder)
     

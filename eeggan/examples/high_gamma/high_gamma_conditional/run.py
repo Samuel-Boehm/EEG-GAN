@@ -1,4 +1,4 @@
-#  Author: Kay Hartmann <kg.hartma@gmail.com>
+#  Author: Samuel Böhm <samuel-boehm@web.de>
 import os
 from re import X
 import joblib
@@ -20,7 +20,7 @@ from eeggan.examples.high_gamma.make_data import create_filename_from_subj_ind
 from torch.utils.tensorboard import SummaryWriter
 
 n_epochs_per_stage = 500
-VERSION = 'cGAN'
+VERSION = 'cGAN_0.5_1.5'
 
 SUBJECT_ID = list(range(1,15))
 
@@ -57,7 +57,7 @@ DEFAULT_CONFIG = dict(
     downsampling='conv',
     discfading='cubic',
     genfading='cubic',
-    n_samples=5000
+    n_samples=6500
 )
 
 default_model_builder = Conditional(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['n_latent'], DEFAULT_CONFIG['n_time'],
