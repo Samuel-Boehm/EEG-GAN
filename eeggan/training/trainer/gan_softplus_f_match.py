@@ -10,14 +10,6 @@ from eeggan.training.discriminator import Discriminator
 from eeggan.training.generator import Generator
 from eeggan.training.trainer.trainer import Trainer
 from eeggan.training.trainer.utils import detach_all
-import numpy as np
-
-
-def fft(X):
-    fft = np.fft.rfft(X, axis=2)
-    fft = np.log(np.abs(fft))
-    return fft.mean(axis=0).squeeze()
-
 
 class GanSoftplusTrainer(Trainer):
     """
@@ -35,6 +27,7 @@ class GanSoftplusTrainer(Trainer):
                  r2_gamma: float):
         self.r1_gamma = r1_gamma
         self.r2_gamma = r2_gamma
+        self.f_match_loss = torch.nn.MSELoss()
         super().__init__(i_logging, discriminator, generator)
 
     def train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], latent: torch.Tensor):
@@ -92,12 +85,19 @@ class GanSoftplusTrainer(Trainer):
         fx_fake = self.discriminator(batch_fake.X.requires_grad_(True), y=batch_fake.y.requires_grad_(True),
                                      y_onehot=batch_fake.y_onehot.requires_grad_(True))
 
-        f_match_loss = torch.nn.MSELoss()
-
-        xx = torch.tensor(fft(batch_real.X), requires_grad=True, dtype=torch.double)
-        yy = torch.tensor(fft(batch_fake.X), requires_grad=True, dtype=torch.double)
         
-        loss = softplus(-fx_fake).mean() + f_match_loss(xx, yy)
+        # X real freaquency domain
+        X_rfd = torch.fft.rfft(batch_real.X, dim=2)
+        X_rfd = torch.log(torch.abs(X_rfd))
+        X_rfd = X_rfd.mean(axis=0).squeeze()
+
+        # X fake freacuency domain
+        X_ffd = torch.fft.rfft(batch_fake.X, dim=2)
+        X_ffd = torch.log(torch.abs(X_ffd))
+        X_ffd = X_ffd.mean(axis=0).squeeze()
+
+        
+        loss = softplus(-fx_fake).mean()  + .1 * self.f_match_loss(X_rfd, X_ffd)
         loss.backward()
 
         self.optim_generator.step()

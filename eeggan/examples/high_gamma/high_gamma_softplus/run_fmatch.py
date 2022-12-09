@@ -19,17 +19,18 @@ from eeggan.examples.high_gamma.make_data import create_filename_from_subj_ind
 
 from torch.utils.tensorboard import SummaryWriter
 
-n_epochs_per_stage = 2000
+n_epochs_per_stage = 1000
 
-nsamples = 6742
+nsamples = 1000
 
-VERSION = f'{nsamples}_samples'
+VERSION = f'f_match_2'
 # EXPERIMENT = 'longrun'
 
 SUBJECT_ID = list(range(1,15))
 
 RESULTPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Results/{EXPERIMENT}'
 
+writer = SummaryWriter(log_dir=f'/home/boehms/eeg-gan/EEG-GAN/Data/Tensorboard/{EXPERIMENT}/{VERSION}')
 
 
 
@@ -42,7 +43,7 @@ DEFAULT_CONFIG = dict(
     n_stages=N_PROGRESSIVE_STAGES,  # number of progressive stages
     n_epochs_per_stage=n_epochs_per_stage,  # epochs in each progressive stage
     n_epochs_metrics=100,
-    plot_every_epoch=500,
+    plot_every_epoch=50,
     n_epochs_fade=int(0.1 * n_epochs_per_stage),
     use_fade=False,
     freeze_stages=True,

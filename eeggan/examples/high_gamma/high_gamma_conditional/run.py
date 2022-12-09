@@ -14,13 +14,13 @@ from eeggan.examples.high_gamma.train import train
 from eeggan.model.builder import ProgressiveModelBuilder
 from eeggan.pytorch.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
-from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
+from eeggan.training.trainer.gan_softplus_f_match import GanSoftplusTrainer
 from eeggan.examples.high_gamma.make_data import create_filename_from_subj_ind
 
 from torch.utils.tensorboard import SummaryWriter
 
 n_epochs_per_stage = 500
-VERSION = 'cGAN'
+VERSION = 'cGAN_fmatch_torch'
 
 SUBJECT_ID = list(range(1,15))
 
@@ -37,10 +37,10 @@ DEFAULT_CONFIG = dict(
     n_batch=128,  # batch size
     n_stages=N_PROGRESSIVE_STAGES,  # number of progressive stages
     n_epochs_per_stage=n_epochs_per_stage,  # epochs in each progressive stage
-    n_epochs_metrics=10,
-    plot_every_epoch=25,
+    n_epochs_metrics=50,
+    plot_every_epoch=250,
     n_epochs_fade=int(0.1 * n_epochs_per_stage),
-    use_fade=False,
+    use_fade=True,
     freeze_stages=True,
 
     n_latent=200,  # latent vector size
@@ -57,7 +57,7 @@ DEFAULT_CONFIG = dict(
     downsampling='conv',
     discfading='cubic',
     genfading='cubic',
-    n_samples=5000
+    n_samples=6000
 )
 
 default_model_builder = Conditional(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['n_latent'], DEFAULT_CONFIG['n_time'],
