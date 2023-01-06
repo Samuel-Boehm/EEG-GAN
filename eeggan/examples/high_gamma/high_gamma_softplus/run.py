@@ -15,8 +15,6 @@ from eeggan.model.builder import ProgressiveModelBuilder
 from eeggan.pytorch.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
-from eeggan.examples.high_gamma.make_data import create_filename_from_subj_ind
-
 from torch.utils.tensorboard import SummaryWriter
 
 n_epochs_per_stage = 2000
