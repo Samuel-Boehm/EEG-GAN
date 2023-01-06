@@ -109,24 +109,33 @@ def train_completetrials(train_set, test_set, n_classes, n_chans, deep4_path:str
 
     input_time_length = train_set.X.shape[2]
     train_dataloader = DataLoader(train_set, batch_size=batch_size, shuffle=False)
+    
     model, loss, optimizer = build_model(input_time_length, n_chans, n_classes, cropped=False)
 
     trained_model, log_dict  = train_model(model=model, train_dataloader=train_dataloader,
                           loss=loss, optimizer=optimizer, n_epochs=n_epochs, cuda=cuda)
 
     # Calculate Acc on Test set:
-    X = torch.tensor(test_set.X).cuda()
-    y = torch.tensor(test_set.y).cuda()
+    test_dataloader = DataLoader(train_set, batch_size=64, shuffle=False)
 
-    out = trained_model(X)
+    mean_accu = []
 
-    _, predicted = torch.max(out.data, 1)
-    total = y.size(0)
+    for X, y, _ in test_dataloader:
+        if cuda:
+                X, y = X.cuda(), y.cuda()
+                trained_model = trained_model.cuda()
+            
+        out = trained_model(X)
+        _, predicted = torch.max(out.data, 1)
+        total = y.size(0)
 
-    correct = (predicted.cpu() == y.cpu()).sum()
-    accu = 100. * correct / total
+        correct = (predicted.cpu() == y.cpu()).sum()
+        accu = 100. * correct / total
+        mean_accu.append(accu.numpy())
 
-    print(f'Accuracy on testset %: {accu:.3f}')
+
+    mean_accu = np.mean(mean_accu)
+    print(f'Accuracy on testset %: {mean_accu:.3f}')
 
     # Append test_set accuracy to log dict
     log_dict['test_acc'].append(accu.item())

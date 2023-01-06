@@ -96,8 +96,9 @@ class GanSoftplusTrainer(Trainer):
         X_ffd = torch.log(torch.abs(X_ffd))
         X_ffd = X_ffd.mean(axis=0).squeeze()
 
+        print('fmatch loss', self.f_match_loss(X_rfd, X_ffd))
         
-        loss = softplus(-fx_fake).mean()  + .1 * self.f_match_loss(X_rfd, X_ffd)
+        loss = softplus(-fx_fake).mean()  #+ 1e-6 * self.f_match_loss(X_rfd, X_ffd)
         loss.backward()
 
         self.optim_generator.step()

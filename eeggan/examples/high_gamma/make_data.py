@@ -23,15 +23,14 @@ from eeggan.eeggan_logger import set_logger_level, init_logger
 logger = logging.getLogger(__name__)
 init_logger(logger, level='INFO')
 
-
-def make_dataset_for_subj(subj_ind: list, dataset_path: str,
+def make_dataset_for_subj(name: str, dataset_path: str,
                           channels: List[str], classdict: OrderedDict,
                           fs: float, interval_times: Tuple[float, float], verbose='INFO'):
     """
     Loads subject from MOABB Dataset using Braindecode and saves a single dataset instance for the subject.
 
     Args:
-        subj_ind (int): subject index
+        name (str): dataset name
         
         dataset_path (str): target path, where the fresh created dataset is dumped
         
@@ -51,10 +50,8 @@ def make_dataset_for_subj(subj_ind: list, dataset_path: str,
     if not os.path.exists(dataset_path):
         os.makedirs(dataset_path)
 
-    logger.info(f'Creating Dataset for Subject(s) {subj_ind}')
     n_classes = len(classdict)
     data_collection = fetch_and_unpack_schirrmeister2017_moabb_data(
-        subject_id=subj_ind,
         channels=channels,
         interval_times=interval_times,
         fs=fs,
@@ -63,18 +60,19 @@ def make_dataset_for_subj(subj_ind: list, dataset_path: str,
     test_set = data_collection['test']
     train_set = data_collection['train']
 
-    logger.debug(f'test set: X shape: {test_set.X.shape} y shape: {test_set.y.shape}')
-    logger.debug(f'train set: X shape: {train_set.X.shape} y shape: {train_set.y.shape}')
-
     test_set = prepare_data(test_set.X, test_set.y, n_classes, train_set.X.shape[2], normalize=True)
     train_set = prepare_data(train_set.X, train_set.y, n_classes, test_set.X.shape[2], normalize=True)
 
+    test_set.index_dict = data_collection['test'].index_dict
+    train_set.index_dict = data_collection['train'].index_dict
+
     dataset = HighGammaDataset(train_set, test_set, train_set[0][0].shape[1],
                                channels, [e for e in classdict.values()], fs)
-   
-    joblib.dump(dataset, os.path.join(dataset_path, f'{create_filename_from_subj_ind(subj_ind)}.dataset' ), compress=True)
 
-def make_deep4_for_subj(subj_ind: int, dataset_path: str, deep4_path: str, n_progressive: int, n_deep4: int,
+   
+    joblib.dump(dataset, os.path.join(dataset_path, f'{name}.dataset' ), compress=True)
+
+def make_deep4_for_subj(name: str, dataset_path: str, deep4_path: str, n_progressive: int, n_deep4: int,
                         verbose='INFO', n_epochs: int=100):
 
     set_logger_level(logger, level=verbose)
@@ -82,9 +80,8 @@ def make_deep4_for_subj(subj_ind: int, dataset_path: str, deep4_path: str, n_pro
     if not os.path.exists(deep4_path):
         os.makedirs(deep4_path)
 
-    logger.info(f'Training Deep 4 Models for Subject {subj_ind}')
 
-    dataset = load_dataset(subj_ind, dataset_path)
+    dataset = load_dataset(name, dataset_path)
 
     logger.debug(f'Dataset contains {len(dataset.classes)} classes, {len(dataset.channels)}'
                  f' channels and was sampled in {dataset.fs} Hz')
@@ -105,11 +102,13 @@ def make_deep4_for_subj(subj_ind: int, dataset_path: str, deep4_path: str, n_pro
                      f'shape {train_set_stage.X.shape}')
 
         for i_deep4 in range(n_deep4):
-            deep4_dict_path = f'{deep4_path}/{create_filename_from_subj_ind(subj_ind)}_stage{i_stage}_{i_deep4}' 
+            deep4_dict_path = f'{deep4_path}/{name}_stage{i_stage}_{i_deep4}' 
             mod = make_deep4(train_set_stage, test_set_stage, n_classes, n_chans, deep4_dict_path, n_epochs)
             models.append(mod)
+        
+        print('Number of Models:', len(models))
 
-        joblib.dump(models, os.path.join(deep4_path, f'{create_filename_from_subj_ind(subj_ind)}_stage{i_stage}.deep4'), compress=True)
+        joblib.dump(models, os.path.join(deep4_path, f'{name}_stage{i_stage}.deep4'), compress=True)
 
 
 def make_data_for_stage(X, i_stage, max_stage):
@@ -119,7 +118,7 @@ def make_data_for_stage(X, i_stage, max_stage):
 
 def make_deep4(train_set, test_set, n_classes, n_chans, deep4_path, n_epochs):
 
-    batch_size = train_set.X.shape[0] // n_epochs
+    batch_size = 64
 
     model = train_completetrials(train_set, test_set, n_classes, n_chans, deep4_path,
                                  n_epochs=n_epochs, batch_size=batch_size, 
@@ -128,27 +127,27 @@ def make_deep4(train_set, test_set, n_classes, n_chans, deep4_path, n_epochs):
     return model
 
 
-def load_dataset(index: int, path: str) -> HighGammaDataset:
-    return joblib.load(os.path.join(path, f'{create_filename_from_subj_ind(index)}.dataset'))
+def load_dataset(name: str, path: str) -> HighGammaDataset:
+    return joblib.load(os.path.join(path, f'{name}.dataset'))
 
 
-def load_deeps4(index, stage, path):
-    return joblib.load(os.path.join(path, f'{create_filename_from_subj_ind(index)}_stage{stage}.deep4'))
+def load_deeps4(name: str, stage: int, path: str):
+    return joblib.load(os.path.join(path, f'{name}_stage{stage}.deep4'))
 
 
-def fetch_and_unpack_schirrmeister2017_moabb_data(subject_id: list, channels: List[str],
+def fetch_and_unpack_schirrmeister2017_moabb_data(channels: List[str],
                                                   interval_times: Tuple[float, float], fs: float, mapping: dict):
     # Get raw data from MOABB
-    DataSet = {'test': SignalAndTarget(np.array([]), np.array([])),
-               'train': SignalAndTarget(np.array([]), np.array([]))}
+    DataSet = {'test': SignalAndTarget(np.array([]), np.array([]), None),
+               'train': SignalAndTarget(np.array([]), np.array([]), None) }
     mne.set_log_level('WARNING')
-    data = Schirrmeister2017().get_data(subject_id)
+    data = Schirrmeister2017().get_data()
     for subj_id, subj_data in data.items():
         logger.info(f'Preprocessing Data for subj {subj_id}')
         for sess_id, sess_data in subj_data.items():
             for run_id, raw in sess_data.items():
                 X, y = _preprocess_and_stack(raw, channels, interval_times, fs, mapping)
-                DataSet[run_id].add_data(X, y)
+                DataSet[run_id].add_data(X, y, subj_id)
     return DataSet
 
 
@@ -175,7 +174,7 @@ def _preprocess_and_stack(raw, channels, interval_times, fs, mapping):
 
     X = mne_epochs.get_data()
     X = X.astype(dtype=np.float32)
-    # X = ZCA_whitening(X)
+    X = ZCA_whitening(X)
     annots = mne_epochs.get_annotations_per_epoch()
     labels = [x[0][-1] for x in annots]
     y = [mapping[k] for k in labels]
@@ -207,24 +206,3 @@ def ZCA_whitening(X):
 
         X_whitened[i] = np.dot(np.dot(np.dot(v, diagw), v.T), xc)
     return X_whitened
-
-
-def range_extract(lst):
-    'Yield 2-tuple ranges or 1-tuple single elements from list of increasing ints'
-    lenlst = len(lst)
-    i = 0
-    while i< lenlst:
-        low = lst[i]
-        while i <lenlst-1 and lst[i]+1 == lst[i+1]: i +=1
-        hi = lst[i]
-        if   hi - low >= 2:
-            yield (low, hi)
-        elif hi - low == 1:
-            yield (low,)
-            yield (hi,)
-        else:
-            yield (low,)
-        i += 1
-        
-def create_filename_from_subj_ind(ids:list):
-    return ','.join( (('%i-%i' % r) if len(r) == 2 else '%i' % r) for r in range_extract(ids)) 

@@ -24,7 +24,7 @@ from eeggan.training.trainer.trainer import Trainer
 from torch.utils.tensorboard import SummaryWriter
 
 
-def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
+def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: str,
           progression_handler: ProgressionHandler, trainer: Trainer, n_batch: int, lr_d: float, lr_g: float,
           betas: Tuple[float, float], n_epochs_per_stage: int, n_epochs_metrics: int, plot_every_epoch: int,
           orig_fs: float, n_samples:int, tensorboard_writer: SummaryWriter
@@ -35,22 +35,30 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
 
     init_cuda()  # activate cuda
 
-    dataset = load_dataset(subj_ind, dataset_path)
+    dataset = load_dataset(dataset_name, dataset_path)
     
+    # Here we can select a subject:
+    dataset.train_data = dataset.train_data.return_subject(4)
+    dataset.test_data = dataset.test_data.return_subject(4)
+
+
     # Pool Train and Test
     dataset.train_data.X = np.concatenate((dataset.train_data.X[:], dataset.test_data.X[:]), axis=0)
     dataset.train_data.y = np.concatenate((dataset.train_data.y[:], dataset.test_data.y[:]), axis=0)
     dataset.train_data.y_onehot = np.concatenate((dataset.train_data.y_onehot[:], dataset.test_data.y_onehot[:]), axis=0)
 
-    index = np.random.choice(range(dataset.train_data.X.shape[0]), n_samples, replace=False)
+    # Here we can select to draw subsets: 
+    # index = np.random.choice(range(dataset.train_data.X.shape[0]), n_samples, replace=False)
+    # dataset.train_data.X = dataset.train_data.X[index]
+    # dataset.train_data.y = dataset.train_data.y[index]
+    # dataset.train_data.y_onehot = dataset.train_data.y_onehot[index]
 
-    dataset.train_data.X = dataset.train_data.X[index]
-    dataset.train_data.y = dataset.train_data.y[index]
-    dataset.train_data.y_onehot = dataset.train_data.y_onehot[index]
-
+    
     train_data = dataset.train_data
     
-    test_data = dataset.test_data
+    # test_data = dataset.test_data
+
+    del dataset
 
     discriminator = progression_handler.discriminator
     generator = progression_handler.generator
@@ -75,7 +83,7 @@ def train(subj_ind: int, dataset_path: str, deep4s_path: str, result_path: str,
                    'optim_discriminator': optim_discriminator, 'optim_generator': optim_generator}
 
         # load trained deep4s for stage
-        deep4s = load_deeps4(subj_ind, stage, deep4s_path)
+        deep4s = load_deeps4(dataset_name, stage, deep4s_path)
         select_modules = ['conv_4', 'softmax']
         deep4s = [to_cuda(IntermediateOutputWrapper(select_modules, deep4)) for deep4 in deep4s]
 

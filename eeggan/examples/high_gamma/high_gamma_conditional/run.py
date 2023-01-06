@@ -8,21 +8,23 @@ import sys
 # setting path
 sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
-from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import FS, N_PROGRESSIVE_STAGES, INPUT_LENGTH, MODELPATH, DATAPATH, EXPERIMENT
+from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import (FS, N_PROGRESSIVE_STAGES,
+ INPUT_LENGTH, MODELPATH, DATAPATH)
 from eeggan.examples.high_gamma.models.conditional import Conditional
 from eeggan.examples.high_gamma.train import train
 from eeggan.model.builder import ProgressiveModelBuilder
 from eeggan.pytorch.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
-from eeggan.training.trainer.gan_softplus_f_match import GanSoftplusTrainer
+from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 from eeggan.examples.high_gamma.make_data import create_filename_from_subj_ind
 
 from torch.utils.tensorboard import SummaryWriter
 
-n_epochs_per_stage = 500
-VERSION = 'cGAN_fmatch_torch'
+n_epochs_per_stage = 1000
+EXPERIMENT = 'ZCA_prewhitened'
+VERSION = 'cGAN'
 
-SUBJECT_ID = list(range(1,15))
+DATASET = 'rest_right'
 
 RESULTPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Results/{EXPERIMENT}'
 
@@ -57,7 +59,7 @@ DEFAULT_CONFIG = dict(
     downsampling='conv',
     discfading='cubic',
     genfading='cubic',
-    n_samples=6000
+    n_samples=6742  #int(2240 + 11244)
 )
 
 default_model_builder = Conditional(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['n_latent'], DEFAULT_CONFIG['n_time'],
@@ -66,10 +68,10 @@ default_model_builder = Conditional(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['
                                  discfading=DEFAULT_CONFIG['discfading'], genfading=DEFAULT_CONFIG['genfading'])
 
 
-def run(subj_ind: list, result_name: str, dataset_path: str, deep4_path: str, result_path: str,
+def run(dataset_name: str, result_name: str, dataset_path: str, deep4_path: str, result_path: str,
         config: dict = DEFAULT_CONFIG, model_builder: ProgressiveModelBuilder = default_model_builder):
 
-    result_path_subj = os.path.join(result_path, result_name, create_filename_from_subj_ind(subj_ind))
+    result_path_subj = os.path.join(result_path, result_name, dataset_name)
     
     os.makedirs(result_path_subj, exist_ok=True)
 
@@ -96,7 +98,7 @@ def run(subj_ind: list, result_name: str, dataset_path: str, deep4_path: str, re
     generator.train()
     discriminator.train()
 
-    train(subj_ind, dataset_path, deep4_path, result_path_subj, progression_handler, trainer, config['n_batch'],
+    train(dataset_name, dataset_path, deep4_path, result_path_subj, progression_handler, trainer, config['n_batch'],
           config['lr_d'], config['lr_g'], config['betas'], config['n_epochs_per_stage'], config['n_epochs_metrics'],
           config['plot_every_epoch'], config['orig_fs'], config['n_samples'], writer)
 
@@ -104,7 +106,7 @@ def run(subj_ind: list, result_name: str, dataset_path: str, deep4_path: str, re
 if __name__ == "__main__":
 
     
-    run(subj_ind=SUBJECT_ID,
+    run(dataset_name=DATASET,
         result_name=VERSION,
         dataset_path=DATAPATH,
         deep4_path=MODELPATH,
