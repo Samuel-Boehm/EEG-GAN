@@ -1,4 +1,4 @@
-#  Author: Kay Hartmann <kg.hartma@gmail.com>
+#  Author: Kay Hartmann <kg.hartma@gmail.com>, Samuel Böhm <samuel-boehm@web.de>
 
 import os
 from typing import Tuple
@@ -22,13 +22,14 @@ from eeggan.training.handlers.plots import SpectralPlot
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.trainer import Trainer
 from torch.utils.tensorboard import SummaryWriter
+from eeggan.examples.high_gamma.load_gan import load_GAN
 
 
 def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: str,
           progression_handler: ProgressionHandler, trainer: Trainer, n_batch: int, lr_d: float, lr_g: float,
           betas: Tuple[float, float], n_epochs_per_stage: int, n_epochs_metrics: int, plot_every_epoch: int,
-          orig_fs: float, n_samples:int, tensorboard_writer: SummaryWriter
-    ):
+          orig_fs: float, n_samples:int, tensorboard_writer: SummaryWriter, subject: int = None, 
+          pretrained_path: str = None):
 
     plot_path = os.path.join(result_path, "plots")
     os.makedirs(plot_path, exist_ok=True)
@@ -38,8 +39,9 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
     dataset = load_dataset(dataset_name, dataset_path)
     
     # Here we can select a subject:
-    dataset.train_data = dataset.train_data.return_subject(4)
-    dataset.test_data = dataset.test_data.return_subject(4)
+    if subject:
+        dataset.train_data = dataset.train_data.return_subject(subject)
+        dataset.test_data = dataset.test_data.return_subject(subject)
 
 
     # Pool Train and Test
@@ -47,7 +49,7 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
     dataset.train_data.y = np.concatenate((dataset.train_data.y[:], dataset.test_data.y[:]), axis=0)
     dataset.train_data.y_onehot = np.concatenate((dataset.train_data.y_onehot[:], dataset.test_data.y_onehot[:]), axis=0)
 
-    # Here we can select to draw subsets: 
+    # Here we can select to draw random subsets: 
     # index = np.random.choice(range(dataset.train_data.X.shape[0]), n_samples, replace=False)
     # dataset.train_data.X = dataset.train_data.X[index]
     # dataset.train_data.y = dataset.train_data.y[index]
@@ -55,7 +57,6 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
 
     
     train_data = dataset.train_data
-    
     # test_data = dataset.test_data
 
     del dataset
@@ -70,8 +71,15 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
                                 Events.EPOCH_COMPLETED(every=n_epochs_metrics))
 
     for stage in range(progression_handler.current_stage, progression_handler.n_stages):
+        
 
-    
+        # If we set a path to pretrained models for each stage, the model will be loaded and used as base
+        if pretrained_path:
+            stateDict = torch.load(os.path.join(pretrained_path, f'states_stage_{stage}.pt'))
+            progression_handler.generator.load_state_dict(stateDict['generator'])
+            progression_handler.discriminator.load_state_dict(stateDict['discriminator'])
+
+            
         # optimizer
         optim_discriminator = optim.Adam(progression_handler.get_trainable_discriminator_parameters(), lr=lr_d,
                                          betas=betas)
@@ -124,8 +132,9 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
                    os.path.join(result_path, 'states_stage_%d.pt' % stage))
         torch.save(trainer.state.metrics, os.path.join(result_path, 'metrics_stage_%d.pt' % stage))
 
-        
-        # advance stage if not last
-        trainer.detach_metrics(metrics, usage_metrics)
+
+        # advance stage if not last 
         if stage != progression_handler.n_stages - 1:
             progression_handler.advance_stage()
+        trainer.detach_metrics(metrics, usage_metrics)
+        
