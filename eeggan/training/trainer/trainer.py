@@ -53,9 +53,11 @@ class Trainer(Engine, metaclass=ABCMeta):
         Engine.__init__(self, self.train_batch)
         self.add_event_handler(Events.ITERATION_COMPLETED(every=i_logging), self.log_training)
 
-    def set_optimizers(self, optim_discriminator: Optimizer, optim_generator: Optimizer):
+    def set_optimizers(self, optim_discriminator: Optimizer, optim_generator: Optimizer, optim_spectral_discriminator: Optimizer = None):
         self.optim_discriminator = optim_discriminator
         self.optim_generator = optim_generator
+        if optim_spectral_discriminator:
+            self.optim_spectral_discriminator = optim_spectral_discriminator
 
     def attach_metrics(self, metrics: List[Metric], metric_names: List[str], usage: MetricUsage):
         for i, metric in enumerate(metrics):
