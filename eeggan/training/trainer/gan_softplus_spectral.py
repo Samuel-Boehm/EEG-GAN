@@ -1,90 +1,125 @@
-#  Author: Samuel Boehm <samuel-boehm@web.de>
-
+#  Author: Samuel Böhm <samuel-boehm@web.de>
 import torch
-from torch import autograd
 from torch.nn.functional import softplus
+from torch import autograd
 
 from eeggan.cuda import to_device
 from eeggan.data.dataset import Data
 from eeggan.training.discriminator import Discriminator
 from eeggan.training.generator import Generator
-from eeggan.training.trainer.trainer import Trainer
-from eeggan.training.spectral_discriminator import SpectralDiscriminator
-from torch.optim.optimizer import Optimizer
 from eeggan.training.trainer.utils import detach_all
+from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 
 
-class Spectral_Trainer(Trainer):
-    """
-    Improved GAN
 
-    References
-    ----------
-    Salimans, T., Goodfellow, I., Zaremba, W., Cheung, V., Radford, A., &
-    Chen, X. (2016). Improved Techniques for Training GANs. Learning;
-    Computer Vision and Pattern Recognition; Neural and Evolutionary Computing.
-    Retrieved from http://arxiv.org/abs/1606.03498
-    """
 
-    def __init__(self, i_logging: int, discriminator: Discriminator, spectral_discriminator: SpectralDiscriminator,
-                spectral_disriminator_optim: Optimizer, generator: Generator, r1_gamma: float, r2_gamma: float):
-        self.spectral_discriminator = spectral_discriminator,
-        self.spectral_discriminator_optim = spectral_disriminator_optim,
-        self.r1_gamma = r1_gamma
-        self.r2_gamma = r2_gamma
-        super().__init__(i_logging, discriminator, generator)
+
+def gradient_penalty(D, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], device):
+
+    batch_size = batch_real.X.shape[0]
+
+    # Calculate interpolation
+    alpha = torch.rand(batch_size, 1, 1)
+    alpha = alpha.expand_as(batch_real.X).to(device)
+    # getting x hat
+    interpolated = alpha * batch_real.X + (1 - alpha) * batch_fake.X
+
+    dis_interpolated = D(interpolated, y=batch_real.y, y_onehot=batch_real.y_onehot)
+    grad_outputs = torch.ones(dis_interpolated.shape).to(device)
+
+    # Calculate gradients of probabilities with respect to examples
+    gradients = autograd.grad(outputs=dis_interpolated, inputs=interpolated,
+                           grad_outputs=grad_outputs, create_graph=True, retain_graph=True)[0]
+
+    # Gradients have shape (batch_size, num_channels, n_samples),
+    # so flatten to easily take norm per example in batch
+    gradients = gradients.view(batch_size, -1)
+
+    # Derivatives of the gradient close to 0 can cause problems because of
+    # the square root, so manually calculate norm and add epsilon
+    gradients_norm = ((torch.sqrt(torch.sum(gradients ** 2, dim=1) + 1e-12) - 1) ** 2).mean()
+    return gradients_norm
+    
+
+class SpectralTrainer(GanSoftplusTrainer):
+    
+    def __init__(self, i_logging: int, discriminator: Discriminator, generator: Generator, r1: float,
+                 sp_discriminator: Discriminator, sp_optim):
+                 
+        self.r1_lambda = r1
+        self.sp_discriminator = sp_discriminator
+        self.sp_optim = sp_optim
+        super().__init__(i_logging, discriminator, generator, r1, None)
+
 
     def train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], latent: torch.Tensor):
         
+        #### Train time domain discriminator ####
         self.discriminator.zero_grad()
         self.optim_discriminator.zero_grad()
         self.discriminator.train(True)
 
-        has_r1 = self.r1_gamma > 0.
-        fx_real = self.discriminator(batch_real.X.requires_grad_(has_r1), y=batch_real.y.requires_grad_(has_r1),
-                                     y_onehot=batch_real.y_onehot.requires_grad_(has_r1))
-        loss_real = softplus(-fx_real).mean()
-        loss_real.backward(retain_graph=has_r1)
-        loss_r1 = None
-        if has_r1:
-            r1_penalty = self.r1_gamma * calc_gradient_penalty(batch_real.X.requires_grad_(True),
-                                                               batch_real.y_onehot.requires_grad_(True), fx_real)
-            r1_penalty.backward()
-            loss_r1 = r1_penalty.item()
 
-        has_r2 = self.r2_gamma > 0.
+        fx_real_td = self.discriminator(batch_real.X.requires_grad_(True),
+                                    y=batch_real.y.requires_grad_(True),
+                                    y_onehot=batch_real.y_onehot.requires_grad_(True))
         
-        fx_fake = self.discriminator(batch_fake.X.requires_grad_(has_r2), y=batch_fake.y.requires_grad_(has_r2),
-                                     y_onehot=batch_fake.y_onehot.requires_grad_(has_r2))
-        loss_fake = softplus(fx_fake).mean()
-        loss_fake.backward(retain_graph=has_r2)
-        loss_r2 = None
-        if has_r2:
-            r2_penalty = self.r1_gamma * calc_gradient_penalty(batch_fake.X.requires_grad_(True),
-                                                               batch_fake.y_onehot.requires_grad_(True), fx_real)
-            r2_penalty.backward()
-            loss_r2 = r2_penalty.item()
+        err_real_td = softplus(-fx_real_td).mean()
 
+        fx_fake_td = self.discriminator(batch_fake.X.requires_grad_(True), 
+                                    y=batch_fake.y.requires_grad_(True),
+                                    y_onehot=batch_fake.y_onehot.requires_grad_(True))
+
+        err_fake_td = softplus(fx_fake_td).mean()
+      
+
+        gp_td = self.r1_lambda * gradient_penalty(self.discriminator, batch_real,
+                                                batch_fake, batch_real.X.device)
+     
+        # Calculate error with gradient penalty
+        err_td = err_real_td + err_fake_td + gp_td
+        err_td.backward()
+        
+        # Optimize
         self.optim_discriminator.step()
 
-        return {"loss_real": loss_real.item(), "loss_fake": loss_fake.item(), "r1_penalty": loss_r1,
-                "r2_penalty": loss_r2}
+        ##### train frequency domain discriminator ####
+        self.sp_discriminator.zero_grad()
+        self.sp_optim.zero_grad()
+        self.sp_discriminator.train(True)
 
-    def train_spectral_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor],):
-        self.spectral_discriminator.zero_grad()
-        self.spectral_discriminator_optim.zero_grad()
-        self.spectral_discriminator.train(True)
-
-        self.generator.train(False)
-        self.discriminator.train(False)
+        fx_real_fd = self.sp_discriminator(batch_real.X.requires_grad_(True))
         
-        return None
+        err_real_fd = softplus(-fx_real_fd).mean()
 
+        fx_fake_fd = self.sp_discriminator(batch_fake.X.requires_grad_(True))
+
+        err_fake_fd = softplus(fx_fake_fd).mean()
+    
+        gp_fd = self.r1_lambda * gradient_penalty(self.sp_discriminator, batch_real,
+                                                batch_fake, batch_real.X.device)
+        
+        # Calculate error with gradient penalty
+        err_fd = err_real_fd + err_fake_fd + gp_fd
+        err_fd.backward()
+        
+        # Optimize
+        self.sp_optim.step()
+        
+
+        return {"loss_real td": err_real_td.item(), "loss_fake td": err_fake_td.item(),
+                "loss_real fd": err_real_fd.item(), "loss_fake fd": err_fake_fd.item(),
+                "r1_penalty td": gp_td.item(), "r1_penalty fd": gp_fd.item()}
+        
+
+    
     def train_generator(self, batch_real: Data[torch.Tensor]):
         self.generator.zero_grad()
         self.optim_generator.zero_grad()
         self.generator.train(True)
+
         self.discriminator.train(False)
+        self.sp_discriminator.train(False)
 
         with torch.no_grad():
             latent, y_fake, y_onehot_fake = to_device(batch_real.X.device,
@@ -93,29 +128,25 @@ class Spectral_Trainer(Trainer):
 
         X_fake = self.generator(latent.requires_grad_(False), y=y_fake.requires_grad_(False),
                                 y_onehot=y_onehot_fake.requires_grad_(False))
+        
         batch_fake = Data[torch.Tensor](X_fake, y_fake, y_onehot_fake)
 
-
+        # Time domain error
         fx_fake = self.discriminator(batch_fake.X.requires_grad_(True), y=batch_fake.y.requires_grad_(True),
                                      y_onehot=batch_fake.y_onehot.requires_grad_(True))
-        loss = softplus(-fx_fake).mean()
+        
+        # Frequency domain error
+        fx_fd_fake = self.sp_discriminator(batch_fake.X.requires_grad_(True))
+        
+        loss1 = softplus(-fx_fake).mean()
+        loss2 = softplus(-fx_fd_fake).mean()
+
+        a = 1.0
+        b = 1.0 
+        loss =  (a*loss1 + b*loss2) / (a+b)
         loss.backward()
 
         self.optim_generator.step()
 
         return loss.item()
 
-
-def calc_gradient_penalty(X: torch.Tensor, y: torch.Tensor, outputs: torch.Tensor) -> torch.Tensor:
-    inputs = X
-    ones = torch.ones_like(outputs)
-    if y is not None:
-        inputs = (inputs, y)
-        outputs = (outputs, outputs)
-        ones = (ones, ones)
-    gradients = autograd.grad(outputs=outputs, inputs=inputs,
-                              grad_outputs=ones,
-                              create_graph=True, retain_graph=True, only_inputs=True, allow_unused=True)
-    gradients = torch.cat([tmp.reshape(tmp.size(0), -1) for tmp in gradients], 1)
-    gradient_penalty = 0.5 * gradients.norm(2, dim=1).pow(2).mean()
-    return gradient_penalty

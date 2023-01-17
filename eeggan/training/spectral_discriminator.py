@@ -6,10 +6,15 @@ import numpy as np
 
 from eeggan.training.discriminator import Discriminator
 from eeggan.training.spectralLoss import SpectralLoss
+from eeggan.pytorch.modules.module import Module
+from eeggan.pytorch.modules.sequential import Sequential
 
 
 
-class Unnormalize(nn.Module):
+#  Author: Samuel Böhm <samuel-boehm@web.de>
+
+
+class Unnormalize(Module):
     
     ###########################################################################
     def __init__(self):
@@ -21,7 +26,7 @@ class Unnormalize(nn.Module):
     
 ##############################################################################
 
-class Normalize(nn.Module):
+class Normalize(Module):
     
     ###########################################################################
     def __init__(self):
@@ -36,8 +41,8 @@ class Normalize(nn.Module):
 class SpectralDiscriminator(Discriminator):
     
     ###########################################################################
-    def __init__(self, n_samples, n_channels,  spectral = "linear"):
-        super(SpectralDiscriminator, self).__init__()
+    def __init__(self, n_samples, n_channels, n_classes,  spectral = "linear"):
+        super().__init__(n_samples, n_channels, n_classes)
         
         self.n_samples = n_samples
         self.n_channels = n_channels
@@ -53,7 +58,7 @@ class SpectralDiscriminator(Discriminator):
             self.forward = self.forward_none
 
         else:
-            layers = nn.Sequential()
+            layers = Sequential()
             
             if "unnormalize" in spectral:
                 layers.add_module("Unnormalize", Unnormalize())
@@ -67,15 +72,18 @@ class SpectralDiscriminator(Discriminator):
             if "nonlinear" in spectral:
                 layers.add_module("Linear1Spectral", nn.Linear(self.spectral_transform.vector_length, self.spectral_transform.vector_length))
                 layers.add_module("ReLU1Spectral",   nn.LeakyReLU(0.2))
+                layers.add_module("Linear1Spectral", nn.Linear(self.spectral_transform.vector_length, self.spectral_transform.vector_length))
+                layers.add_module("ReLU1Spectral",   nn.LeakyReLU(0.2))
+                layers.add_module("Linear1Spectral", nn.Linear(self.spectral_transform.vector_length, self.spectral_transform.vector_length))
+                layers.add_module("ReLU1Spectral",   nn.LeakyReLU(0.2))
                 layers.add_module("Linear2Spectral", nn.Linear(self.spectral_transform.vector_length, 1))
                 
             self._forward_spectral = layers
             
     ###########################################################################
-    def forward(self, x):
-        x_profiles = self.spectral_transform.spectral_vector(x)
-        y = self._forward_spectral(x_profiles)
-        
+    def forward(self, x, **kwargs):
+        x_profiles = self.spectral_transform.spectral_vector(x, **kwargs)
+        y = self._forward_spectral(x_profiles)        
         return y
     
     ###########################################################################

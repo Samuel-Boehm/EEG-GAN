@@ -87,12 +87,8 @@ class SpectralLoss(torch.nn.Module):
     
     ############################################################
     def fft(self,data):
-        if len(data.shape) == 4 and data.shape[1] == 3:
-            # convert to grayscale
-            data =  0.299 * data[:,0,:,:] + \
-                    0.587 * data[:,1,:,:] + \
-                    0.114 * data[:,2,:,:]
-        fft = torch.rfft(data,2,onesided=True)
+ 
+        fft = torch.view_as_real(torch.fft.rfft(data))
         # abs of complex
         fft_abs = torch.sum(fft**2,dim=3)
         fft_abs = fft_abs + self.eps
