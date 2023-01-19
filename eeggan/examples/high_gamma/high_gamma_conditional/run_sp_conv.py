@@ -1,18 +1,20 @@
+
+import os
+import joblib
+import sys
+from ignite.engine import Events
+
+# setting path
+sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
+
 from eeggan.examples.high_gamma.models.spconGAN import SP_GAN
 from eeggan.training.progressive.handler import SpectralProgessionHandler
 from eeggan.training.trainer.gan_softplus_spectral import SpectralTrainer
 from eeggan.pytorch.utils.weights import weight_filler
 from eeggan.examples.high_gamma.train_spectral import train_spectral
-import os
-import joblib
-from ignite.engine import Events
-import sys
-
-# setting path
-sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
-
-from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import (FS, N_PROGRESSIVE_STAGES,
-INPUT_LENGTH)
+from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import (
+FS, N_PROGRESSIVE_STAGES, INPUT_LENGTH
+)
 
 n_epochs_per_stage = 500
 EXPERIMENT = 'ZCA_prewhitened'
@@ -92,6 +94,8 @@ progression_handler = SpectralProgessionHandler(discriminator,
                         config['n_epochs_fade'],
                         freeze_stages=config['freeze_stages'])
                                             
+progression_handler.set_progression(0, 1.)
+trainer.add_event_handler(Events.EPOCH_COMPLETED(every=1), progression_handler.advance_alpha)
 
 generator.train();
 discriminator.train();

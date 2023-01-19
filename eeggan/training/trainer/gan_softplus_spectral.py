@@ -9,6 +9,7 @@ from eeggan.training.discriminator import Discriminator
 from eeggan.training.generator import Generator
 from eeggan.training.trainer.utils import detach_all
 from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
+from torch.optim.optimizer import Optimizer
 
 
 def gradient_penalty(D, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], device):
