@@ -1,24 +1,21 @@
-from torch import optim
-
-
 import os
 import joblib
 import sys
+from ignite.engine import Events
+
 
 # setting path
 sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
 from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import (FS, N_PROGRESSIVE_STAGES,
 INPUT_LENGTH)
-from eeggan.cuda import to_cuda
 from eeggan.examples.high_gamma.models.conditional import Conditional
 from eeggan.examples.high_gamma.train_spd import train
 from eeggan.pytorch.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.gan_softplus_spectral import SpectralTrainer
-from eeggan.training.trainer.test_spec_D import SpectralDiscriminator
 
-n_epochs_per_stage = 1000
+n_epochs_per_stage = 500
 EXPERIMENT = 'ZCA_prewhitened'
 VERSION = 'SP_GAN'
 DATASET = 'rest_right'
@@ -33,8 +30,8 @@ config = dict(
     n_batch=64,  # batch size
     n_stages=N_PROGRESSIVE_STAGES,  # number of progressive stages
     n_epochs_per_stage=n_epochs_per_stage,  # epochs in each progressive stage
-    n_epochs_metrics=10,
-    plot_every_epoch=50,
+    n_epochs_metrics=25,
+    plot_every_epoch=250,
     n_epochs_fade=int(0.1 * n_epochs_per_stage),
     use_fade=True,
     freeze_stages=True,
@@ -69,10 +66,6 @@ joblib.dump(model_builder, os.path.join(result_path_subj, 'model_builder.jblb'),
 discriminator = model_builder.build_discriminator()
 generator = model_builder.build_generator()
 
-# sp_discriminator = SpectralDiscriminator(n_samples=72, n_channels=21, n_classes=2)
-# optim_sp_disc = optim.Adam(sp_discriminator.parameters(), lr=.005, betas=(0., 0.99))
-# sp_discriminator = to_cuda(optim_sp_disc)
-
 # initiate weights
 generator.apply(weight_filler) # Apply is part of nn.module and applies a function over a whole network
 discriminator.apply(weight_filler)
@@ -81,14 +74,16 @@ discriminator.apply(weight_filler)
 
 
 # trainer engine
-trainer = SpectralTrainer(10, discriminator, generator, config['r1_gamma'],
-                        config['r2_gamma'], None, None)
+trainer = SpectralTrainer(10, discriminator, generator, config['r1_gamma'], None, None)
 
 # handles potential progression after each epoch
 progression_handler = ProgressionHandler(discriminator, generator, config['n_stages'], config['use_fade'],
                         config['n_epochs_fade'], freeze_stages=config['freeze_stages'])
 generator.train()
 discriminator.train()
+
+progression_handler.set_progression(0, 1.)
+trainer.add_event_handler(Events.EPOCH_COMPLETED(every=1), progression_handler.advance_alpha)
 
 if __name__ == "__main__":
         train(DATASET, DATAPATH, DEEP4_PATH, result_path_subj, progression_handler, trainer, config['n_batch'],

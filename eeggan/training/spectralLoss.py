@@ -85,7 +85,6 @@ class SpectralLoss(torch.nn.Module):
     #                                                          #
     ############################################################
     
-    ############################################################
     def fft(self,data):
  
         fft = torch.view_as_real(torch.fft.rfft(data))
@@ -97,7 +96,7 @@ class SpectralLoss(torch.nn.Module):
         return fft_abs
     
     ############################################################
-    def spectral_vector(self, data):
+    def spectral_vector(self, data, **kwargs):
         """Assumes first dimension to be batch size."""
         fft = self.fft(data) \
                 .unsqueeze(1) \
@@ -111,6 +110,7 @@ class SpectralLoss(torch.nn.Module):
         profile = profile / profile.max(1)[0].view(-1,1)
         
         return profile
+    
     
     ############################################################
     def avg_profile(self, data):
