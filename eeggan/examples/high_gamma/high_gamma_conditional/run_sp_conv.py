@@ -16,7 +16,7 @@ from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import 
 FS, N_PROGRESSIVE_STAGES, INPUT_LENGTH
 )
 
-n_epochs_per_stage = 500
+n_epochs_per_stage = 50
 EXPERIMENT = 'ZCA_prewhitened'
 VERSION = 'SP_CONV_GAN'
 DATASET = 'rest_right'
@@ -31,8 +31,8 @@ config = dict(
     n_batch=64,  # batch size
     n_stages=N_PROGRESSIVE_STAGES,  # number of progressive stages
     n_epochs_per_stage=n_epochs_per_stage,  # epochs in each progressive stage
-    n_epochs_metrics=50,
-    plot_every_epoch=250,
+    n_epochs_metrics=1,
+    plot_every_epoch=25,
     n_epochs_fade=int(0.1 * n_epochs_per_stage),
     use_fade=False,
     freeze_stages=True,
@@ -105,4 +105,4 @@ if __name__ == "__main__":
 
     train_spectral(DATASET, DATAPATH, DEEP4_PATH, result_path_subj, progression_handler, trainer, config['n_batch'],
         config['lr_d'], config['lr_g'], config['betas'], config['n_epochs_per_stage'], config['n_epochs_metrics'],
-        config['plot_every_epoch'], config['orig_fs'], config['n_samples'], None, 4, None)
+        config['plot_every_epoch'], config['orig_fs'], config['n_samples'], None, None, None)

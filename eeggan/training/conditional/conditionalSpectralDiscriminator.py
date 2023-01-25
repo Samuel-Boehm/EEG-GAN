@@ -85,25 +85,3 @@ class ProgressiveSpectralDiscriminator(Discriminator):
         # fft_out = fft_out / fft_out.max(2)[0].view(-1,1)
 
         return fft_out
-
-    def downsampdownsample_to_blockle_embedding(self, x, i_block):
-        """
-        Scales down input to the size of current input stage.
-        Utilizes `ProgressiveDiscriminatorBlock.fade_sequence` from each stage.
-
-        Parameters
-        ----------
-        x : autograd.Variable
-            Input data
-        i_block : int
-            Stage to which input should be downsampled
-
-        Returns
-        -------
-        output : autograd.Variable
-            Downsampled data
-        """
-        for i in range(i_block):
-            x = self.blocks[i].fade_sequence(x)
-        output = x
-        return output

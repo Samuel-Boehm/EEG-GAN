@@ -1,36 +1,6 @@
 #  Author: Samuel Böhm <samuel-boehm@web.de>
 
 import os
-from typing import Tuple
-
-import numpy as np
-import torch
-from eeggan.examples.high_gamma.braindecode_hack import IntermediateOutputWrapper
-from ignite.engine import Events
-from ignite.metrics import MetricUsage
-from matplotlib import pyplot
-from torch import Tensor, optim
-from torch.utils.data import DataLoader
-
-from eeggan.cuda import to_cuda, init_cuda
-from eeggan.data.dataset import Data
-from eeggan.data.preprocess.resample import downsample
-from eeggan.examples.high_gamma.make_data import load_dataset, load_deeps4
-from eeggan.training.handlers.metrics import WassersteinMetric, InceptionMetric, FrechetMetric, LossMetric, \
-    ClassificationMetric, WassersteinMetricPOT, Old_WassersteinMetric
-from eeggan.training.handlers.plots import SpectralPlot
-from eeggan.training.progressive.handler import ProgressionHandler
-from eeggan.training.trainer.trainer import Trainer
-from eeggan.training.trainer.test_spec_D import SpectralDiscriminator
-from eeggan.pytorch.utils.weights import weight_filler
-from torch.utils.tensorboard import SummaryWriter
-
-
-
-
-#  Author: Samuel Böhm <samuel-boehm@web.de>
-
-import os
 import numpy as np
 import torch
 from typing import Tuple

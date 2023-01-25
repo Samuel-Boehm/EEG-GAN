@@ -64,79 +64,52 @@ class SpectralTrainer(GanSoftplusTrainer):
         super().__init__(i_logging, discriminator, generator, r1, None)
 
 
+    def _train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor],
+                            discriminator, optimizer):
+        discriminator.zero_grad()
+        optimizer.zero_grad()
+        discriminator.train(True)
+
+        has_r1 = self.r1_gamma > 0.
+        fx_real = discriminator(batch_real.X.requires_grad_(has_r1), y=batch_real.y.requires_grad_(has_r1),
+                                     y_onehot=batch_real.y_onehot.requires_grad_(has_r1))
+
+        loss_real = softplus(-fx_real).mean()
+        loss_real.backward(retain_graph=has_r1)
+        loss_r1 = None
+
+        if has_r1:
+            r1_penalty = self.r1_gamma * calc_gradient_penalty(batch_real.X.requires_grad_(True),
+                                                               batch_real.y_onehot.requires_grad_(True), fx_real)
+            r1_penalty.backward()
+            loss_r1 = r1_penalty.item()
+
+        has_r2 = self.r2_gamma > 0.
+        
+        fx_fake = discriminator(batch_fake.X.requires_grad_(has_r2), y=batch_fake.y.requires_grad_(has_r2),
+                                     y_onehot=batch_fake.y_onehot.requires_grad_(has_r2))
+        loss_fake = softplus(fx_fake).mean()
+        loss_fake.backward(retain_graph=has_r2)
+        loss_r2 = None
+        if has_r2:
+            r2_penalty = self.r1_gamma * calc_gradient_penalty(batch_fake.X.requires_grad_(True),
+                                                               batch_fake.y_onehot.requires_grad_(True), fx_real)
+            r2_penalty.backward()
+            loss_r2 = r2_penalty.item()
+
+        optimizer.step()
+
+        return loss_real.item(), loss_fake.item(), loss_r1, loss_r2
+
+
     def train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], latent: torch.Tensor):
-        
-        #### Train time domain discriminator ####
-        self.discriminator.zero_grad()
-        self.optim_discriminator.zero_grad()
-        self.discriminator.train(True)
+        # Train time domain discriminator
+        loss_real_td, loss_fake_td, loss_r1_td, loss_r2_td = self._train_discriminator(batch_real, batch_fake, self.discriminator, self.optim_discriminator)
+        # Train the spectral discriminator
+        loss_real_fd, loss_fake_fd, loss_r1_fd, loss_r2_fd = self._train_discriminator(batch_real, batch_fake, self.spectral_discriminator, self.optim_spectral_discriminator)
+        return {'loss_real_td': loss_real_td, 'loss_fake_td': loss_fake_td, 'loss_r1_td': loss_r1_td, 'loss_r2_td':loss_r2_td,
+                'loss real_fd': loss_real_fd, 'loss_fake_fd': loss_fake_fd, 'loss_r1_fd': loss_r1_fd, 'loss_r2_fd': loss_r2_fd}
 
-
-        fx_real_td = self.discriminator(batch_real.X.requires_grad_(True),
-                                    y=batch_real.y.requires_grad_(True),
-                                    y_onehot=batch_real.y_onehot.requires_grad_(True))
-        
-        err_real_td = softplus(-fx_real_td).mean()
-
-        fx_fake_td = self.discriminator(batch_fake.X.requires_grad_(True), 
-                                    y=batch_fake.y.requires_grad_(True),
-                                    y_onehot=batch_fake.y_onehot.requires_grad_(True))
-
-        err_fake_td = softplus(fx_fake_td).mean()
-
-
-        if change_penalty == 0:
-            gp_td = self.r1_lambda * calc_gradient_penalty(batch_real.X.requires_grad_(True),
-                                                            batch_real.y_onehot.requires_grad_(True),
-                                                            fx_real_td)
-        else:
-            gp_td = self.r1_lambda * gradient_penalty(self.discriminator, batch_real, batch_fake, batch_real.X.device)
-     
-        # Calculate error with gradient penalty
-        err_td = err_real_td + err_fake_td + gp_td
-        err_td.backward()
-        
-        # Optimize
-        self.optim_discriminator.step()
-
-        ##### train frequency domain discriminator ####
-        self.spectral_discriminator.zero_grad()
-        self.optim_spectral.zero_grad()
-        self.spectral_discriminator.train(True)
-
-        fx_real_fd = self.spectral_discriminator(batch_real.X.requires_grad_(True),
-                                    y=batch_real.y.requires_grad_(True),
-                                    y_onehot=batch_real.y_onehot.requires_grad_(True))
-        
-        err_real_fd = softplus(-fx_real_fd).mean()
-
-        fx_fake_fd = self.spectral_discriminator(batch_fake.X.requires_grad_(True), 
-                                    y=batch_fake.y.requires_grad_(True),
-                                    y_onehot=batch_fake.y_onehot.requires_grad_(True))
-
-        err_fake_fd = softplus(fx_fake_fd).mean()
-
-        if change_penalty == 0:
-            gp_fd = self.r1_lambda * calc_gradient_penalty(batch_real.X.requires_grad_(True),
-                                                            batch_real.y_onehot.requires_grad_(True),
-                                                            fx_real_fd)
-        else:
-            gp_td = self.r1_lambda * gradient_penalty(self.spectral_discriminator, batch_real, batch_fake, batch_real.X.device)
-        
-        # Calculate error with gradient penalty
-        err_fd = err_real_fd + err_fake_fd + gp_fd
-        err_fd.backward()
-        
-        # Optimize
-        self.optim_spectral.step()
-        
-
-        return {"loss_real td": err_real_td.item(), "loss_fake td": err_fake_td.item(),
-                "loss_real fd": err_real_fd.item(), "loss_fake fd": err_fake_fd.item(),
-                "r1_penalty td": gp_td.item(), "r1_penalty fd": gp_fd.item()}
-        
-
-    
     def train_generator(self, batch_real: Data[torch.Tensor]):
         self.generator.zero_grad()
         self.optim_generator.zero_grad()
@@ -167,7 +140,7 @@ class SpectralTrainer(GanSoftplusTrainer):
         loss2 = softplus(-fx_fd_fake).mean()
 
         a = 1.0
-        b = 1.0 
+        b = 0.0 
         loss =  (a*loss1 + b*loss2) / (a+b)
         loss.backward()
 
