@@ -101,7 +101,7 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
 
         # initiate spectral plotter
         spectral_plot = SpectralPlot(pyplot.figure(), plot_path, "spectral_stage_%d_" % stage, X_block.shape[2],
-                                     orig_fs / sample_factor)
+                                     orig_fs / sample_factor, tb_writer = tensorboard_writer)
         event_name = Events.EPOCH_COMPLETED(every=plot_every_epoch)
         spectral_handler = trainer.add_event_handler(event_name, spectral_plot)
 
@@ -111,10 +111,8 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
         # metric_frechet = FrechetMetric(deep4s, sample_factor, tb_writer=tensorboard_writer) -> Does not work becaus of GPU memory overload :( 
         metric_loss = LossMetric(tb_writer=tensorboard_writer)
         metric_classification = ClassificationMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
-        metric_POT_SWD = WassersteinMetricPOT(100, tb_writer=tensorboard_writer)
-        metric_old_swd = Old_WassersteinMetric(100, np.prod(X_block.shape[1:]).item(), tb_writer=tensorboard_writer)
-        metrics = [metric_wasserstein, metric_POT_SWD, metric_old_swd, metric_inception, metric_loss, metric_classification]
-        metric_names = ["wasserstein", "POT_SWD", 'old_swd', "inception", "loss", "classification"]
+        metrics = [metric_wasserstein, metric_inception, metric_loss, metric_classification]
+        metric_names = ["wasserstein", "inception", "loss", "classification"]
         trainer.attach_metrics(metrics, metric_names, usage_metrics)
 
         # wrap into cuda loader

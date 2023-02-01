@@ -12,7 +12,8 @@ from eeggan.training.trainer.trainer import Trainer, BatchOutput
 
 
 class EpochPlot(metaclass=ABCMeta):
-    def __init__(self, figure: Figure, plot_path: str, prefix: str):
+    def __init__(self, figure: Figure, plot_path: str, prefix: str, tb_writer=None):
+        self.writer = tb_writer # Tensorboard writer
         self.figure = figure
         self.path = plot_path
         self.prefix = prefix
@@ -20,6 +21,8 @@ class EpochPlot(metaclass=ABCMeta):
     def __call__(self, trainer: Trainer):
         self.plot(trainer)
         self.figure.savefig(os.path.join(self.path, self.prefix + str(trainer.state.epoch)))
+        if self.writer:
+            self.writer.add_figure(self.prefix + str(trainer.state.epoch), self.figure.gca())
         self.figure.clear()
 
     def plot(self, trainer: Trainer):
@@ -27,7 +30,6 @@ class EpochPlot(metaclass=ABCMeta):
 
 
 class SpectralPlot(EpochPlot):
-
     def __init__(self, figure: Figure, plot_path: str, prefix: str, n_samples: int, fs: float):
         self.n_samples = n_samples
         self.fs = fs
@@ -37,6 +39,7 @@ class SpectralPlot(EpochPlot):
         batch_output: BatchOutput = trainer.state.output
         spectral_plot(batch_output.batch_real.X.data.cpu().numpy(), batch_output.batch_fake.X.data.cpu().numpy(),
                       self.fs, self.figure.gca())
+        
 
 class DiscriminatorSpectrum(EpochPlot):
 

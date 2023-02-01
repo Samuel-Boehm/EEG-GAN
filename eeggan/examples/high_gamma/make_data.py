@@ -185,13 +185,15 @@ def ZCA_whitening(X):
     '''
     Applies zero component analysis whitening to the input X
     X needs to be of shape (trials, channels, datapoints)
+
+    if a stim onset is given (in seconds), the covariance matrix will only be calculated with 
+    the data that was until the stimulus.
     '''
     X_whitened = np.zeros_like(X)
 
     for i in range (X.shape[0]): 
         # Zero center data
-        xc = X[i].T - np.mean(X[i].T, axis=0)
-        xc = xc.T
+        xc = X[i] - np.mean(X[i], axis=0)
 
         xcov = np.cov(xc, rowvar=True, bias=True)
 

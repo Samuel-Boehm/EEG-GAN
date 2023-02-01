@@ -57,11 +57,10 @@ change_penalty = 0
 class SpectralTrainer(GanSoftplusTrainer):
     
     def __init__(self, i_logging: int, discriminator: Discriminator, generator: Generator, r1: float,
-                 spectral_discriminator: Discriminator):
+                 r2: float, spectral_discriminator: Discriminator):
                  
-        self.r1_lambda = r1
         self.spectral_discriminator = spectral_discriminator
-        super().__init__(i_logging, discriminator, generator, r1, None)
+        super().__init__(i_logging, discriminator, generator, r1, r2)
 
 
     def _train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor],
@@ -106,17 +105,19 @@ class SpectralTrainer(GanSoftplusTrainer):
         # Train time domain discriminator
         loss_real_td, loss_fake_td, loss_r1_td, loss_r2_td = self._train_discriminator(batch_real, batch_fake, self.discriminator, self.optim_discriminator)
         # Train the spectral discriminator
-        loss_real_fd, loss_fake_fd, loss_r1_fd, loss_r2_fd = self._train_discriminator(batch_real, batch_fake, self.spectral_discriminator, self.optim_spectral_discriminator)
+        loss_real_fd, loss_fake_fd, loss_r1_fd, loss_r2_fd = self._train_discriminator(batch_real, batch_fake, self.spectral_discriminator, self.optim_spectral)
+
+
+
         return {'loss_real_td': loss_real_td, 'loss_fake_td': loss_fake_td, 'loss_r1_td': loss_r1_td, 'loss_r2_td':loss_r2_td,
-                'loss real_fd': loss_real_fd, 'loss_fake_fd': loss_fake_fd, 'loss_r1_fd': loss_r1_fd, 'loss_r2_fd': loss_r2_fd}
+                'loss real_fd': loss_real_fd, 'loss_fake_fd': loss_fake_fd, 'loss_r1_fd': loss_r1_fd, 'loss_r2_fd': loss_r2_fd,
+                }
 
     def train_generator(self, batch_real: Data[torch.Tensor]):
         self.generator.zero_grad()
         self.optim_generator.zero_grad()
         self.generator.train(True)
-
         self.discriminator.train(False)
-        self.spectral_discriminator.train(False)
 
         with torch.no_grad():
             latent, y_fake, y_onehot_fake = to_device(batch_real.X.device,
@@ -125,28 +126,36 @@ class SpectralTrainer(GanSoftplusTrainer):
 
         X_fake = self.generator(latent.requires_grad_(False), y=y_fake.requires_grad_(False),
                                 y_onehot=y_onehot_fake.requires_grad_(False))
-        
         batch_fake = Data[torch.Tensor](X_fake, y_fake, y_onehot_fake)
 
-        # Time domain error
+
         fx_fake = self.discriminator(batch_fake.X.requires_grad_(True), y=batch_fake.y.requires_grad_(True),
                                      y_onehot=batch_fake.y_onehot.requires_grad_(True))
         
-        # Frequency domain error
-        fx_fd_fake = self.spectral_discriminator(batch_fake.X.requires_grad_(True), y=batch_fake.y.requires_grad_(True),
+        sp_fake = self.spectral_discriminator(batch_fake.X.requires_grad_(True), y=batch_fake.y.requires_grad_(True),
                                      y_onehot=batch_fake.y_onehot.requires_grad_(True))
         
-        loss1 = softplus(-fx_fake).mean()
-        loss2 = softplus(-fx_fd_fake).mean()
+        
+        # loss_td = softplus(-fx_fake).mean()
+        # loss_fd = softplus(-sp_fake).mean()
+        
+        a = 1
+        b = .2
+        
+        # err = (a*fx_fake + b*sp_fake) / (a+b)
+        loss_ = softplus(-sp_fake).mean()
+        loss = softplus(-fx_fake).mean()
+        
+        loss_c = (a*loss + b*loss_) / (a+b)
+    
+        # optimize
+          
 
-        a = 1.0
-        b = 0.0 
-        loss =  (a*loss1 + b*loss2) / (a+b)
-        loss.backward()
+        loss_c.backward()
 
         self.optim_generator.step()
 
-        return loss.item()
+        return {'td':loss.item(), 'fd':loss_.item(), 'combined': loss_c.item(), 'out_sp_disc': -sp_fake}
 
     def set_optimizers(self, optim_discriminator: Optimizer, optim_generator: Optimizer, optim_spectral: Optimizer = None):
         self.optim_discriminator = optim_discriminator

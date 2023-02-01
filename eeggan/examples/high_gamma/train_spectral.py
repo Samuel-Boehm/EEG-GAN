@@ -83,8 +83,8 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         trainer.set_optimizers(optim_discriminator, optim_generator, optim_spectral)
 
         # modules to save
-        to_save = {'discriminator': discriminator, 'generator': generator,
-                   'optim_discriminator': optim_discriminator, 'optim_generator': optim_generator}
+        to_save = {'discriminator': discriminator, 'generator': generator, 'spectral_discriminator':spectral_discriminator,
+                   'optim_discriminator': optim_discriminator, 'optim_generator': optim_generator, 'optim:spec_disc': optim_spectral}
 
         # load trained deep4s for stage
         deep4s = load_deeps4(dataset_name, stage, deep4s_path)
