@@ -4,12 +4,11 @@ import os
 from abc import ABCMeta
 import numpy as np
 
-
 from matplotlib.figure import Figure
 
 from eeggan.plotting.plots import spectral_plot, labeled_tube_plot
 from eeggan.training.trainer.trainer import Trainer, BatchOutput
-
+from eeggan.training.trainer.gan_softplus_spectral import SpectralTrainer
 
 class EpochPlot(metaclass=ABCMeta):
     def __init__(self, figure: Figure, plot_path: str, prefix: str, tb_writer=None):
@@ -22,7 +21,7 @@ class EpochPlot(metaclass=ABCMeta):
         self.plot(trainer)
         self.figure.savefig(os.path.join(self.path, self.prefix + str(trainer.state.epoch)))
         if self.writer:
-            self.writer.add_figure(self.prefix + str(trainer.state.epoch), self.figure.gca())
+            self.writer.add_figure(self.prefix + str(trainer.state.epoch), self.figure)
         self.figure.clear()
 
     def plot(self, trainer: Trainer):
@@ -30,10 +29,10 @@ class EpochPlot(metaclass=ABCMeta):
 
 
 class SpectralPlot(EpochPlot):
-    def __init__(self, figure: Figure, plot_path: str, prefix: str, n_samples: int, fs: float):
+    def __init__(self, figure: Figure, plot_path: str, prefix: str, n_samples: int, fs: float, tb_writer=None):
         self.n_samples = n_samples
         self.fs = fs
-        super().__init__(figure, plot_path, prefix)
+        super().__init__(figure, plot_path, prefix, tb_writer)
 
     def plot(self, trainer: Trainer):
         batch_output: BatchOutput = trainer.state.output
@@ -43,21 +42,23 @@ class SpectralPlot(EpochPlot):
 
 class DiscriminatorSpectrum(EpochPlot):
 
-    def __init__(self, figure: Figure, plot_path: str, prefix: str):
-        super().__init__(figure, plot_path, prefix)
+    def __init__(self, figure: Figure, plot_path: str, prefix: str, tb_writer=None):
+        super().__init__(figure, plot_path, prefix, tb_writer)
 
-    def plot(self, trainer: Trainer):
+    def plot(self, trainer: SpectralTrainer):
         batch_output: BatchOutput = trainer.state.output
 
-        svr = trainer.sp_discriminator.spectral_transform.spectral_vector(batch_output.batch_real.X)
-        svf = trainer.sp_discriminator.spectral_transform.spectral_vector(batch_output.batch_fake.X)
-
+        svr = trainer.spectral_discriminator.get_input(batch_output.batch_real.X, batch_output.batch_real.y)
+        svf = trainer.spectral_discriminator.get_input(batch_output.batch_fake.X, batch_output.batch_fake.y)
         
-        mean_r = np.mean(svr.cpu().numpy(), axis=0)
-        std_r = np.std(svr.cpu().numpy(), axis=0)
+        svr = svr.detach().cpu().numpy()
+        svf = svf.detach().cpu().numpy()
+        
+        mean_r = np.mean(svr, axis=0)
+        std_r = np.std(svr, axis=0)
 
-        mean_f = np.mean(svf.cpu().numpy(), axis=0)
-        std_f = np.std(svf.cpu().numpy(), axis=0)
+        mean_f = np.mean(svf, axis=0)
+        std_f = np.std(svf, axis=0)
         
         x = np.arange(len(mean_r))
 
@@ -65,5 +66,5 @@ class DiscriminatorSpectrum(EpochPlot):
                       [mean_r, mean_f],
                       [std_r, std_f],
                       ["Real", "Fake"],
-                      "Mean spectral log amplitude", "Hz", "log(Amp)", self.figure.gca())
+                      "Spectral Vector", "Hz", "Normalized vector", self.figure.gca())
 

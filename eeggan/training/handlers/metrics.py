@@ -64,7 +64,7 @@ class WassersteinMetric(ListMetric[float]):
             self.w_transform = create_wasserstein_transform_matrix(self.n_projections, self.n_features)
             distances.append(calculate_sliced_wasserstein_distance(X_real, X_fake, self.w_transform))
 
-        self.append((epoch, np.mean(distances)))
+        self.append((epoch, (np.mean(distances), np.std(distances))))
 
         if self.tb_writer:
             self.tb_writer.add_scalar('Sliced WD', np.mean(distances), epoch)
@@ -139,9 +139,9 @@ class InceptionMetric(ListMetric[Tuple[float, float]]):
                 score_mean, score_std = calculate_inception_score(preds, self.splits, self.repetitions)
             score_means.append(score_mean)
             score_stds.append(score_std)
-        self.append((epoch, (np.nanmean(score_means).item(), np.nanmean(score_stds).item())))
+        self.append((epoch, (np.nanmean(score_means).item(), np.nanstd(score_means).item())))
         if self.tb_writer:
-            self.tb_writer.add_scalar('Inception score mean', np.mean(score_means).item(), epoch)
+            self.tb_writer.add_scalar('Inception score', np.mean(score_means).item(), epoch)
         
 
 
@@ -158,18 +158,15 @@ class FrechetMetric(ListMetric[Tuple[float, float]]):
     def update(self, batch_output: BatchOutput) -> None:
         with torch.no_grad():
             X_real, = to_device(batch_output.batch_real.X.device,
-                                Tensor(
-                                    upsample(batch_output.batch_real.X.data.cpu().numpy(), self.upsample_factor,
-                                             axis=2)))
+                                Tensor(upsample(batch_output.batch_real.X.data.cpu().numpy(), self.upsample_factor, axis=2)))
+
             X_real = X_real[:, :, :, None]
+
             X_fake, = to_device(batch_output.batch_fake.X.device,
-                                Tensor(
-                                    upsample(batch_output.batch_fake.X.data.cpu().numpy(), self.upsample_factor,
-                                             axis=2)))
+                                Tensor(upsample(batch_output.batch_fake.X.data.cpu().numpy(), self.upsample_factor, axis=2)))
             X_fake = X_fake[:, :, :, None]
             epoch = batch_output.i_epoch
             dists = []
-            print(len(self.deep4s))
             for deep4 in self.deep4s:
                 mu_real, sig_real = calculate_activation_statistics(deep4(X_real)[0])
                 mu_fake, sig_fake = calculate_activation_statistics(deep4(X_fake)[0])
@@ -179,7 +176,7 @@ class FrechetMetric(ListMetric[Tuple[float, float]]):
             self.append((epoch, (np.mean(dists).item(), np.std(dists).item())))
 
         if self.tb_writer:
-            self.tb_writer.add_scalar('Frechet mean', np.mean(dists).item(), epoch)
+            self.tb_writer.add_scalar('Frechet Inception Distance', np.mean(dists).item(), epoch)
 
 
 class ClassificationMetric(ListMetric[Tuple[float, float]]):
@@ -223,7 +220,9 @@ class LossMetric(ListMetric[Dict]):
         self.append((batch_output.i_epoch, {"loss_d": batch_output.loss_d, "loss_g": batch_output.loss_g}))
 
         if self.tb_writer:
-            self.tb_writer.add_scalar('loss Discriminator real', batch_output.loss_d['loss_real'], batch_output.i_epoch)
-            self.tb_writer.add_scalar('loss Discriminator fake', batch_output.loss_d['loss_fake'], batch_output.i_epoch)
-            self.tb_writer.add_scalar('loss Generator', batch_output.loss_g, batch_output.i_epoch)
-
+            for key in batch_output.loss_d.keys():
+                if batch_output.loss_d[key]:
+                    self.tb_writer.add_scalar(str(key), batch_output.loss_d[key], batch_output.i_epoch)
+            for key in batch_output.loss_g.keys():
+                if batch_output.loss_g[key]:
+                    self.tb_writer.add_scalar(str(key), batch_output.loss_g[key], batch_output.i_epoch)

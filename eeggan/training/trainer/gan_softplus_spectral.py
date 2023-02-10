@@ -79,7 +79,7 @@ class SpectralTrainer(GanSoftplusTrainer):
 
         if has_r1:
             r1_penalty = self.r1_gamma * calc_gradient_penalty(batch_real.X.requires_grad_(True),
-                                                               batch_real.y_onehot.requires_grad_(True), fx_real)
+                                                               None, fx_real)
             r1_penalty.backward()
             loss_r1 = r1_penalty.item()
 
@@ -106,8 +106,6 @@ class SpectralTrainer(GanSoftplusTrainer):
         loss_real_td, loss_fake_td, loss_r1_td, loss_r2_td = self._train_discriminator(batch_real, batch_fake, self.discriminator, self.optim_discriminator)
         # Train the spectral discriminator
         loss_real_fd, loss_fake_fd, loss_r1_fd, loss_r2_fd = self._train_discriminator(batch_real, batch_fake, self.spectral_discriminator, self.optim_spectral)
-
-
 
         return {'loss_real_td': loss_real_td, 'loss_fake_td': loss_fake_td, 'loss_r1_td': loss_r1_td, 'loss_r2_td':loss_r2_td,
                 'loss real_fd': loss_real_fd, 'loss_fake_fd': loss_fake_fd, 'loss_r1_fd': loss_r1_fd, 'loss_r2_fd': loss_r2_fd,
@@ -155,7 +153,7 @@ class SpectralTrainer(GanSoftplusTrainer):
 
         self.optim_generator.step()
 
-        return {'td':loss.item(), 'fd':loss_.item(), 'combined': loss_c.item(), 'out_sp_disc': -sp_fake}
+        return {'td':loss.item(), 'fd':loss_.item(), 'combined': loss_c.item()}
 
     def set_optimizers(self, optim_discriminator: Optimizer, optim_generator: Optimizer, optim_spectral: Optimizer = None):
         self.optim_discriminator = optim_discriminator

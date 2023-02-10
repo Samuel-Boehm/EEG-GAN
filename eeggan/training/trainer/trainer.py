@@ -96,7 +96,6 @@ class Trainer(Engine, metaclass=ABCMeta):
         n = engine.state.max_epochs
         i = engine.state.iteration
         print("Epoch {}/{} : {} - loss_d: {} loss_g: {}".format(e, n, i, batch_out.loss_d, batch_out.loss_g))
-        # display_GPU_load(f'Load during Epoch {e}/{n}')
 
 
     def train_discriminator(self, batch_real: Data[torch.Tensor], batch_fake: Data[torch.Tensor], latent: torch.Tensor):

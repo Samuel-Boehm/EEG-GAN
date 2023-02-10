@@ -47,6 +47,7 @@ class ProgressionHandler:
         if self.current_alpha < 1. and self.epochs_fade is not None:
             alpha_increase = 1. / self.epochs_fade
             self.set_progression(self.current_stage, self.current_alpha + alpha_increase)
+            print('current Alpha: ' ,self.current_alpha)
 
 class SpectralProgessionHandler(ProgressionHandler):
     def __init__(self, discriminator: ProgressiveDiscriminator, generator: ProgressiveGenerator, 

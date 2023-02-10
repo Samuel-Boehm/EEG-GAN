@@ -63,8 +63,7 @@ class GanSoftplusTrainer(Trainer):
 
         self.optim_discriminator.step()
 
-        return {"loss_real": loss_real.item(), "loss_fake": loss_fake.item(), "r1_penalty": loss_r1,
-                "r2_penalty": loss_r2}
+        return {"loss_real": loss_real.item(), "loss_fake": loss_fake.item(), "r1_penalty": loss_r1}
 
     def train_generator(self, batch_real: Data[torch.Tensor]):
         self.generator.zero_grad()
@@ -89,7 +88,7 @@ class GanSoftplusTrainer(Trainer):
 
         self.optim_generator.step()
 
-        return loss.item()
+        return {'loss_gen':loss.item()}
 
 
 def calc_gradient_penalty(X: torch.Tensor, y: torch.Tensor, outputs: torch.Tensor) -> torch.Tensor:

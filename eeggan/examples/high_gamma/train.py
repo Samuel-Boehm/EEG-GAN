@@ -17,7 +17,7 @@ from eeggan.data.dataset import Data
 from eeggan.data.preprocess.resample import downsample
 from eeggan.examples.high_gamma.make_data import load_dataset, load_deeps4
 from eeggan.training.handlers.metrics import WassersteinMetric, InceptionMetric, FrechetMetric, LossMetric, \
-    ClassificationMetric, WassersteinMetricPOT, Old_WassersteinMetric
+    ClassificationMetric
 from eeggan.training.handlers.plots import SpectralPlot
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.trainer import Trainer
@@ -65,6 +65,12 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
     generator = progression_handler.generator
     discriminator, generator = to_cuda(discriminator, generator)
 
+    num_gpus = torch.cuda.device_count()
+    print('num_gpus: ', num_gpus)
+    discriminator = torch.nn.parallel.DataParallel(discriminator, device_ids=list(range(num_gpus)))
+    generator  = torch.nn.parallel.DataParallel(generator, device_ids=list(range(num_gpus)))
+
+
         
     # usage to update every epoch and compute once at end of stage
     usage_metrics = MetricUsage(Events.STARTED, Events.EPOCH_COMPLETED(every=n_epochs_per_stage),
@@ -87,8 +93,12 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
         trainer.set_optimizers(optim_discriminator, optim_generator)
 
         # modules to save
-        to_save = {'discriminator': discriminator, 'generator': generator,
-                   'optim_discriminator': optim_discriminator, 'optim_generator': optim_generator}
+        to_save ={
+                'discriminator': discriminator,
+                'generator': generator,
+                'optim_discriminator': optim_discriminator,
+                'optim_generator': optim_generator
+                }
 
         # load trained deep4s for stage
         deep4s = load_deeps4(dataset_name, stage, deep4s_path)
@@ -102,17 +112,18 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
         # initiate spectral plotter
         spectral_plot = SpectralPlot(pyplot.figure(), plot_path, "spectral_stage_%d_" % stage, X_block.shape[2],
                                      orig_fs / sample_factor, tb_writer = tensorboard_writer)
+
         event_name = Events.EPOCH_COMPLETED(every=plot_every_epoch)
         spectral_handler = trainer.add_event_handler(event_name, spectral_plot)
 
         # initiate metrics
         metric_wasserstein = WassersteinMetric(100, np.prod(X_block.shape[1:]).item(), tb_writer=tensorboard_writer)
         metric_inception = InceptionMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
-        # metric_frechet = FrechetMetric(deep4s, sample_factor, tb_writer=tensorboard_writer) -> Does not work becaus of GPU memory overload :( 
+        metric_frechet = FrechetMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
         metric_loss = LossMetric(tb_writer=tensorboard_writer)
         metric_classification = ClassificationMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
-        metrics = [metric_wasserstein, metric_inception, metric_loss, metric_classification]
-        metric_names = ["wasserstein", "inception", "loss", "classification"]
+        metrics = [metric_wasserstein, metric_inception, metric_frechet, metric_loss, metric_classification]
+        metric_names = ["wasserstein", "inception", 'frechet', 'loss', 'classification']
         trainer.attach_metrics(metrics, metric_names, usage_metrics)
 
         # wrap into cuda loader
@@ -134,5 +145,6 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
         # advance stage if not last 
         if stage != progression_handler.n_stages - 1:
             progression_handler.advance_stage()
+
         trainer.detach_metrics(metrics, usage_metrics)
         

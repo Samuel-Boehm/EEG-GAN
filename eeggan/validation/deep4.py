@@ -105,10 +105,10 @@ def train_model(model: torch.nn.Module,
 
 
 def train_completetrials(train_set, test_set, n_classes, n_chans, deep4_path:str, n_epochs=100, 
-                         batch_size=60, cuda=True):
+                         batch_size=64, cuda=True):
 
     input_time_length = train_set.X.shape[2]
-    train_dataloader = DataLoader(train_set, batch_size=batch_size, shuffle=False)
+    train_dataloader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
     
     model, loss, optimizer = build_model(input_time_length, n_chans, n_classes, cropped=False)
 
@@ -123,7 +123,7 @@ def train_completetrials(train_set, test_set, n_classes, n_chans, deep4_path:str
     for X, y, _ in test_dataloader:
         if cuda:
                 X, y = X.cuda(), y.cuda()
-                trained_model = trained_model.cuda()
+                trained_model = trained_model.cuda().eval()
             
         out = trained_model(X)
         _, predicted = torch.max(out.data, 1)

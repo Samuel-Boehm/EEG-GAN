@@ -18,15 +18,14 @@ from eeggan.data.preprocess.resample import downsample
 from eeggan.examples.high_gamma.make_data import load_dataset, load_deeps4
 from eeggan.training.handlers.metrics import WassersteinMetric, InceptionMetric, FrechetMetric, \
     LossMetric,ClassificationMetric, WassersteinMetricPOT, Old_WassersteinMetric
-from eeggan.training.handlers.plots import SpectralPlot
+from eeggan.training.handlers.plots import SpectralPlot, DiscriminatorSpectrum
 from eeggan.training.progressive.handler import SpectralProgessionHandler
 from eeggan.training.trainer.gan_softplus_spectral import SpectralTrainer
-
 
 def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: str,
           progression_handler: SpectralProgessionHandler, trainer: SpectralTrainer, n_batch: int, lr_d: float, lr_g: float,
           betas: Tuple[float, float], n_epochs_per_stage: int, n_epochs_metrics: int, plot_every_epoch: int,
-          orig_fs: float, n_samples:int, tensorboard_writer: SummaryWriter, subject: int = None, 
+          orig_fs: float, n_samples: int, tensorboard_writer: SummaryWriter, subject: int = None, 
           pretrained_path: str = None):
 
     plot_path = os.path.join(result_path, "plots")
@@ -70,7 +69,14 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
             progression_handler.generator.load_state_dict(stateDict['generator'])
             progression_handler.discriminator.load_state_dict(stateDict['discriminator'])
 
-            
+        # scale data for current stage
+        sample_factor = 2 ** (progression_handler.n_stages - stage - 1)
+        X_block = downsample(train_data.X, factor=sample_factor, axis=2)
+
+        # Set mask for spectral discriminator stage: 
+        trainer.spectral_discriminator.calculate_size_for_block()
+        to_cuda(trainer.spectral_discriminator)
+
         # optimizer
         optim_discriminator = optim.Adam(progression_handler.get_trainable_discriminator_parameters()[0], lr=lr_d,
                                          betas=betas)
@@ -83,25 +89,23 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         trainer.set_optimizers(optim_discriminator, optim_generator, optim_spectral)
 
         # modules to save
-        to_save = {'discriminator': discriminator, 'generator': generator, 'spectral_discriminator':spectral_discriminator,
-                   'optim_discriminator': optim_discriminator, 'optim_generator': optim_generator, 'optim:spec_disc': optim_spectral}
+        to_save = {'discriminator': discriminator, 'generator': generator,
+                   'optim_discriminator': optim_discriminator, 'optim_generator': optim_generator}
 
         # load trained deep4s for stage
         deep4s = load_deeps4(dataset_name, stage, deep4s_path)
         select_modules = ['conv_4', 'softmax']
         deep4s = [to_cuda(IntermediateOutputWrapper(select_modules, deep4)) for deep4 in deep4s]
 
-        # scale data for current stage
-        sample_factor = 2 ** (progression_handler.n_stages - stage - 1)
-        X_block = downsample(train_data.X, factor=sample_factor, axis=2)
-
-
         # initiate spectral plotter
-        spectral_plot = SpectralPlot(pyplot.figure(), plot_path, "spectral_stage_%d_" % stage, X_block.shape[2],
-                                     orig_fs / sample_factor)
-        
+        spectral_plot = SpectralPlot(pyplot.figure(figsize=(15,7)), plot_path, "spectral_stage_%d_" % stage, X_block.shape[2],
+                                     orig_fs / sample_factor, tb_writer = tensorboard_writer)
+        spectral_profile_plot = DiscriminatorSpectrum(pyplot.figure(), plot_path, "spectral_profile_%d_" % stage,
+                                                    tb_writer = tensorboard_writer)
+
         event_name = Events.EPOCH_COMPLETED(every=plot_every_epoch)
-        trainer.add_event_handler(event_name, spectral_plot)
+        spectral_handler = trainer.add_event_handler(event_name, spectral_plot)
+        spectral_handler = trainer.add_event_handler(event_name, spectral_profile_plot)
 
     
         # initiate metrics
@@ -124,6 +128,7 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         # train stage
         state = trainer.run(train_loader, (stage + 1) * n_epochs_per_stage)
         trainer.remove_event_handler(spectral_plot, event_name)
+        trainer.remove_event_handler(spectral_profile_plot, event_name) 
 
         # save stuff
         torch.save(to_save, os.path.join(result_path, 'modules_stage_%d.pt' % stage))

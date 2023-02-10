@@ -19,27 +19,29 @@ class SP_GAN(Conditional):
         self.input_spectral = int(n_time / 2) + 1
         self.n_time_last_layer_spectral = int(np.floor(self.input_spectral / 2 ** n_stages)) 
 
-        print(self.n_time_last_layer, self.n_time_last_layer_spectral)
     
     def build_spectral_discriminator(self) -> ProgressiveSpectralDiscriminator:
-        blocks = []
+        blocks = nn.ModuleList([])
         for i in range(self.n_stages - 1):
-            block = ProgressiveDiscriminatorBlock(
-                self.build_disc_conv_sequence(self.n_stages - 1 - i),
-                self.build_disc_in_sequence(),
-                self.build_disc_fade_sequence()
-            )
-            blocks.append(block)
+            in_size = int(np.floor(self.input_spectral / 2 ** i)) 
+            out_size = int(np.floor(self.input_spectral / 2 ** (i + 1))) 
+            blocks.append(linearBlock(in_size, out_size))
 
-        last_block = ProgressiveDiscriminatorBlock(
-            Sequential(
-                self.build_disc_conv_sequence(0),
-                Reshape([[0], self.n_filters * self.n_time_last_layer_spectral]),
-                weight_scale(nn.Linear(self.n_filters * self.n_time_last_layer_spectral, 1),
-                             gain=calculate_gain('linear'))
-            ),
-            self.build_disc_in_sequence(),
-            None
+        last_block = Sequential(
+            nn.Linear(self.input_spectral, 1)
         )
         blocks.append(last_block)
+
         return ProgressiveSpectralDiscriminator(self.n_time, self.n_channels, self.n_classes, blocks)
+
+class linearBlock(nn.Module):
+    def __init__(self, in_size, out_size, use_pixelnorm=True):
+        super(linearBlock, self).__init__()
+        self.use_pn = use_pixelnorm
+        self.lin1 = nn.Linear(in_size, out_size)
+        self.leaky = nn.LeakyReLU(0.2)
+
+    def forward(self, x):
+        x = self.leaky(self.lin1(x))
+        return x
+

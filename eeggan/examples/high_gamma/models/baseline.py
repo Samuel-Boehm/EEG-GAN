@@ -115,7 +115,7 @@ class Baseline(ProgressiveModelBuilder):
                              gain=calculate_gain('linear'))
             ),
             self.build_disc_in_sequence(),
-            None
+            self.build_disc_fade_sequence()
         )
         blocks.append(last_block)
         return ProgressiveDiscriminator(self.n_time, self.n_channels, self.n_classes, blocks)

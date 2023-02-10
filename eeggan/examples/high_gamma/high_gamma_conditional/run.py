@@ -9,9 +9,8 @@ import argparse
 # setting path
 sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
-from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import (FS, N_PROGRESSIVE_STAGES,
- INPUT_LENGTH, MODELPATH, DATAPATH)
-from eeggan.examples.high_gamma.models.conditional import Conditional
+from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import FS, N_PROGRESSIVE_STAGES, MODELPATH, DATAPATH
+from eeggan.examples.high_gamma.models.conditionalV2 import ConditionalV2
 from eeggan.examples.high_gamma.train import train
 from eeggan.model.builder import ProgressiveModelBuilder
 from eeggan.pytorch.utils.weights import weight_filler
@@ -19,11 +18,15 @@ from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 from torch.utils.tensorboard import SummaryWriter
 
-n_epochs_per_stage = 2000
+n_epochs_per_stage = 1000
 EXPERIMENT = 'ZCA_prewhitened'
-VERSION = 'cGAN_fade'
+VERSION = 'cGAN_short'
 
-DATASET = 'rest_right'
+SEGMENT_IVAL = (-0.5, 2.00)
+INPUT_LENGTH = int((SEGMENT_IVAL[1] - SEGMENT_IVAL[0]) * FS)
+
+
+DATASET = 'rest_right_2'
 
 RESULTPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Results/{EXPERIMENT}'
 
@@ -41,7 +44,7 @@ DEFAULT_CONFIG = dict(
     n_epochs_metrics=50,
     plot_every_epoch=250,
     n_epochs_fade=int(0.1 * n_epochs_per_stage),
-    use_fade=True,
+    use_fade=False,
     freeze_stages=True,
 
     n_latent=200,  # latent vector size
@@ -61,7 +64,7 @@ DEFAULT_CONFIG = dict(
     n_samples=6742  #int(2240 + 11244)
 )
 
-default_model_builder = Conditional(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['n_latent'], DEFAULT_CONFIG['n_time'],
+default_model_builder = ConditionalV2(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['n_latent'], DEFAULT_CONFIG['n_time'],
                                  DEFAULT_CONFIG['n_chans'], DEFAULT_CONFIG['n_classes'], DEFAULT_CONFIG['n_filters'],
                                  upsampling=DEFAULT_CONFIG['upsampling'], downsampling=DEFAULT_CONFIG['downsampling'],
                                  discfading=DEFAULT_CONFIG['discfading'], genfading=DEFAULT_CONFIG['genfading'])
