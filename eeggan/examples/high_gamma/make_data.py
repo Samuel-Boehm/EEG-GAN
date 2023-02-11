@@ -132,7 +132,7 @@ def load_dataset(name: str, path: str) -> HighGammaDataset:
 
 
 def load_deeps4(name: str, stage: int, path: str):
-    return joblib.load(os.path.join(path, f'{name}_stage{stage}.deep4'))
+    return joblib.load(os.path.join(path, f'{name}_deep4_stage{stage}.deep4'))
 
 
 def fetch_and_unpack_schirrmeister2017_moabb_data(channels: List[str],

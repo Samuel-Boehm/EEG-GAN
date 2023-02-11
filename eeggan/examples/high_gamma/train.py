@@ -63,15 +63,15 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
 
     discriminator = progression_handler.discriminator
     generator = progression_handler.generator
-    discriminator, generator = to_cuda(discriminator, generator)
-
+    
     num_gpus = torch.cuda.device_count()
     print('num_gpus: ', num_gpus)
-    discriminator = torch.nn.parallel.DataParallel(discriminator, device_ids=list(range(num_gpus)))
-    generator  = torch.nn.parallel.DataParallel(generator, device_ids=list(range(num_gpus)))
+    discriminator = torch.nn.DataParallel(discriminator, device_ids=list(range(num_gpus)))
+    generator  = torch.nn.DataParallel(generator, device_ids=list(range(num_gpus)))
+
+    discriminator, generator = to_cuda(discriminator, generator)
 
 
-        
     # usage to update every epoch and compute once at end of stage
     usage_metrics = MetricUsage(Events.STARTED, Events.EPOCH_COMPLETED(every=n_epochs_per_stage),
                                 Events.EPOCH_COMPLETED(every=n_epochs_metrics))

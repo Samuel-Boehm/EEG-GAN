@@ -73,7 +73,7 @@ class Trainer(Engine, metaclass=ABCMeta):
 
             latent, y_fake, y_onehot_fake = to_device(batch_real.X.device,
                                                       *self.generator.create_latent_input(self.rng, len(batch_real.X)))
-            X_fake = self.generator(latent, y=y_fake, y_onehot=y_onehot_fake)
+            X_fake = self.generator(latent)
             batch_fake: Data[torch.Tensor] = Data(X_fake, y_fake, y_onehot_fake)
 
         batch_real, batch_fake, latent = detach_all(batch_real, batch_fake, latent)
@@ -84,7 +84,7 @@ class Trainer(Engine, metaclass=ABCMeta):
         with torch.no_grad():
             latent, y_fake, y_onehot_fake = to_device(batch_real.X.device,
                                                       *self.generator.create_latent_input(self.rng, len(batch_real.X)))
-            X_fake = self.generator(latent, y=y_fake, y_onehot=y_onehot_fake)
+            X_fake = self.generator(latent)
             batch_fake: Data[torch.Tensor] = Data(X_fake, y_fake, y_onehot_fake)
 
         batch_real, batch_fake, latent = detach_all(batch_real, batch_fake, latent)

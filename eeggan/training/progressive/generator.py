@@ -6,7 +6,6 @@ from typing import List
 
 from torch import nn
 
-from eeggan.pytorch.modules.module import Module
 from eeggan.training.generator import Generator
 
 """
@@ -16,7 +15,7 @@ Retrieved from http://arxiv.org/abs/1710.10196
 """
 
 
-class ProgressiveGeneratorBlock(Module):
+class ProgressiveGeneratorBlock(nn.Module):
     """
     Block for one Generator stage during progression
 
@@ -36,10 +35,10 @@ class ProgressiveGeneratorBlock(Module):
         self.out_sequence = out_sequence
         self.fade_sequence = fade_sequence
 
-    def forward(self, x, last=False, **kwargs):
-        out = self.intermediate_sequence(x, **kwargs)
+    def forward(self, x, last=False):
+        out = self.intermediate_sequence(x)
         if last:
-            out = self.out_sequence(out, **kwargs)
+            out = self.out_sequence(out)
         return out
 
 
@@ -72,17 +71,17 @@ class ProgressiveGenerator(Generator):
         self.cur_block = 0
         self.alpha = 1.
 
-    def forward(self, x, **kwargs):
+    def forward(self, x):
         fade = False
         alpha = self.alpha
         for i in range(0, self.cur_block + 1):
-            x = self.blocks[i](x, last=(i == self.cur_block), **kwargs)
+            x = self.blocks[i](x, last=(i == self.cur_block))
             if alpha < 1. and i == self.cur_block - 1:
-                tmp = self.blocks[i].out_sequence(x, **kwargs)
+                tmp = self.blocks[i].out_sequence(x)
                 fade = True
 
         if fade:
-            tmp = self.blocks[i - 1].fade_sequence(tmp, **kwargs)
+            tmp = self.blocks[i - 1].fade_sequence(tmp)
             x = alpha * x + (1. - alpha) * tmp
         return x
 

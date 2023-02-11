@@ -2,10 +2,10 @@
 
 import torch
 
-from eeggan.pytorch.modules.module import Module
+from torch import nn
 
 
-class PixelNorm(Module):
+class PixelNorm(nn.Module):
     """
     References
     ----------
@@ -14,6 +14,6 @@ class PixelNorm(Module):
     Retrieved from http://arxiv.org/abs/1710.10196
     """
 
-    def forward(self, x, eps=1e-8, **kwargs):
+    def forward(self, x, eps=1e-8):
         tmp = torch.sqrt(torch.pow(x, 2).mean(dim=1, keepdim=True) + eps)
         return x / tmp

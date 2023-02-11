@@ -37,27 +37,26 @@ class GanSoftplusTrainer(Trainer):
         self.discriminator.train(True)
 
         has_r1 = self.r1_gamma > 0.
-        fx_real = self.discriminator(batch_real.X.requires_grad_(has_r1), y=batch_real.y.requires_grad_(has_r1),
-                                     y_onehot=batch_real.y_onehot.requires_grad_(has_r1))
+        fx_real = self.discriminator(batch_real.X.requires_grad_(has_r1))
         loss_real = softplus(-fx_real).mean()
         loss_real.backward(retain_graph=has_r1)
         loss_r1 = None
         if has_r1:
-            r1_penalty = self.r1_gamma * calc_gradient_penalty(batch_real.X.requires_grad_(True),
-                                                               batch_real.y_onehot.requires_grad_(True), fx_real)
+            r1_penalty = self.r1_gamma * calc_gradient_penalty(X=batch_real.X.requires_grad_(True),
+                                                               y=None, 
+                                                               outputs=fx_real)
             r1_penalty.backward()
             loss_r1 = r1_penalty.item()
 
         has_r2 = self.r2_gamma > 0.
-        
-        fx_fake = self.discriminator(batch_fake.X.requires_grad_(has_r2), y=batch_fake.y.requires_grad_(has_r2),
-                                     y_onehot=batch_fake.y_onehot.requires_grad_(has_r2))
+        fx_fake = self.discriminator(batch_fake.X.requires_grad_(has_r2))
         loss_fake = softplus(fx_fake).mean()
         loss_fake.backward(retain_graph=has_r2)
         loss_r2 = None
         if has_r2:
-            r2_penalty = self.r1_gamma * calc_gradient_penalty(batch_fake.X.requires_grad_(True),
-                                                               batch_fake.y_onehot.requires_grad_(True), fx_real)
+            r2_penalty = self.r1_gamma * calc_gradient_penalty(x=batch_fake.X.requires_grad_(True),
+                                                               y=None, 
+                                                               outputs=fx_real)
             r2_penalty.backward()
             loss_r2 = r2_penalty.item()
 
@@ -76,13 +75,9 @@ class GanSoftplusTrainer(Trainer):
                                                       *self.generator.create_latent_input(self.rng, len(batch_real.X)))
             latent, y_fake, y_onehot_fake = detach_all(latent, y_fake, y_onehot_fake)
 
-        X_fake = self.generator(latent.requires_grad_(False), y=y_fake.requires_grad_(False),
-                                y_onehot=y_onehot_fake.requires_grad_(False))
+        X_fake = self.generator(latent.requires_grad_(False))
         batch_fake = Data[torch.Tensor](X_fake, y_fake, y_onehot_fake)
-
-
-        fx_fake = self.discriminator(batch_fake.X.requires_grad_(True), y=batch_fake.y.requires_grad_(True),
-                                     y_onehot=batch_fake.y_onehot.requires_grad_(True))
+        fx_fake = self.discriminator(batch_fake.X.requires_grad_(True))
         loss = softplus(-fx_fake).mean()
         loss.backward()
 

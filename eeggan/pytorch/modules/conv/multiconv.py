@@ -3,12 +3,11 @@
 import torch
 import torch.nn as nn
 
-from eeggan.pytorch.modules.module import Module
 from eeggan.pytorch.utils.bias import fill_bias_zero
 from eeggan.pytorch.utils.weights import fill_weights_normal
 
 
-class MultiConv1d(Module):
+class MultiConv1d(nn.Module):
     def __init__(self, conv_configs, in_channels, out_channels, split_in_channels=False, reflective=False):
         super().__init__()
         assert (out_channels % len(conv_configs) == 0)
@@ -37,7 +36,7 @@ class MultiConv1d(Module):
             fill_bias_zero(conv.bias)
             self.convs.append(conv)
 
-    def forward(self, x, **kwargs):
+    def forward(self, x):
         tmp_outputs = list()
         for i, conv in enumerate(self.convs):
             tmp_input = x

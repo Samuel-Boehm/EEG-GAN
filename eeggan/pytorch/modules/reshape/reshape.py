@@ -2,10 +2,10 @@
 
 #  Author: Kay Hartmann <kg.hartma@gmail.com>
 
-from eeggan.pytorch.modules.module import Module
+from torch import nn
 
 
-class Reshape(Module):
+class Reshape(nn.Module):
     """
     Reshape tensor into new shape
 
@@ -20,7 +20,7 @@ class Reshape(Module):
         super().__init__()
         self.shape = shape
 
-    def forward(self, x, **kwargs):
+    def forward(self, x):
         shape = list(self.shape)
         for i in range(len(shape)):
             if type(shape[i]) is list or type(shape[i]) is tuple:
