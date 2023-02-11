@@ -9,7 +9,6 @@ import torch
 
 import sys
 
-from eeggan.pytorch.modules.module import Module
 from eeggan.training.generator import Generator
 
 """
@@ -19,7 +18,7 @@ Retrieved from http://arxiv.org/abs/1710.10196
 """
 
 
-class ProgressiveGeneratorBlock(Module):
+class ProgressiveGeneratorBlock(nn.Module):
     """
     Block for one Generator stage during progression
 

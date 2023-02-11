@@ -7,8 +7,6 @@ import sys
 
 from torch import nn
 import torch
-
-from eeggan.pytorch.modules.module import Module
 from eeggan.training.discriminator import Discriminator
 
 """
@@ -18,7 +16,7 @@ Retrieved from http://arxiv.org/abs/1710.10196
 """
 
 
-class ProgressiveDiscriminatorBlock(Module):
+class ProgressiveDiscriminatorBlock(nn.Module):
     """
     Block for one Discriminator stage during progression
 
