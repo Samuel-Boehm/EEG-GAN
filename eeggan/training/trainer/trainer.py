@@ -10,7 +10,7 @@ from ignite.metrics import Metric, MetricUsage
 from numpy.random.mtrand import RandomState
 from torch.optim.optimizer import Optimizer
 
-from eeggan.cuda import to_device, display_GPU_load
+from eeggan.cuda import to_device
 from eeggan.data.dataset import Data
 from eeggan.training.discriminator import Discriminator
 from eeggan.training.generator import Generator
@@ -73,7 +73,7 @@ class Trainer(Engine, metaclass=ABCMeta):
 
             latent, y_fake, y_onehot_fake = to_device(batch_real.X.device,
                                                       *self.generator.create_latent_input(self.rng, len(batch_real.X)))
-            X_fake = self.generator(latent)
+            X_fake = self.generator(latent, y_fake)
             batch_fake: Data[torch.Tensor] = Data(X_fake, y_fake, y_onehot_fake)
 
         batch_real, batch_fake, latent = detach_all(batch_real, batch_fake, latent)
@@ -84,7 +84,7 @@ class Trainer(Engine, metaclass=ABCMeta):
         with torch.no_grad():
             latent, y_fake, y_onehot_fake = to_device(batch_real.X.device,
                                                       *self.generator.create_latent_input(self.rng, len(batch_real.X)))
-            X_fake = self.generator(latent)
+            X_fake = self.generator(latent, y_fake)
             batch_fake: Data[torch.Tensor] = Data(X_fake, y_fake, y_onehot_fake)
 
         batch_real, batch_fake, latent = detach_all(batch_real, batch_fake, latent)

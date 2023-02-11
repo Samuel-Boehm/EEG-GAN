@@ -22,8 +22,6 @@ from eeggan.training.handlers.plots import SpectralPlot
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.trainer import Trainer
 from torch.utils.tensorboard import SummaryWriter
-from eeggan.examples.high_gamma.load_gan import load_GAN
-
 
 def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: str,
           progression_handler: ProgressionHandler, trainer: Trainer, n_batch: int, lr_d: float, lr_g: float,

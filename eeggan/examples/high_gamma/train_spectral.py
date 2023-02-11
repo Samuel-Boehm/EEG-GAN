@@ -54,6 +54,12 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
     generator = progression_handler.generator
     spectral_discriminator = progression_handler.spectral_discriminator
 
+    num_gpus = torch.cuda.device_count()
+    print('num_gpus: ', num_gpus)
+    discriminator = torch.nn.DataParallel(discriminator, device_ids=list(range(num_gpus)))
+    generator  = torch.nn.DataParallel(generator, device_ids=list(range(num_gpus)))
+    spectral_discriminator  = torch.nn.DataParallel(spectral_discriminator, device_ids=list(range(num_gpus)))
+
     discriminator, generator, spectral_discriminator = to_cuda(discriminator, generator, spectral_discriminator)
 
         
@@ -100,6 +106,7 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         # initiate spectral plotter
         spectral_plot = SpectralPlot(pyplot.figure(figsize=(15,7)), plot_path, "spectral_stage_%d_" % stage, X_block.shape[2],
                                      orig_fs / sample_factor, tb_writer = tensorboard_writer)
+                                     
         spectral_profile_plot = DiscriminatorSpectrum(pyplot.figure(), plot_path, "spectral_profile_%d_" % stage,
                                                     tb_writer = tensorboard_writer)
 
@@ -111,13 +118,11 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         # initiate metrics
         metric_wasserstein = WassersteinMetric(100, np.prod(X_block.shape[1:]).item(), tb_writer=tensorboard_writer)
         metric_inception = InceptionMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
-        # metric_frechet = FrechetMetric(deep4s, sample_factor, tb_writer=tensorboard_writer) -> Does not work becaus of GPU memory overload :( 
+        metric_frechet = FrechetMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
         metric_loss = LossMetric(tb_writer=tensorboard_writer)
         metric_classification = ClassificationMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
-        metric_POT_SWD = WassersteinMetricPOT(100, tb_writer=tensorboard_writer)
-        metric_old_swd = Old_WassersteinMetric(100, np.prod(X_block.shape[1:]).item(), tb_writer=tensorboard_writer)
-        metrics = [metric_wasserstein, metric_POT_SWD, metric_old_swd, metric_inception, metric_loss, metric_classification]
-        metric_names = ["wasserstein", "POT_SWD", 'old_swd', "inception", "loss", "classification"]
+        metrics = [metric_wasserstein, metric_inception, metric_frechet, metric_loss, metric_classification]
+        metric_names = ["wasserstein", "inception", 'frechet', 'loss', 'classification']
         trainer.attach_metrics(metrics, metric_names, usage_metrics)
 
         # wrap into cuda loader

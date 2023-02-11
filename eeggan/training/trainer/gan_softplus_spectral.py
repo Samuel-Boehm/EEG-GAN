@@ -22,7 +22,7 @@ def gradient_penalty(D, batch_real: Data[torch.Tensor], batch_fake: Data[torch.T
     # getting x hat
     interpolated = alpha * batch_real.X + (1 - alpha) * batch_fake.X
 
-    dis_interpolated = D(interpolated, y=batch_real.y, y_onehot=batch_real.y_onehot)
+    dis_interpolated = D(interpolated)
     grad_outputs = torch.ones(dis_interpolated.shape).to(device)
 
     # Calculate gradients of probabilities with respect to examples
@@ -70,8 +70,7 @@ class SpectralTrainer(GanSoftplusTrainer):
         discriminator.train(True)
 
         has_r1 = self.r1_gamma > 0.
-        fx_real = discriminator(batch_real.X.requires_grad_(has_r1), y=batch_real.y.requires_grad_(has_r1),
-                                     y_onehot=batch_real.y_onehot.requires_grad_(has_r1))
+        fx_real = discriminator(batch_real.X.requires_grad_(has_r1), batch_real.y.requires_grad_(has_r1))
 
         loss_real = softplus(-fx_real).mean()
         loss_real.backward(retain_graph=has_r1)
@@ -85,14 +84,13 @@ class SpectralTrainer(GanSoftplusTrainer):
 
         has_r2 = self.r2_gamma > 0.
         
-        fx_fake = discriminator(batch_fake.X.requires_grad_(has_r2), y=batch_fake.y.requires_grad_(has_r2),
-                                     y_onehot=batch_fake.y_onehot.requires_grad_(has_r2))
+        fx_fake = discriminator(batch_fake.X.requires_grad_(has_r2), batch_fake.y.requires_grad_(has_r2))
         loss_fake = softplus(fx_fake).mean()
         loss_fake.backward(retain_graph=has_r2)
         loss_r2 = None
         if has_r2:
             r2_penalty = self.r1_gamma * calc_gradient_penalty(batch_fake.X.requires_grad_(True),
-                                                               batch_fake.y_onehot.requires_grad_(True), fx_real)
+                                                               None, fx_real)
             r2_penalty.backward()
             loss_r2 = r2_penalty.item()
 
@@ -122,16 +120,13 @@ class SpectralTrainer(GanSoftplusTrainer):
                                                       *self.generator.create_latent_input(self.rng, len(batch_real.X)))
             latent, y_fake, y_onehot_fake = detach_all(latent, y_fake, y_onehot_fake)
 
-        X_fake = self.generator(latent.requires_grad_(False), y=y_fake.requires_grad_(False),
-                                y_onehot=y_onehot_fake.requires_grad_(False))
+        X_fake = self.generator(latent.requires_grad_(False), y_fake)
         batch_fake = Data[torch.Tensor](X_fake, y_fake, y_onehot_fake)
 
 
-        fx_fake = self.discriminator(batch_fake.X.requires_grad_(True), y=batch_fake.y.requires_grad_(True),
-                                     y_onehot=batch_fake.y_onehot.requires_grad_(True))
+        fx_fake = self.discriminator(batch_fake.X.requires_grad_(True), batch_fake.y)
         
-        sp_fake = self.spectral_discriminator(batch_fake.X.requires_grad_(True), y=batch_fake.y.requires_grad_(True),
-                                     y_onehot=batch_fake.y_onehot.requires_grad_(True))
+        sp_fake = self.spectral_discriminator(batch_fake.X.requires_grad_(True), batch_fake.y)
         
         
         # loss_td = softplus(-fx_fake).mean()
