@@ -6,7 +6,7 @@ import numpy as np
 from torch import nn
 from torch.nn import Parameter
 
-from eeggan.pytorch.modules.conv.multiconv import MultiConv1d
+from eeggan.examples.high_gamma.models.layers.multiconv import MultiConv1d
 
 
 class WeightScale(object):

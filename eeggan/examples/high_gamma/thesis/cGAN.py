@@ -10,7 +10,7 @@ sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
 from eeggan.examples.high_gamma.models.conditional import Conditional
 from eeggan.examples.high_gamma.train import train
-from eeggan.pytorch.utils.weights import weight_filler
+from eeggan.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 from torch.utils.tensorboard import SummaryWriter

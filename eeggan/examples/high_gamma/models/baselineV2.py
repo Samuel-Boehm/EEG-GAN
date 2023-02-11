@@ -5,15 +5,14 @@ from torch import nn
 from torch.nn.init import calculate_gain
 
 from eeggan.model.builder import ProgressiveModelBuilder
-from eeggan.pytorch.modules.conv.multiconv import MultiConv1d
-from eeggan.pytorch.modules.normalization.pixelnorm import PixelNorm
-from eeggan.pytorch.modules.projection.project import EmbeddedClassStyle
-from eeggan.pytorch.modules.reshape.permute import Permute
-from eeggan.pytorch.modules.reshape.pixelshuffle import PixelShuffle2d
-from eeggan.pytorch.modules.reshape.reshape import Reshape
-from eeggan.pytorch.modules.scaling.interpolate import Interpolate
-from eeggan.pytorch.modules.sequential import Sequential
-from eeggan.pytorch.modules.weights.weight_scaling import weight_scale
+from eeggan.examples.high_gamma.models.layers.multiconv import MultiConv1d
+from eeggan.examples.high_gamma.models.layers.pixelnorm import PixelNorm
+from eeggan.examples.high_gamma.models.layers.project import EmbeddedClassStyle
+from eeggan.examples.high_gamma.models.layers.permute import Permute
+from eeggan.examples.high_gamma.models.layers.pixelshuffle import PixelShuffle2d
+from eeggan.examples.high_gamma.models.layers.reshape import Reshape
+from eeggan.examples.high_gamma.models.layers.interpolate import Interpolate
+from eeggan.examples.high_gamma.models.layers.weight_scaling import weight_scale
 from eeggan.training.progressive.discriminator import ProgressiveDiscriminatorBlock, ProgressiveDiscriminator
 from eeggan.training.progressive.generator import ProgressiveGeneratorBlock, ProgressiveGenerator
 
@@ -38,7 +37,7 @@ class BaselineV2(ProgressiveModelBuilder):
         if self.downsampling in ['nearest', 'linear', 'area', 'cubic']:
             return build_interpolate(0.5, self.downsampling)
         if self.downsampling == 'conv':
-            return Sequential(
+            return nn.Sequential(
                 nn.ReflectionPad1d(1),
                 weight_scale(nn.Conv1d(self.n_filters, self.n_filters, 4, stride=2),
                              gain=calculate_gain('leaky_relu')),
@@ -49,14 +48,14 @@ class BaselineV2(ProgressiveModelBuilder):
         if self.upsampling in ['nearest', 'linear', 'area', 'cubic']:
             return build_interpolate(2, self.upsampling)
         if self.upsampling == 'conv':
-            return Sequential(
+            return nn.Sequential(
                 weight_scale(nn.ConvTranspose1d(self.n_filters, self.n_filters, 4, stride=2, padding=1),
                              gain=calculate_gain('leaky_relu')),
                 nn.LeakyReLU(0.2)
             )
 
     def build_disc_conv_sequence(self, i_stage: int):
-        return Sequential(
+        return nn.Sequential(
             weight_scale(create_multiconv_for_stage(self.n_filters, i_stage),
                          gain=calculate_gain('leaky_relu')),
             nn.LeakyReLU(0.2),
@@ -70,7 +69,7 @@ class BaselineV2(ProgressiveModelBuilder):
         )
 
     def build_disc_in_sequence(self):
-        return Sequential(
+        return nn.Sequential(
             weight_scale(nn.Conv1d(self.n_channels, self.n_filters, 1),
                          gain=calculate_gain('leaky_relu')),
             nn.LeakyReLU(0.2)
@@ -90,7 +89,7 @@ class BaselineV2(ProgressiveModelBuilder):
             blocks.append(block)
 
         last_block = ProgressiveDiscriminatorBlock(
-            Sequential(
+            nn.Sequential(
                 self.build_disc_conv_sequence(0),
                 Reshape([[0], self.n_filters * self.n_time_last_layer]),
                 weight_scale(nn.Linear(self.n_filters * self.n_time_last_layer, 1),
@@ -103,7 +102,7 @@ class BaselineV2(ProgressiveModelBuilder):
         return ProgressiveDiscriminator(self.n_time, self.n_channels, self.n_classes, blocks)
 
     def build_gen_conv_sequence(self, i_stage: int):
-        return Sequential(
+        return nn.Sequential(
             self.build_gen_upsample_sequence(),
             weight_scale(create_multiconv_for_stage(self.n_filters, i_stage),
                          gain=calculate_gain('leaky_relu')),
@@ -120,7 +119,7 @@ class BaselineV2(ProgressiveModelBuilder):
         )
 
     def build_gen_out_sequence(self):
-        return Sequential(
+        return nn.Sequential(
             weight_scale(nn.Conv1d(self.n_filters, self.n_channels, 1),
                          gain=calculate_gain('linear')),
             Reshape([[0], [1], [2], 1]),
@@ -135,7 +134,7 @@ class BaselineV2(ProgressiveModelBuilder):
     def build_generator(self) -> ProgressiveGenerator:
         blocks = []
         first_block = ProgressiveGeneratorBlock(
-            Sequential(
+            nn.Sequential(
                 weight_scale(nn.Linear(self.n_latent, self.n_filters * self.n_time_last_layer),
                              gain=calculate_gain('leaky_relu')),
                 Reshape([[0], self.n_filters, -1]),
@@ -162,7 +161,7 @@ def build_interpolate(scale_factor: float, mode: str):
     if mode in ['nearest', 'linear', 'area']:
         return Interpolate(scale_factor=scale_factor, mode=mode)
     if mode == 'cubic':
-        return Sequential(
+        return nn.Sequential(
             Reshape([[0], [1], [2], 1]),
             Interpolate(scale_factor=(scale_factor, 1), mode='bicubic'),
             Reshape([[0], [1], [2]])

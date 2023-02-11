@@ -2,9 +2,7 @@ import numpy as np
 from torch import nn
 from torch.nn.init import calculate_gain
 
-from eeggan.pytorch.modules.reshape.reshape import Reshape
-from eeggan.pytorch.modules.sequential import Sequential
-from eeggan.pytorch.modules.weights.weight_scaling import weight_scale
+from eeggan.examples.high_gamma.models.layers.weight_scaling import weight_scale
 from eeggan.training.conditional.conditionalDiscriminator import ProgressiveDiscriminatorBlock
 from eeggan.training.conditional.conditionalSpectralDiscriminator import ProgressiveSpectralDiscriminator
 from eeggan.examples.high_gamma.models.conditional import Conditional
@@ -27,7 +25,7 @@ class SP_GAN(Conditional):
             out_size = int(np.floor(self.input_spectral / 2 ** (i + 1))) 
             blocks.append(linearBlock(in_size, out_size))
 
-        last_block = Sequential(
+        last_block = nn.Sequential(
             nn.Linear(self.input_spectral, 1)
         )
         blocks.append(last_block)

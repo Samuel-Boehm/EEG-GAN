@@ -11,7 +11,7 @@ from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import 
 INPUT_LENGTH)
 from eeggan.examples.high_gamma.models.conditional import Conditional
 from eeggan.examples.high_gamma.train_spd import train
-from eeggan.pytorch.utils.weights import weight_filler
+from eeggan.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.gan_softplus_spectral import SpectralTrainer
 

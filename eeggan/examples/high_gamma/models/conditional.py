@@ -6,11 +6,11 @@ from torch import nn
 from torch.nn.init import calculate_gain
 
 from eeggan.model.builder import ProgressiveModelBuilder
-from eeggan.pytorch.modules.conv.multiconv import MultiConv1d
-from eeggan.pytorch.modules.normalization.pixelnorm import PixelNorm
-from eeggan.pytorch.modules.reshape.reshape import Reshape
-from eeggan.pytorch.modules.scaling.interpolate import Interpolate
-from eeggan.pytorch.modules.weights.weight_scaling import weight_scale
+from eeggan.examples.high_gamma.models.layers.multiconv import MultiConv1d
+from eeggan.examples.high_gamma.models.layers.pixelnorm import PixelNorm
+from eeggan.examples.high_gamma.models.layers.reshape import Reshape
+from eeggan.examples.high_gamma.models.layers.interpolate import Interpolate
+from eeggan.examples.high_gamma.models.layers.weight_scaling import weight_scale
 from eeggan.training.conditional.conditionalDiscriminator import ProgressiveDiscriminatorBlock, ProgressiveConditionalDiscriminator
 from eeggan.training.conditional.conditionalGenerator import ProgressiveGeneratorBlock, ProgressiveConditionalGenerator
 

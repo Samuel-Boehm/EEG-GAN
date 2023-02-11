@@ -3,9 +3,7 @@ from torch import nn
 import torch
 from torch.nn.init import calculate_gain
 
-from eeggan.pytorch.modules.reshape.reshape import Reshape
-from eeggan.pytorch.modules.sequential import Sequential
-from eeggan.pytorch.modules.weights.weight_scaling import weight_scale
+from eeggan.examples.high_gamma.models.layers.weight_scaling import weight_scale
 from eeggan.training.conditional.conditionalDiscriminator import ProgressiveDiscriminatorBlock
 from eeggan.training.conditional.conditionalSpectralDiscriminator import ProgressiveSpectralDiscriminator
 from eeggan.examples.high_gamma.models.conditional import Conditional
@@ -34,7 +32,7 @@ class SP_GAN(Conditional):
             blocks.append(block)
 
         last_block = ProgressiveDiscriminatorBlock(
-            Sequential(nn.Linear(int(self.n_time / 2 ** (self.n_stages - 1)) , 1)),
+            nn.Sequential(nn.Linear(int(self.n_time / 2 ** (self.n_stages - 1)) , 1)),
             self.build_spectral_discriminator_in_sequence(self.n_stages- 1),
             None)
 
@@ -47,7 +45,7 @@ class SP_GAN(Conditional):
         vector_length = self.calculate_vector_length(stage)
         in_size = vector_length
         out_size = int(self.n_time / 2 ** (stage))
-        return Sequential(
+        return nn.Sequential(
             weight_scale(nn.Linear(in_size, out_size), gain=calculate_gain('leaky_relu')),
             nn.LeakyReLU(0.2)
             )

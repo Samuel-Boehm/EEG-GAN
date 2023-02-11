@@ -3,8 +3,8 @@
 import torch
 import torch.nn as nn
 
-from eeggan.pytorch.utils.bias import fill_bias_zero
-from eeggan.pytorch.utils.weights import fill_weights_normal
+from eeggan.utils.bias import fill_bias_zero
+from eeggan.utils.weights import fill_weights_normal
 
 
 class MultiConv1d(nn.Module):

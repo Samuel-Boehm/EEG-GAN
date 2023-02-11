@@ -12,7 +12,7 @@ sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 from eeggan.examples.high_gamma.models.sp_pro_lin_GAN import SP_GAN
 from eeggan.training.progressive.handler import SpectralProgessionHandler
 from eeggan.training.trainer.gan_softplus_spectral import SpectralTrainer
-from eeggan.pytorch.utils.weights import weight_filler
+from eeggan.utils.weights import weight_filler
 from eeggan.examples.high_gamma.train_spectral import train_spectral
 from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import (FS, N_PROGRESSIVE_STAGES,
 INPUT_LENGTH)

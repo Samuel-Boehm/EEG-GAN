@@ -1,9 +1,8 @@
 #  Author: Kay Hartmann <kg.hartma@gmail.com>
 
-from eeggan.pytorch.modules.module import Module
+from torch import nn
 
-
-class PixelShuffle1d(Module):
+class PixelShuffle1d(nn.Module):
     """
     1d pixel shuffling
     Shuffles filter dimension into trailing dimension
@@ -39,7 +38,7 @@ class PixelShuffle1d(Module):
         return shuffle_out.view(batch_size, channels, out_height)
 
 
-class PixelShuffle2d(Module):
+class PixelShuffle2d(nn.Module):
     """
     2d pixel shuffling
     Shuffles filter dimension into trailing dimensions

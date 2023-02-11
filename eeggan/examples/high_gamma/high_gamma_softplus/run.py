@@ -12,7 +12,7 @@ from eeggan.examples.high_gamma.high_gamma_softplus.make_data_rest_right import 
 from eeggan.examples.high_gamma.models.baseline import Baseline
 from eeggan.examples.high_gamma.train import train
 from eeggan.model.builder import ProgressiveModelBuilder
-from eeggan.pytorch.utils.weights import weight_filler
+from eeggan.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 from torch.utils.tensorboard import SummaryWriter

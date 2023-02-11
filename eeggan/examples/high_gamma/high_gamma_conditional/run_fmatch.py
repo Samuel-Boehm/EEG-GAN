@@ -13,7 +13,7 @@ INPUT_LENGTH)
 from eeggan.examples.high_gamma.models.conditional import Conditional
 from eeggan.examples.high_gamma.train import train
 from eeggan.model.builder import ProgressiveModelBuilder
-from eeggan.pytorch.utils.weights import weight_filler
+from eeggan.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.gan_softplus_f_match import GanSoftplusTrainer
 from eeggan.examples.high_gamma.make_data import create_filename_from_subj_ind

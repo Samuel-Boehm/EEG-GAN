@@ -12,7 +12,7 @@ from eeggan.examples.high_gamma.high_gamma_wgan.make_data_right_left import FS, 
 from eeggan.examples.high_gamma.models.baseline import Baseline
 from eeggan.examples.high_gamma.train import train
 from eeggan.model.builder import ProgressiveModelBuilder
-from eeggan.pytorch.utils.weights import weight_filler
+from eeggan.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.wgan_gp import WganGpTrainer
 
