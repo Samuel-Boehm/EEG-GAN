@@ -2,10 +2,10 @@
 
 #  Author: Kay Hartmann <kg.hartma@gmail.com>
 
-from eeggan.pytorch.modules.module import Module
+from torch import nn
 
 
-class Permute(Module):
+class Permute(nn.Module):
     def __init__(self, dims):
         super().__init__()
         self.dims = dims

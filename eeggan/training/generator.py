@@ -5,12 +5,12 @@ from abc import ABCMeta
 from numpy.random.mtrand import RandomState
 from torch import Tensor
 from typing import Tuple
-
+from torch import nn
+import torch
 from eeggan.data.preprocess.util import create_onehot_vector
-from eeggan.pytorch.modules.module import Module
 
 
-class Generator(Module, metaclass=ABCMeta):
+class Generator(nn.Module, metaclass=ABCMeta):
     """
     Base Generator Class
     """

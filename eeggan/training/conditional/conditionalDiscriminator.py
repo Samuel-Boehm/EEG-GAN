@@ -38,10 +38,10 @@ class ProgressiveDiscriminatorBlock(Module):
         self.in_sequence = in_sequence
         self.fade_sequence = fade_sequence
 
-    def forward(self, x, first=False, **kwargs):
+    def forward(self, x, first=False):
         if first:
-            x = self.in_sequence(x, **kwargs)
-        out = self.intermediate_sequence(x, **kwargs)
+            x = self.in_sequence(x)
+        out = self.intermediate_sequence(x)
         return out
 
 
@@ -78,7 +78,7 @@ class ProgressiveConditionalDiscriminator(Discriminator):
 
 
 
-    def forward(self, x, y, **kwargs):
+    def forward(self, x, y):
 
         fade = False
         alpha = self.alpha
@@ -88,17 +88,17 @@ class ProgressiveConditionalDiscriminator(Discriminator):
 
         embedding = self.downsample_to_block(embedding, self.cur_block)
 
-        x = torch.cat([x, embedding], 1) #batch_size x n_channels + 1 x n_samples 
+        x = torch.cat([x, embedding], 1) # batch_size x n_channels + 1 x n_samples 
 
         for i in range(self.cur_block, len(self.blocks)):
             if alpha < 1. and i == self.cur_block:
-                tmp = self.blocks[i].fade_sequence(x, **kwargs)
-                tmp = self.blocks[i + 1].in_sequence(tmp, **kwargs)
+                tmp = self.blocks[i].fade_sequence(x)
+                tmp = self.blocks[i + 1].in_sequence(tmp)
                 fade = True
 
             if fade and i == self.cur_block + 1:
                 x = alpha * x + (1. - alpha) * tmp
-            x = self.blocks[i](x,  first=(i == self.cur_block), **kwargs)
+            x = self.blocks[i](x,  first=(i == self.cur_block))
   
         return x
 

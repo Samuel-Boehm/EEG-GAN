@@ -3,9 +3,6 @@ from typing import Iterable, Union
 
 from torch import Tensor, nn
 
-from torch import nn
-
-
 class Interpolate(nn.Module):
     """
     Interpolation layer. Down/up samples the input to the given scale_factor. 

@@ -8,10 +8,8 @@ from torch.nn.init import calculate_gain
 from eeggan.model.builder import ProgressiveModelBuilder
 from eeggan.pytorch.modules.conv.multiconv import MultiConv1d
 from eeggan.pytorch.modules.normalization.pixelnorm import PixelNorm
-from eeggan.pytorch.modules.projection.project import EmbeddedClassStyle
 from eeggan.pytorch.modules.reshape.reshape import Reshape
 from eeggan.pytorch.modules.scaling.interpolate import Interpolate
-from eeggan.pytorch.modules.sequential import Sequential
 from eeggan.pytorch.modules.weights.weight_scaling import weight_scale
 from eeggan.training.conditional.conditionalDiscriminator import ProgressiveDiscriminatorBlock, ProgressiveConditionalDiscriminator
 from eeggan.training.conditional.conditionalGenerator import ProgressiveGeneratorBlock, ProgressiveConditionalGenerator
@@ -53,7 +51,7 @@ class Conditional(ProgressiveModelBuilder):
         if self.downsampling in ['nearest', 'linear', 'area', 'cubic']:
             return build_interpolate(0.5, self.downsampling)
         if self.downsampling == 'conv':
-            return Sequential(
+            return nn.Sequential(
                 nn.ReflectionPad1d(1),
                 weight_scale(nn.Conv1d(self.n_filters, self.n_filters, 4, stride=2),
                              gain=calculate_gain('leaky_relu')),
@@ -66,7 +64,7 @@ class Conditional(ProgressiveModelBuilder):
         if self.upsampling in ['nearest', 'linear', 'area', 'cubic']:
             return build_interpolate(2, self.upsampling)
         if self.upsampling == 'conv':
-            return Sequential(
+            return nn.Sequential(
                 weight_scale(nn.ConvTranspose1d(self.n_filters, self.n_filters, 4, stride=2, padding=1),
                              gain=calculate_gain('leaky_relu')),
                 nn.LeakyReLU(0.2)
@@ -74,7 +72,7 @@ class Conditional(ProgressiveModelBuilder):
 
     def build_disc_conv_sequence(self, i_stage: int):
         # Returns a MultiConv1d layer for the given stage.
-        return Sequential(
+        return nn.Sequential(
             weight_scale(create_multiconv_for_stage(self.n_filters, i_stage),
                          gain=calculate_gain('leaky_relu')),
             nn.LeakyReLU(0.2),
@@ -82,14 +80,11 @@ class Conditional(ProgressiveModelBuilder):
                          gain=calculate_gain('leaky_relu')),
             nn.LeakyReLU(0.2),
             self.build_disc_downsample_sequence(),
-            weight_scale(EmbeddedClassStyle(self.n_classes, self.n_filters),
-                         gain=calculate_gain('leaky_relu')),
-            nn.LeakyReLU(0.2)
         )
 
     def build_disc_in_sequence(self):
         # Label Embedding is added as additional channel => self.n_channels + 1 
-        return Sequential(
+        return nn.Sequential(
             weight_scale(nn.Conv1d(self.n_channels +1, self.n_filters, 1),
                          gain=calculate_gain('leaky_relu')),
             nn.LeakyReLU(0.2)
@@ -109,7 +104,7 @@ class Conditional(ProgressiveModelBuilder):
             blocks.append(block)
 
         last_block = ProgressiveDiscriminatorBlock(
-            Sequential(
+            nn.Sequential(
                 self.build_disc_conv_sequence(0),
                 Reshape([[0], self.n_filters * self.n_time_last_layer]),
                 weight_scale(nn.Linear(self.n_filters * self.n_time_last_layer, 1),
@@ -122,7 +117,7 @@ class Conditional(ProgressiveModelBuilder):
         return ProgressiveConditionalDiscriminator(self.n_time, self.n_channels, self.n_classes, blocks)
 
     def build_gen_conv_sequence(self, i_stage: int):
-        return Sequential(
+        return nn.Sequential(
             self.build_gen_upsample_sequence(),
             weight_scale(create_multiconv_for_stage(self.n_filters, i_stage),
                          gain=calculate_gain('leaky_relu')),
@@ -131,15 +126,11 @@ class Conditional(ProgressiveModelBuilder):
             weight_scale(nn.Conv1d(self.n_filters, self.n_filters, kernel_size=1),
                          gain=calculate_gain('leaky_relu')),
             nn.LeakyReLU(0.2),
-            PixelNorm(),
-            weight_scale(EmbeddedClassStyle(self.n_classes, self.n_filters),
-                         gain=calculate_gain('leaky_relu')),
-            nn.LeakyReLU(0.2),
             PixelNorm()
         )
 
     def build_gen_out_sequence(self):
-        return Sequential(weight_scale(nn.Conv1d(self.n_filters, self.n_channels, 1),
+        return nn.Sequential(weight_scale(nn.Conv1d(self.n_filters, self.n_channels, 1),
                                        gain=calculate_gain('linear')))
 
     def build_gen_fade_sequence(self):
@@ -148,7 +139,7 @@ class Conditional(ProgressiveModelBuilder):
     def build_generator(self) -> ProgressiveConditionalGenerator:
         blocks = []
         first_block = ProgressiveGeneratorBlock(
-            Sequential(
+            nn.Sequential(
                 weight_scale(nn.Linear(self.n_latent + 10, self.n_filters * self.n_time_last_layer),
                              gain=calculate_gain('leaky_relu')),
                 Reshape([[0], self.n_filters, -1]),
@@ -186,7 +177,7 @@ def build_interpolate(scale_factor: float, mode: str):
     if mode in ['nearest', 'linear', 'area']:
         return Interpolate(scale_factor=scale_factor, mode=mode)
     if mode == 'cubic':
-        return Sequential(
+        return nn.Sequential(
             Reshape([[0], [1], [2], 1]),
             Interpolate(scale_factor=(scale_factor, 1), mode='bicubic'),
             Reshape([[0], [1], [2]])

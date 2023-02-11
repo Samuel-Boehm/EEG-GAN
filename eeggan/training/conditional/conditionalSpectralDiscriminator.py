@@ -47,7 +47,7 @@ class ProgressiveSpectralDiscriminator(Discriminator):
         self.calculate_size_for_block()
 
 
-    def forward(self, x, y, **kwargs):
+    def forward(self, x, y):
         #y = y.type(torch.int)
         #embedding = self.label_embedding(y).view(y.shape[0], 1, self.n_samples)
         #embedding = self.downsample_to_block(embedding, self.cur_block)
@@ -57,12 +57,12 @@ class ProgressiveSpectralDiscriminator(Discriminator):
         x = self.spectral_vector(x)
 
         for i in range(self.cur_block, len(self.blocks)):
-            x = self.blocks[i](x,  first=(i == self.cur_block), **kwargs)
+            x = self.blocks[i](x,  first=(i == self.cur_block))
         return x
 
-    def get_input(self, x, y, **kwargs):
+    def get_input(self, x, y):
         '''Returns the input before passing it through forwad
-        this is handy to plot the output of self.spectral_vector'''
+        this is used to plot the output of self.spectral_vector'''
         #y = y.type(torch.int)
         #embedding = self.label_embedding(y).view(y.shape[0], 1, self.n_samples)
         #embedding = self.downsample_to_block(embedding, self.cur_block)
@@ -75,7 +75,7 @@ class ProgressiveSpectralDiscriminator(Discriminator):
 
 
 
-    def spectral_vector(self, x, **kwargs):
+    def spectral_vector(self, x):
         """Assumes first dimension to be batch size."""
 
         fft = torch.view_as_real(torch.fft.rfft(x))

@@ -1,11 +1,10 @@
 #  Author: Kay Hartmann <kg.hartma@gmail.com>
 
 from abc import ABCMeta
+from torch import nn
 
-from eeggan.pytorch.modules.module import Module
 
-
-class Discriminator(Module, metaclass=ABCMeta):
+class Discriminator(nn.Module, metaclass=ABCMeta):
     """
     Base descriminator Class
     """
