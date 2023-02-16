@@ -30,6 +30,8 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
 
     plot_path = os.path.join(result_path, "plots")
     os.makedirs(plot_path, exist_ok=True)
+    os.makedirs(os.path.join(result_path, "batch_output"), exist_ok=True)
+
 
     init_cuda()  # activate cuda
 
