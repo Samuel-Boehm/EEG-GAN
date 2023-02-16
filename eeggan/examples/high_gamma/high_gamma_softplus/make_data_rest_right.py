@@ -13,20 +13,19 @@ from eeggan.examples.high_gamma.make_data import make_dataset_for_subj, make_dee
 
 FS = 512. * 2
 CLASSDICT_REST_RIGHT_HAND = OrderedDict([('right_hand', 1), ('left_hand', 2),('rest', 3), ('feet', 4) ])
-SEGMENT_IVAL = (-0.5, 4.00)
+# CLASSDICT_REST_RIGHT_HAND = OrderedDict([('right_hand', 1), ('rest', 3)])
+SEGMENT_IVAL = (-0.5, 2.50)
 INPUT_LENGTH = int((SEGMENT_IVAL[1] - SEGMENT_IVAL[0]) * FS)
 N_PROGRESSIVE_STAGES = 7
 N_DEEP4 = 10
-CHANNELS = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P7', 'P3', 'Pz', 'P4',
-            'P8', 'O1', 'O2', 'M1', 'M2']
+CHANNELS = ['Fp1','Fp2','F7','F3','Fz','F4','F8',
+            'T7','C3','Cz','C4','T8','P7','P3',
+            'Pz','P4','P8','O1','O2','M1','M2']
 N_EPOCHS = 100
 EXPERIMENT = 'Thesis'
 DATAPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/{EXPERIMENT}'
 MODELPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Models/{EXPERIMENT}'
-NAME = 'upsampled_deep4'
-
-RUN_ALL = False
-
+NAME = 'upsampled_Deep4'
 
 def run(name: str = NAME,
         dataset_path: str = DATAPATH,
@@ -39,7 +38,7 @@ def run(name: str = NAME,
         n_deep: int = N_DEEP4,
         n_epochs = N_EPOCHS):
 
-    init_cuda()  # activate cuda
+    init_cuda()  #activate cuda
 
     make_dataset_for_subj(name=name, dataset_path=dataset_path,
                           channels=channels, classdict=classdict,

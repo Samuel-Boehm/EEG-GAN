@@ -17,7 +17,7 @@ from eeggan.data.dataset import Data
 from eeggan.data.preprocess.resample import downsample
 from eeggan.examples.high_gamma.make_data import load_dataset, load_deeps4
 from eeggan.training.handlers.metrics import WassersteinMetric, InceptionMetric, FrechetMetric, \
-    LossMetric,ClassificationMetric, WassersteinMetricPOT, Old_WassersteinMetric
+    LossMetric,ClassificationMetric, SaveBatch
 from eeggan.training.handlers.plots import SpectralPlot, DiscriminatorSpectrum
 from eeggan.training.progressive.handler import SpectralProgessionHandler
 from eeggan.training.trainer.gan_softplus_spectral import SpectralTrainer
@@ -95,8 +95,8 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         trainer.set_optimizers(optim_discriminator, optim_generator, optim_spectral)
 
         # modules to save
-        to_save = {'discriminator': discriminator, 'generator': generator,
-                   'optim_discriminator': optim_discriminator, 'optim_generator': optim_generator}
+        to_save = {'discriminator': discriminator, 'generator': generator, 'spectral_discriminator': spectral_discriminator,
+                   'optim_discriminator': optim_discriminator, 'optim_generator': optim_generator, 'optim_spectral':optim_spectral}
 
         # load trained deep4s for stage
         deep4s = load_deeps4(dataset_name, stage, deep4s_path)
@@ -104,10 +104,10 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         deep4s = [to_cuda(IntermediateOutputWrapper(select_modules, deep4)) for deep4 in deep4s]
 
         # initiate spectral plotter
-        spectral_plot = SpectralPlot(pyplot.figure(figsize=(15,7)), plot_path, "spectral_stage_%d_" % stage, X_block.shape[2],
+        spectral_plot = SpectralPlot(pyplot.figure(), plot_path, "spectral_stage_%d_" % stage, X_block.shape[2],
                                      orig_fs / sample_factor, tb_writer = tensorboard_writer)
                                      
-        spectral_profile_plot = DiscriminatorSpectrum(pyplot.figure(), plot_path, "spectral_profile_%d_" % stage,
+        spectral_profile_plot = DiscriminatorSpectrum(pyplot.figure(), plot_path, "sp_loss_%d_" % stage,
                                                     tb_writer = tensorboard_writer)
 
         event_name = Events.EPOCH_COMPLETED(every=plot_every_epoch)

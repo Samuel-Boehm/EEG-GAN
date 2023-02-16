@@ -174,7 +174,7 @@ def _preprocess_and_stack(raw, channels, interval_times, fs, mapping):
 
     X = mne_epochs.get_data()
     X = X.astype(dtype=np.float32)
-    X = ZCA_whitening(X)
+    # X = ZCA_whitening(X)
     annots = mne_epochs.get_annotations_per_epoch()
     labels = [x[0][-1] for x in annots]
     y = [mapping[k] for k in labels]

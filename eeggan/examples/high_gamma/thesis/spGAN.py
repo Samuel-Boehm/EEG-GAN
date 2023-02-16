@@ -17,10 +17,10 @@ from eeggan.examples.high_gamma.train_spectral import train_spectral
 
 
 FS = 512.
-SEGMENT_IVAL = (-0.5, 4.00)
+SEGMENT_IVAL = (-0.5, 2.50)
 INPUT_LENGTH = int((SEGMENT_IVAL[1] - SEGMENT_IVAL[0]) * FS)
 N_PROGRESSIVE_STAGES = 6
-N_EPOCHS_PER_STAGE = 1000
+N_EPOCHS_PER_STAGE = 500
 
 EXPERIMENT = 'Thesis'
 DATASET = 'whitened'
@@ -41,7 +41,7 @@ config = dict(
     n_stages=N_PROGRESSIVE_STAGES,  # number of progressive stages
     n_epochs_per_stage=N_EPOCHS_PER_STAGE,  # epochs in each progressive stage
     n_epochs_metrics=100,
-    plot_every_epoch=500,
+    plot_every_epoch=250,
     n_epochs_fade=int(0.1 * N_EPOCHS_PER_STAGE),
     use_fade=False,
     freeze_stages=True,

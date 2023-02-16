@@ -70,7 +70,7 @@ class Baseline(ProgressiveModelBuilder):
                 nn.LeakyReLU(0.2)
             )
 
-    def build_disc_conv_sequence(self, i_stage: int):
+    def build_disc_conv_sequence(self, i_stage: int)-> nn.Module:
         # Returns a MultiConv1d layer for the given stage.
         return nn.Sequential(
             weight_scale(create_multiconv_for_stage(self.n_filters, i_stage),
@@ -82,7 +82,7 @@ class Baseline(ProgressiveModelBuilder):
             self.build_disc_downsample_sequence()
         )
 
-    def build_disc_in_sequence(self):
+    def build_disc_in_sequence(self)-> nn.Module:
         return nn.Sequential(
             weight_scale(nn.Conv1d(self.n_channels, self.n_filters, 1),
                          gain=calculate_gain('leaky_relu')),

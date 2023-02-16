@@ -71,7 +71,7 @@ class ProgressiveGenerator(Generator):
         self.cur_block = 0
         self.alpha = 1.
 
-    def forward(self, x):
+    def forward(self, x, y=None):
         fade = False
         alpha = self.alpha
         for i in range(0, self.cur_block + 1):

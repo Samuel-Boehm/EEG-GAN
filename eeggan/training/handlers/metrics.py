@@ -8,6 +8,8 @@ import torch
 from ignite.metrics import Metric
 from torch import Tensor
 from torch.nn.modules.module import Module
+import joblib
+import os
 
 from eeggan.cuda import to_device
 from eeggan.data.preprocess.resample import upsample
@@ -226,3 +228,15 @@ class LossMetric(ListMetric[Dict]):
             for key in batch_output.loss_g.keys():
                 if batch_output.loss_g[key]:
                     self.tb_writer.add_scalar(str(key), batch_output.loss_g[key], batch_output.i_epoch)
+
+class SaveBatch(ListMetric):
+    def __init__(self, path, *args, **kwargs):
+        self.path = path
+        super().__init__(*args, **kwargs)
+    
+    def reset(self) -> None:
+        super().reset()
+
+    def update(self, batch_output: BatchOutput) -> None:
+        joblib.dump(batch_output, os.path.join(self.path, f'{batch_output.i_epoch}.batch' ), compress=True)
+        

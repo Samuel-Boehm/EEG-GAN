@@ -29,6 +29,15 @@ def calculate_frechet_distances(mu1: torch.Tensor, sigma1: torch.Tensor, mu2: to
     Raises:
     -- InvalidFIDException if nan occures.
     """
+
+    #########
+    # Try Calculating on CPU:
+    mu1 = mu1.cpu()
+    sigma1 = sigma1.cpu()
+    mu2 = mu2.cpu()
+    sigma2 = sigma2.cpu()
+    #########
+    
     with torch.no_grad():
         m = torch.square(mu1 - mu2).sum()
         d = torch.bmm(sigma1, sigma2)

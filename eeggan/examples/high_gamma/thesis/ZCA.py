@@ -16,10 +16,10 @@ from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 from torch.utils.tensorboard import SummaryWriter
 
 FS = 512.
-SEGMENT_IVAL = (-0.5, 4.00)
+SEGMENT_IVAL = (-0.5, 2.50)
 INPUT_LENGTH = int((SEGMENT_IVAL[1] - SEGMENT_IVAL[0]) * FS)
 N_PROGRESSIVE_STAGES = 6
-N_EPOCHS_PER_STAGE = 1000
+N_EPOCHS_PER_STAGE = 500
 
 EXPERIMENT = 'Thesis'
 VERSION = 'ZCA'
@@ -39,8 +39,8 @@ config = dict(
     n_batch=128,  # batch size
     n_stages=N_PROGRESSIVE_STAGES,  # number of progressive stages
     n_epochs_per_stage=N_EPOCHS_PER_STAGE,  # epochs in each progressive stage
-    n_epochs_metrics=200,
-    plot_every_epoch=500,
+    n_epochs_metrics=100,
+    plot_every_epoch=250,
     n_epochs_fade=int(0.1 * N_EPOCHS_PER_STAGE),
     use_fade=False,
     freeze_stages=True,
@@ -70,7 +70,7 @@ model_builder = Baseline(config['n_stages'],
                     discfading=config['discfading'],
                     genfading=config['genfading'])
 
-result_path_subj = os.path.join(RESULTPATH, EXPERIMENT, DATASET)
+result_path_subj = os.path.join(RESULTPATH, VERSION)
 
 os.makedirs(result_path_subj, exist_ok=True)
 

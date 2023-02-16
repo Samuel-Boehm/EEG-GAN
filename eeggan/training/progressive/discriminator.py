@@ -70,7 +70,7 @@ class ProgressiveDiscriminator(Discriminator):
         self.cur_block = len(self.blocks) - 1
         self.alpha = 1.
 
-    def forward(self, x):
+    def forward(self, x, y=None):
         fade = False
         alpha = self.alpha
         for i in range(self.cur_block, len(self.blocks)):

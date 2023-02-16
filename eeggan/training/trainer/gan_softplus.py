@@ -37,7 +37,7 @@ class GanSoftplusTrainer(Trainer):
         self.discriminator.train(True)
 
         has_r1 = self.r1_gamma > 0.
-        fx_real = self.discriminator(batch_real.X.requires_grad_(has_r1))
+        fx_real = self.discriminator(batch_real.X.requires_grad_(has_r1), batch_real.y)
         loss_real = softplus(-fx_real).mean()
         loss_real.backward(retain_graph=has_r1)
         loss_r1 = None
@@ -49,7 +49,7 @@ class GanSoftplusTrainer(Trainer):
             loss_r1 = r1_penalty.item()
 
         has_r2 = self.r2_gamma > 0.
-        fx_fake = self.discriminator(batch_fake.X.requires_grad_(has_r2))
+        fx_fake = self.discriminator(batch_fake.X.requires_grad_(has_r2), batch_real.y)
         loss_fake = softplus(fx_fake).mean()
         loss_fake.backward(retain_graph=has_r2)
         loss_r2 = None
@@ -75,9 +75,9 @@ class GanSoftplusTrainer(Trainer):
                                                       *self.generator.create_latent_input(self.rng, len(batch_real.X)))
             latent, y_fake, y_onehot_fake = detach_all(latent, y_fake, y_onehot_fake)
 
-        X_fake = self.generator(latent.requires_grad_(False))
+        X_fake = self.generator(latent.requires_grad_(False), y_fake)
         batch_fake = Data[torch.Tensor](X_fake, y_fake, y_onehot_fake)
-        fx_fake = self.discriminator(batch_fake.X.requires_grad_(True))
+        fx_fake = self.discriminator(batch_fake.X.requires_grad_(True), y_fake)
         loss = softplus(-fx_fake).mean()
         loss.backward()
 
