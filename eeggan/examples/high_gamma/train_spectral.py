@@ -116,14 +116,16 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
 
     
         # initiate metrics
-        metric_wasserstein = WassersteinMetric(100, np.prod(X_block.shape[1:]).item(), tb_writer=tensorboard_writer)
-        metric_inception = InceptionMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
-        metric_frechet = FrechetMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
+        # metric_wasserstein = WassersteinMetric(100, np.prod(X_block.shape[1:]).item(), tb_writer=tensorboard_writer)
+        # metric_inception = InceptionMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
+        # metric_frechet = FrechetMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
         metric_loss = LossMetric(tb_writer=tensorboard_writer)
-        metric_classification = ClassificationMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
-        metrics = [metric_wasserstein, metric_inception, metric_frechet, metric_loss, metric_classification]
-        metric_names = ["wasserstein", "inception", 'frechet', 'loss', 'classification']
+        save_batch = SaveBatch(path=os.path.join(result_path, "batch_output"))
+        # metric_classification = ClassificationMetric(deep4s, sample_factor, tb_writer=tensorboard_writer)
+        metrics = [metric_loss, save_batch]
+        metric_names = ['loss', 'save_batch']
         trainer.attach_metrics(metrics, metric_names, usage_metrics)
+
 
         # wrap into cuda loader
         train_data_tensor: Data[Tensor] = Data(

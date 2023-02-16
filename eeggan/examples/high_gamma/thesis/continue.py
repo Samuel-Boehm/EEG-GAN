@@ -24,9 +24,11 @@ RESULTPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Results/{EXPERIMENT}'
 
 
 CHECKPOINTPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Results/{EXPERIMENT}/{VERSION}/'
-STAGE = 3
+STAGE = 4
 
 config = joblib.load(os.path.join( CHECKPOINTPATH, 'config.dict'))
+
+config['n_batch'] = 512 // 2
 
 generator, discriminator, model_builder = load_GAN(CHECKPOINTPATH, STAGE)
 
@@ -38,12 +40,11 @@ joblib.dump(config, os.path.join(result_path_subj, 'config.dict'), compress=Fals
 joblib.dump(model_builder, os.path.join(result_path_subj, 'model_builder.jblb'), compress=True)
 
 # trainer engine
-trainer = GanSoftplusTrainer(i_logging=10,
+trainer = GanSoftplusTrainer(i_logging=200,
                         discriminator=discriminator,
                         generator=generator,
-                        r1=config['r1_gamma'],
-                        r2=config['r2_gamma'],
-                        )
+                        r1_gamma=config['r1_gamma'],
+                        r2_gamma=config['r2_gamma'])
 
 # handles potential progression after each epoch
 progression_handler = ProgressionHandler(discriminator, 
