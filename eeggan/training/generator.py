@@ -5,6 +5,7 @@ from abc import ABCMeta
 from numpy.random.mtrand import RandomState
 from torch import Tensor
 from typing import Tuple
+import torch
 
 from eeggan.data.preprocess.util import create_onehot_vector
 from eeggan.pytorch.modules.module import Module

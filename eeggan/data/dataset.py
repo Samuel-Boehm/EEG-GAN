@@ -63,10 +63,19 @@ class Data(SignalAndTarget, Iterable, Generic[T]):
     def __len__(self) -> int:
         return len(self.X)
     
-    def subset(self, index):
+    def subset(self, n_samples:int):
         '''
         Return a subsample of the Dataset after a list of indices 
         '''
+        assert n_samples % 2 == 0, "To have balanced subsets n_samples needs to be an even number"
+        y0 = np.where(self.y==0)[0]
+        y1 = np.where(self.y==1)[0]
+
+        r1 = np.random.choice(y0, n_samples//2, replace=False)
+        r2 = np.random.choice(y1, n_samples//2, replace=False)
+
+        index = np.concatenate((r1, r2), axis=0)
+        
         return Data(self.X[index], self.y[index], self.y_onehot[index])
     
     def return_subject(self, subject):
@@ -75,6 +84,18 @@ class Data(SignalAndTarget, Iterable, Generic[T]):
         last = self.index_dict[subject][1]
         return Data(self.X[first:last], self.y[first:last], self.y_onehot[first:last])
 
+    def add_data(self, X, y, y_onehot, subject):
+        if self.X.shape[0] == 0:
+            self.X = X
+            self.y = y
+            self.y_onehot = y_onehot
+            self.index_dict[subject] = (0, self.X.shape[0])
+        else:
+            assert X.shape[1:] == self.X.shape[1:]
+            self.index_dict[subject] = (int(self.X.shape[0]), int(self.X.shape[0] + X.shape[0]))
+            self.X = np.concatenate((self.X, X), axis=0)
+            self.y = np.concatenate((self.y, y), axis=0)
+            self.y_onehot = np.concatenate((self.y_onehot, y_onehot), axis=0)
 
 @dataclass
 class Dataset(Generic[T]):
