@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from eeggan.validation.metrics.frechet import calculate_activation_statistics, calculate_frechet_distances
+from eeggan.validation.metrics.frechet import calculate_activation_statistics, calculate_frechet_distance
 from eeggan.validation.metrics.inception import calculate_inception_score
 from eeggan.validation.metrics.wasserstein import create_wasserstein_transform_matrix, \
     calculate_sliced_wasserstein_distance
@@ -26,7 +26,7 @@ def init_inception(train_preds, test_preds):
 def init_frechet(train_act, test_act):
     train_mu, train_sigma = calculate_activation_statistics(train_act)
     test_mu, test_sigma = calculate_activation_statistics(test_act)
-    f_dist = calculate_frechet_distances(train_mu[None, :, :], train_sigma[None, :, :], test_mu[None, :, :],
+    f_dist = calculate_frechet_distance(train_mu[None, :, :], train_sigma[None, :, :], test_mu[None, :, :],
                                          test_sigma[None, :, :])
     return train_mu, train_sigma, test_mu, test_sigma, f_dist
 

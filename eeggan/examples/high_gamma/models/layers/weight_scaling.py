@@ -38,6 +38,7 @@ class WeightScale(object):
         del module._parameters[name]
 
         # Constant from He et al. 2015
+
         c = gain / np.sqrt(np.prod(list(weight.size())[1:]))
         setattr(module, name + '_c', float(c))
         module.register_parameter(name + '_unscaled', nn.Parameter(weight.data))
