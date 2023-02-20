@@ -8,7 +8,7 @@ import sys
 # setting path
 sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
-from eeggan.examples.high_gamma.models.conditionalV2 import ConditionalV2
+from eeggan.examples.high_gamma.models.conditionalV3 import ConditionalV3
 from eeggan.examples.high_gamma.train import train
 from eeggan.utils.weights import weight_filler
 from eeggan.training.progressive.handler import ProgressionHandler
@@ -59,7 +59,7 @@ config = dict(
     genfading='cubic',
     n_samples='all'
 )
-model_builder = ConditionalV2(config['n_stages'],
+model_builder = ConditionalV3(config['n_stages'],
                     config['n_latent'],
                     config['n_time'],
                     config['n_chans'],
