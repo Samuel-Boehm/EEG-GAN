@@ -51,6 +51,10 @@ class Data(SignalAndTarget, Iterable, Generic[T]):
     X: T 
     y: T
     y_onehot: T 
+    
+
+    def __post_init__(self):
+        self.index_dict: dict = {}
 
 
     def __iter__(self) -> Tuple[T, T, T]:

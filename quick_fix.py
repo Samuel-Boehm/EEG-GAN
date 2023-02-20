@@ -113,3 +113,14 @@ def create_balanced_datasets(gan_path, data_path, data_name, stage, subject=None
         fake = Data(*to_cuda(Tensor(fake.X), Tensor(fake.y), Tensor(fake.y_onehot)))
     
     return real, fake
+
+if __name__ == '__main__':
+    gan_path = '/home/samuelboehm/boehms/eeg-gan/EEG-GAN/Data/Results/Thesis/torch_cGAN/'
+    data_path = '/home/samuelboehm/boehms/eeg-gan/EEG-GAN/Data/Data/Thesis'
+    data_name = 'whitened'
+    stage = 6
+    n_samples = 6000
+    real, fake = create_balanced_datasets(gan_path, data_path, data_name, stage, n_samples=n_samples)
+
+    joblib.dump(real, os.path.join(data_path, f'tGAN_real.dataset' ), compress=True)
+    joblib.dump(fake, os.path.join(data_path, f'tGAN_fake.dataset' ), compress=True)
