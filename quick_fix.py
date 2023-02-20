@@ -118,9 +118,9 @@ if __name__ == '__main__':
     gan_path = '/home/samuelboehm/boehms/eeg-gan/EEG-GAN/Data/Results/Thesis/torch_cGAN/'
     data_path = '/home/samuelboehm/boehms/eeg-gan/EEG-GAN/Data/Data/Thesis'
     data_name = 'whitened'
-    stage = 6
+    stage = 3
     n_samples = 6000
     real, fake = create_balanced_datasets(gan_path, data_path, data_name, stage, n_samples=n_samples)
 
-    joblib.dump(real, os.path.join(data_path, f'tGAN_real.dataset' ), compress=True)
-    joblib.dump(fake, os.path.join(data_path, f'tGAN_fake.dataset' ), compress=True)
+    joblib.dump(real, os.path.join(data_path, f'tGAN_real_stage{stage}.dataset' ), compress=True)
+    joblib.dump(fake, os.path.join(data_path, f'tGAN_fake_stage{stage}.dataset' ), compress=True)
