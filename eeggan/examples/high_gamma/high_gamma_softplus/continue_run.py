@@ -74,10 +74,7 @@ def run(subj_ind: int, result_name: str, dataset_path: str, deep4_path: str, res
     
     trainer.add_event_handler(Events.EPOCH_COMPLETED(every=1), progression_handler.advance_alpha)
 
-    print(progression_handler.generator.cur_block)
-    print(progression_handler.discriminator.cur_block)
-
-    
+   
     generator.train()
     discriminator.train()
 

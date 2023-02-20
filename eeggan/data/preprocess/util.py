@@ -21,7 +21,6 @@ def prepare_data(X: np.ndarray, y: np.ndarray, n_classes: int, input_length: int
         X = normalize_data(X)
 
     y = y - y.min()
-    y = y // y.max()
 
     data: Data[np.ndarray] = Data(X, y, create_onehot_vector(y, n_classes))
 

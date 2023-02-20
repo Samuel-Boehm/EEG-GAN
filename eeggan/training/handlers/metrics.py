@@ -14,8 +14,8 @@ import os
 from eeggan.cuda import to_device
 from eeggan.data.preprocess.resample import upsample
 from eeggan.training.trainer.trainer import BatchOutput
-from eeggan.validation.metrics.frechet import calculate_activation_statistics, calculate_frechet_distances
-from eeggan.validation.metrics.inception import calculate_inception_score
+from eeggan.validation.metrics.frechet import calculate_activation_statistics, calculate_frechet_distance
+from eeggan.validation.metrics.inception import calculate_inception_score, get_predictions
 from eeggan.validation.metrics.wasserstein import create_wasserstein_transform_matrix, \
     calculate_sliced_wasserstein_distance, calculated_wasserstein_distance_POT
 from eeggan.validation.validation_helper import logsoftmax_act_to_softmax
@@ -59,8 +59,10 @@ class WassersteinMetric(ListMetric[float]):
 
     def update(self, batch_output: BatchOutput) -> None:
         epoch = batch_output.i_epoch
-        X_real = batch_output.batch_real.X.data.cpu().numpy()
-        X_fake = batch_output.batch_fake.X.data.cpu().numpy()
+        
+        X_real = batch_output.batch_real.X
+        X_fake = batch_output.batch_fake.X
+
         distances = []
         for repeat in range(10):
             self.w_transform = create_wasserstein_transform_matrix(self.n_projections, self.n_features)
@@ -112,8 +114,6 @@ class WassersteinMetricPOT(ListMetric[float]):
         if self.tb_writer:
             self.tb_writer.add_scalar('POT SWD', distance, epoch)
 
-
-
 class InceptionMetric(ListMetric[Tuple[float, float]]):
 
     def __init__(self, deep4s: List[Module], upsample_factor: float, splits: int = 1, repetitions: int = 100, *args, **kwargs):
@@ -127,17 +127,15 @@ class InceptionMetric(ListMetric[Tuple[float, float]]):
         super().reset()
 
     def update(self, batch_output: BatchOutput) -> None:
-        X_fake, = to_device(batch_output.batch_fake.X.device,
-                            Tensor(
-                                upsample(batch_output.batch_fake.X.data.cpu().numpy(), self.upsample_factor, axis=2)))
+        X_fake, = to_device('cpu', Tensor(upsample(batch_output.batch_fake.X, self.upsample_factor, axis=2)))
         X_fake = X_fake[:, :, :, None]
         epoch = batch_output.i_epoch
         score_means = []
         score_stds = []
         for deep4 in self.deep4s:
             with torch.no_grad():
-                preds = deep4(X_fake)[1]
-                preds = logsoftmax_act_to_softmax(preds)            
+                preds = get_predictions(X_fake, deep4, device='cuda')
+                preds = logsoftmax_act_to_softmax(preds)
                 score_mean, score_std = calculate_inception_score(preds, self.splits, self.repetitions)
             score_means.append(score_mean)
             score_stds.append(score_std)
@@ -159,21 +157,18 @@ class FrechetMetric(ListMetric[Tuple[float, float]]):
 
     def update(self, batch_output: BatchOutput) -> None:
         with torch.no_grad():
-            X_real, = to_device(batch_output.batch_real.X.device,
-                                Tensor(upsample(batch_output.batch_real.X.data.cpu().numpy(), self.upsample_factor, axis=2)))
-
+            X_real = Tensor(upsample(batch_output.batch_real.X, self.upsample_factor, axis=2))
             X_real = X_real[:, :, :, None]
 
-            X_fake, = to_device(batch_output.batch_fake.X.device,
-                                Tensor(upsample(batch_output.batch_fake.X.data.cpu().numpy(), self.upsample_factor, axis=2)))
+            X_fake = Tensor(upsample(batch_output.batch_fake.X, self.upsample_factor, axis=2))
             X_fake = X_fake[:, :, :, None]
+
             epoch = batch_output.i_epoch
             dists = []
             for deep4 in self.deep4s:
-                mu_real, sig_real = calculate_activation_statistics(deep4(X_real)[0])
-                mu_fake, sig_fake = calculate_activation_statistics(deep4(X_fake)[0])
-                dist = calculate_frechet_distances(mu_real[None, :, :], sig_real[None, :, :], mu_fake[None, :, :],
-                                                   sig_fake[None, :, :]).item()
+                mu_real, sig_real = calculate_activation_statistics(X_real, deep4, device='cuda')
+                mu_fake, sig_fake = calculate_activation_statistics(X_fake, deep4, device='cuda')
+                dist = calculate_frechet_distance(mu_real, sig_real, mu_fake, sig_fake).item()
                 dists.append(dist)
             self.append((epoch, (np.mean(dists).item(), np.std(dists).item())))
 
@@ -192,18 +187,17 @@ class ClassificationMetric(ListMetric[Tuple[float, float]]):
         super().reset()
 
     def update(self, batch_output: BatchOutput) -> None:
-        X_fake, = to_device(batch_output.batch_fake.X.device,
-                            Tensor(
-                                upsample(batch_output.batch_fake.X.data.cpu().numpy(), self.upsample_factor, axis=2)))
+        X_fake = Tensor(upsample(batch_output.batch_fake.X, self.upsample_factor, axis=2))
         X_fake = X_fake[:, :, :, None]
         epoch = batch_output.i_epoch
         accuracies = []
         for deep4 in self.deep4s:
             with torch.no_grad():
-                preds: Tensor = deep4(X_fake)[1].squeeze()
+                preds = get_predictions(X_fake, deep4, device='cuda')
                 class_pred = preds.argmax(dim=1)
-                accuracy = (class_pred == batch_output.batch_fake.y).type(torch.float).mean()
-                accuracies.append(accuracy.item())
+                accuracy = (class_pred == Tensor(batch_output.batch_fake.y) * 2).type(torch.float).mean()
+                
+                accuracies.append(accuracy)
         self.append((epoch, (np.mean(accuracies).item(), np.std(accuracies).item())))
 
         if self.tb_writer:
