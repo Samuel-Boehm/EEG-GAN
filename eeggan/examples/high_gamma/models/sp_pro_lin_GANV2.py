@@ -41,10 +41,9 @@ class SP_GAN(Conditional):
         return ProgressiveSpectralDiscriminator(self.n_time, self.n_channels, self.n_classes, blocks)
 
     def build_spectral_discriminator_in_sequence(self, stage):
-    # Label Embedding is added as additional channel => self.n_channels + 1
-        vector_length = (self.n_time // 2) + 1 
-        in_size = vector_length
+    # Label Embedding is added as additional channel => self.n_channels + 1        
         out_size = int(self.n_time / 2 ** (stage))
+        in_size = (out_size // 2) + 1
         return nn.Sequential(
             weight_scale(nn.Linear(in_size, out_size), gain=calculate_gain('leaky_relu')),
             nn.LeakyReLU(0.2)
