@@ -103,9 +103,9 @@ def train(dataset_name: str, dataset_path: str, deep4s_path: str, result_path: s
                 }
 
         # load trained deep4s for stage
-        deep4s = load_deeps4(dataset_name, stage, deep4s_path)
-        select_modules = ['conv_4', 'softmax']
-        deep4s = [to_cuda(IntermediateOutputWrapper(select_modules, deep4)) for deep4 in deep4s]
+        # deep4s = load_deeps4(dataset_name, stage, deep4s_path)
+        # select_modules = ['conv_4', 'softmax']
+        # deep4s = [to_cuda(IntermediateOutputWrapper(select_modules, deep4)) for deep4 in deep4s]
 
         # scale data for current stage
         sample_factor = 2 ** (progression_handler.n_stages - stage - 1)

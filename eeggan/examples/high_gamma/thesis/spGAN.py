@@ -17,7 +17,7 @@ from eeggan.examples.high_gamma.train_spectral import train_spectral
 
 
 FS = 512.
-SEGMENT_IVAL = (-0.5, 2.50)
+SEGMENT_IVAL = (-0.5, 4.0)
 INPUT_LENGTH = int((SEGMENT_IVAL[1] - SEGMENT_IVAL[0]) * FS)
 N_PROGRESSIVE_STAGES = 6
 N_EPOCHS_PER_STAGE = 500
@@ -43,7 +43,7 @@ config = dict(
     n_epochs_metrics=100,
     plot_every_epoch=250,
     n_epochs_fade=int(0.1 * N_EPOCHS_PER_STAGE),
-    use_fade=False,
+    use_fade=True,
     freeze_stages=True,
     n_latent=200,  # latent vector size
     r1_gamma=10.,

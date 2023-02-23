@@ -82,7 +82,6 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         X_block = downsample(train_data.X, factor=sample_factor, axis=2)
 
         # Set mask for spectral discriminator stage: 
-        trainer.spectral_discriminator.calculate_size_for_block()
         to_cuda(trainer.spectral_discriminator)
 
         # optimizer
