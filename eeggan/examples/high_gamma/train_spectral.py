@@ -82,6 +82,9 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         X_block = downsample(train_data.X, factor=sample_factor, axis=2)
 
         # Set mask for spectral discriminator stage: 
+
+        # Set mask for spectral discriminator stage: 
+        trainer.spectral_discriminator.calculate_size_for_block()
         to_cuda(trainer.spectral_discriminator)
 
         # optimizer
@@ -108,12 +111,12 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         spectral_plot = SpectralPlot(pyplot.figure(), plot_path, "spectral_stage_%d_" % stage, X_block.shape[2],
                                      orig_fs / sample_factor, tb_writer = tensorboard_writer)
                                      
-        spectral_profile_plot = DiscriminatorSpectrum(pyplot.figure(), plot_path, "sp_loss_%d_" % stage,
-                                                    tb_writer = tensorboard_writer)
+        #spectral_profile_plot = DiscriminatorSpectrum(pyplot.figure(), plot_path, "sp_loss_%d_" % stage,
+        #                                            tb_writer = tensorboard_writer)
 
         event_name = Events.EPOCH_COMPLETED(every=plot_every_epoch)
         spectral_handler = trainer.add_event_handler(event_name, spectral_plot)
-        spectral_handler = trainer.add_event_handler(event_name, spectral_profile_plot)
+        #spectral_handler = trainer.add_event_handler(event_name, spectral_profile_plot)
 
     
         # initiate metrics
@@ -136,7 +139,7 @@ def train_spectral(dataset_name: str, dataset_path: str, deep4s_path: str, resul
         # train stage
         state = trainer.run(train_loader, (stage + 1) * n_epochs_per_stage)
         trainer.remove_event_handler(spectral_plot, event_name)
-        trainer.remove_event_handler(spectral_profile_plot, event_name) 
+        # trainer.remove_event_handler(spectral_profile_plot, event_name) 
 
         # save stuff
         torch.save(to_save, os.path.join(result_path, 'modules_stage_%d.pt' % stage))
