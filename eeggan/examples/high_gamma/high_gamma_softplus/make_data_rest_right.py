@@ -10,8 +10,8 @@ from eeggan.examples.high_gamma.make_data import make_dataset_for_subj, make_dee
 
 FS = 512.
 # CLASSDICT_REST_RIGHT_HAND = OrderedDict([('right_hand', 1), ('left_hand', 2),('rest', 3), ('feet', 4) ])
-CLASSDICT_REST_RIGHT_HAND = OrderedDict([('right_hand', 1), ('rest', 3)])
-SEGMENT_IVAL = (-0.5, 4.00)
+CLASSDICT_REST_RIGHT_HAND = OrderedDict([('right_hand', 0), ('rest', 1)])
+SEGMENT_IVAL = (-0.5, 2.50)
 INPUT_LENGTH = int((SEGMENT_IVAL[1] - SEGMENT_IVAL[0]) * FS)
 N_PROGRESSIVE_STAGES = 6
 N_DEEP4 = 10
@@ -22,7 +22,7 @@ N_EPOCHS = 100
 EXPERIMENT = 'Thesis'
 DATAPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/{EXPERIMENT}'
 MODELPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Models/{EXPERIMENT}'
-NAME = 'full'
+NAME = '2labels'
 
 def run(name: str = NAME,
         dataset_path: str = DATAPATH,
@@ -41,8 +41,8 @@ def run(name: str = NAME,
                           channels=channels, classdict=classdict,
                           fs=fs, interval_times=interval_times, verbose='INFO')
 
-    #make_deep4_for_subj(name=name, dataset_path=dataset_path, deep4_path=deep4_path,
-    #                    n_progressive=n_progressive, n_deep4=n_deep, verbose='INFO', n_epochs=n_epochs)
+    make_deep4_for_subj(name=name, dataset_path=dataset_path, deep4_path=deep4_path,
+                        n_progressive=n_progressive, n_deep4=n_deep, verbose='INFO', n_epochs=n_epochs)
 
 
 if __name__ == "__main__":
