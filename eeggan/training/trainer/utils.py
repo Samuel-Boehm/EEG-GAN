@@ -3,7 +3,7 @@ from typing import Union
 
 from torch import Tensor
 
-from eeggan.data.dataset import Data
+from eeggan.data.dataclasses import Data
 
 
 def detach_all(*elements: Union[Tensor, Data[Tensor]]):

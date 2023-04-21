@@ -3,7 +3,7 @@ import sys
 # setting path
 sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
-from eeggan.data.dataset import Data
+from eeggan.data.dataclasses import Data
 from eeggan.data.preprocess.resample import downsample
 from utils import create_balanced_datasets
 

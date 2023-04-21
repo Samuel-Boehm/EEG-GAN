@@ -11,7 +11,7 @@ from numpy.random.mtrand import RandomState
 from torch.optim.optimizer import Optimizer
 
 from eeggan.cuda import to_device
-from eeggan.data.dataset import Data
+from eeggan.data.dataclasses import Data
 from eeggan.training.discriminator import Discriminator
 from eeggan.training.generator import Generator
 from eeggan.training.trainer.utils import detach_all

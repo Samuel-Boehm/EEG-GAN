@@ -13,9 +13,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 from eeggan.cuda import to_cuda, init_cuda
 from eeggan.examples.high_gamma.braindecode_hack import IntermediateOutputWrapper
-from eeggan.data.dataset import Data
+from eeggan.data.dataclasses import Data
 from eeggan.data.preprocess.resample import downsample
-from eeggan.examples.high_gamma.make_data import load_dataset, load_deeps4
+from eeggan.data.create_dataset import load_dataset, load_deeps4
 from eeggan.training.handlers.metrics import WassersteinMetric, InceptionMetric, FrechetMetric, \
     LossMetric,ClassificationMetric, SaveBatch
 from eeggan.training.handlers.plots import SpectralPlot, DiscriminatorSpectrum

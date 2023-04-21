@@ -12,15 +12,15 @@ import joblib
 from collections import OrderedDict
 
 
-from eeggan.examples.high_gamma.make_data import load_dataset
+from eeggan.data.create_dataset import load_dataset
 from eeggan.cuda import to_cuda, init_cuda
-from eeggan.examples.high_gamma.dataset import HighGammaDataset
+from eeggan.data.dataclasses import Dataset
 from eeggan.data.preprocess.resample import downsample
-from eeggan.data.dataset import Data
+from eeggan.data.dataclasses import Data
 from numpy.random.mtrand import RandomState
 
 
-def balance_dataset(data: HighGammaDataset):
+def balance_dataset(data: Dataset):
     label_counts =  np.unique(data.train_data.y, return_counts=True)
     smallest_dataset = label_counts[1].min()
     idx = list()
@@ -29,7 +29,6 @@ def balance_dataset(data: HighGammaDataset):
 
     idx = np.array(idx).flatten()
     data.train_data.y = data.train_data.y[idx]
-    data.train_data.y_onehot = data.train_data.y_onehot[idx]
     data.train_data.X = data.train_data.X[idx]
     return data 
 

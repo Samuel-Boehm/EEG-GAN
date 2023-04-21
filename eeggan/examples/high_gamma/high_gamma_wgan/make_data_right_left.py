@@ -9,7 +9,7 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 from eeggan.cuda import init_cuda
-from eeggan.examples.high_gamma.make_data import make_dataset_for_subj, make_deep4_for_subj
+from eeggan.data.create_dataset import make_dataset_for_subj, make_deep4_for_subj
 
 FS = 512. 
 CLASSDICT_REST_RIGHT_HAND = OrderedDict([('left_hand', 2), ('right_hand', 1)])

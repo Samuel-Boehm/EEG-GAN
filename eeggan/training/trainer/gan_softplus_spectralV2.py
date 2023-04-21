@@ -4,7 +4,7 @@ from torch.nn.functional import softplus
 from torch import autograd
 
 from eeggan.cuda import to_device
-from eeggan.data.dataset import Data
+from eeggan.data.dataclasses import Data
 from eeggan.training.discriminator import Discriminator
 from eeggan.training.generator import Generator
 from eeggan.training.trainer.utils import detach_all

@@ -11,7 +11,7 @@ from tqdm import tqdm
 import joblib
 
 
-from eeggan.data.dataset import Data
+from eeggan.data.dataclasses import Data
 from eeggan.data.preprocess.resample import downsample
 from utils import create_balanced_datasets
 CHANNELS = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2', 'M1', 'M2']
