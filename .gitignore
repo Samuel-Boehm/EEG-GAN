@@ -137,3 +137,5 @@ eeggan/examples/high_gamma/high_gamma_wgan/.run.py.swp
 analysis_scripts/
 
 EEG_GAN_Notebook.ipynb
+EEG-GAN2.0.ipynb
+Dataset/whitened_Deep4.dataset
