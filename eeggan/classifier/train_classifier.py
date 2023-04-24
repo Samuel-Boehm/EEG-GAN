@@ -1,58 +1,44 @@
 #  Authors:	Samuel Böhm <samuel-boehm@web.de>
-import os
-import  numpy as np
-import copy
 import joblib
+import os
+from eeggan.data.create_dataset import ZCA_whitening
+from braindecode.preprocessing import exponential_moving_standardize, create_windows_from_events
 
-from torch.optim import AdamW
-from torch.nn import NLLLoss
+from braindecode.datasets import MOABBDataset
+from braindecode.preprocessing import exponential_moving_standardize, preprocess, Preprocessor
 
-from skorch.callbacks import LRScheduler
-from skorch.helper import predefined_split
-from braindecode import EEGClassifier
-from braindecode.models import deep4
+dataset = MOABBDataset(dataset_name="Schirrmeister2017", subject_ids=list(range(1, 15)))
 
-from eeggan.data.preprocess.resample import upsample, downsample
-from eeggan.validation.deep4 import train_completetrials
-from eeggan.data.create_dataset import load_dataset
+# safe path for dataset
+dataset_path = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/eeggan2.0'
 
-# Training the classifier follows the 'braindecode get started' page for trialwise decoding:
-# https://braindecode.org/stable/auto_examples/plot_bcic_iv_2a_moabb_trial.html
+# targed sfreq
+sfreq = 256
 
+# Channels to pick
+channels = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P7', 'P3', 'Pz', 'P4',
+            'P8', 'O1', 'O2', 'M1', 'M2']
 
-lr = 1 * 0.01
-weight_decay = 0.5 * 0.001
+# Parameters for exponential moving standardization
+factor_new = 1e-3
+init_block_size = 1000
 
-def downsample_for_stage(X, i_stage, max_stage):
-    down = downsample(X, 2 ** (max_stage - i_stage), axis=2)
-    return upsample(down, 2 ** (max_stage - i_stage), axis=2)
+# Define Preprocessor
+preprocessors = [
+    Preprocessor('resample', sfreq),
+    Preprocessor('pick_types', eeg=True, meg=False, stim=False),  # Keep EEG sensors
+    Preprocessor(exponential_moving_standardize,  # Exponential moving standardization
+                 factor_new=factor_new, init_block_size=init_block_size)
+]
 
+# Transform the data
+preprocess(dataset, preprocessors)
 
-def make_classifier(n_chans, n_classes, n_samples):
-    model = deep4(n_chans, n_classes, n_samples, final_conv_length='auto')
+# Create wondowed dataset
+windows_dataset = create_windows_from_events(
+    dataset, trial_start_offset_samples=0, trial_stop_offset_samples=0.5*sfreq,
+    window_size_samples=2.5*sfreq, window_stride_samples=100,
+    drop_last_window=False, picks = channels)
 
-
-def load_deeps4(name: str, stage: int, path: str):
-    return joblib.load(os.path.join(path, f'{name}_Deep4_stage{stage}.deep4'))
-
-
-def train_classifier(train_set, test_set, n_classes, n_chans, deep4_path, n_epochs):
-
-    batch_size = 64
-
-    clf = EEGClassifier(
-        model,
-        criterion=NLLLoss,
-        optimizer=AdamW,
-        train_split=predefined_split(valid_set),  # using valid_set for validation
-        optimizer__lr=lr,
-        optimizer__weight_decay=weight_decay,
-        batch_size=batch_size,
-        callbacks=[
-            "accuracy", ("lr_scheduler", LRScheduler('CosineAnnealingLR', T_max=n_epochs - 1)),
-        ],
-        device=device,
-        )
-
-    model = model.cpu().eval()
-    return model
+# Safe Dataset
+joblib.dump(windows_dataset, os.path.join(dataset_path, 'windowed.dataset' ), compress=True)
