@@ -1,4 +1,4 @@
-#  Author: Kay Hartmann <kg.hartma@gmail.com>
+#  Author: Samuel Böhm <samuel-boehm@web.de>
 
 from typing import Iterable, Tuple, TypeVar, Generic
 from dataclasses import dataclass
@@ -10,15 +10,24 @@ T = TypeVar('T')
 @dataclass
 class SignalAndTarget(object):
     """
-    Simple data container class.
-    Parameters
-    ----------
+    Data container class inspired by the eponymous braindecode class.
+
+    The input signal is saved together with an array of labels. 
+    If a subject if given a dictionary is created, saving the start and stop index of
+    the subjects data block. This can be  used to return individual subjects later on. 
+
+    Source: 
+    https://github.com/robintibor/braindecode/blob/master/braindecode/datautil/signal_target.py#L1-L16
+    
+    -----------------------------------------------------------------
+    
     X (np.ndarray) : 3D array
         The input signal per trial.
     y (np.ndarray) : 1D array
         Labels for each trial.
     subject (int): subject ID
     """
+    
     def __init__(self, X:np.ndarray, y:np.ndarray, subject:int):
         self.X: np.ndarray = X
         self.y: np.ndarray = y
@@ -33,10 +42,16 @@ class SignalAndTarget(object):
         return f'shape X:{self.X.shape} shape y:{self.y.shape}'
 
     def add_data(self, X, y, subject):
+        
+        """
+        Adds another X, y block to the data. 
+        """
+        
         if self.X.shape[0] == 0:
             self.X = X
             self.y = y
             self.index_dict[subject] = (0, self.X.shape[0])
+
         else:
             assert X.shape[1:] == self.X.shape[1:]
             self.index_dict[subject] = (int(self.X.shape[0]), int(self.X.shape[0] + X.shape[0]))
@@ -47,7 +62,12 @@ class SignalAndTarget(object):
 
 @dataclass
 class Data(SignalAndTarget, Iterable, Generic[T]):
-
+    """
+    Base datastructure for the EEG-GAN project.
+    This structure holds the data block X and the labels
+    in integer and onehot encoding. 
+    """
+    
     X: T 
     y: T
     y_onehot: T 
@@ -68,9 +88,9 @@ class Data(SignalAndTarget, Iterable, Generic[T]):
         return len(self.X)
     
     def subset(self, n_samples:int):
-        '''
-        Return a subsample of the Dataset after a list of indices 
-        '''
+        """
+        Return a subset of the Dataset after a list of indices (used to draw random samples) 
+        """
         assert n_samples % 2 == 0, "To have balanced subsets n_samples needs to be an even number"
         y0 = np.where(self.y==0)[0]
         y1 = np.where(self.y==1)[0]
@@ -83,12 +103,17 @@ class Data(SignalAndTarget, Iterable, Generic[T]):
         return Data(self.X[index], self.y[index], self.y_onehot[index])
     
     def return_subject(self, subject):
-        '''Return a subject after a list of subject IDs'''
+        """
+        Return subject(s) after a list of subject IDs
+        """
         first = self.index_dict[subject][0]
         last = self.index_dict[subject][1]
         return Data(self.X[first:last], self.y[first:last], self.y_onehot[first:last])
 
     def add_data(self, X, y, y_onehot, subject):
+        """
+        Add another block of data
+        """
         if self.X.shape[0] == 0:
             self.X = X
             self.y = y
@@ -101,9 +126,10 @@ class Data(SignalAndTarget, Iterable, Generic[T]):
             self.y = np.concatenate((self.y, y), axis=0)
             self.y_onehot = np.concatenate((self.y_onehot, y_onehot), axis=0)
             
-
-
 @dataclass
 class Dataset(Generic[T]):
+    """
+    This dataclass hols a train and test data Data object
+    """
     train_data: Data[T]
     test_data: Data[T]

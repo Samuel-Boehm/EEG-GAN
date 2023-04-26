@@ -1,4 +1,7 @@
 #  Author: Samuel Boehm <samuel-boehm@web.de>
+import sys
+# setting path
+sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
 from eeggan.examples.high_gamma.braindecode_hack import IntermediateOutputWrapper
 from eeggan.training.handlers.metrics import WassersteinMetric, InceptionMetric, ClassificationMetric, FrechetMetric
@@ -19,12 +22,12 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--name', type=str, required=True)
-parser.add_argument('--gan_path', type=str, required=False, default='/home/samuelboehm/boehms/eeg-gan/EEG-GAN/Data/Results/Thesis/')
+parser.add_argument('--gan_path', type=str, required=False, default='/home/boehms/eeg-gan/EEG-GAN/Data/Results/Thesis/')
 parser.add_argument('--data_name', type=str, required=True)
 parser.add_argument('--stage', type=int, required=True)
 parser.add_argument('--subject', type=int, required=False)
-parser.add_argument('--data_path', type=str, required=False, default='/home/samuelboehm/boehms/eeg-gan/EEG-GAN/Data/Data/Thesis/')
-parser.add_argument('--deep4_path', type=str, required=False, default='/home/samuelboehm/boehms/eeg-gan/EEG-GAN/Data/Models/Thesis/')
+parser.add_argument('--data_path', type=str, required=False, default='/home/boehms/eeg-gan/EEG-GAN/Data/Data/Thesis/')
+parser.add_argument('--deep4_path', type=str, required=False, default='/home/boehms/eeg-gan/EEG-GAN/Data/Models/Thesis/')
 parser.add_argument('--downsample', type=bool, required=False, default=False)
 
 args = parser.parse_args()
@@ -118,4 +121,4 @@ if __name__ == '__main__':
 
     df = calculate_metrics(real, fake, args.stage, args.data_name, args.deep4_path, batchsize*2)
     df = df.reindex(sorted(df.columns), axis=1)
-    df.to_csv(f'/home/samuelboehm/boehms/eeg-gan/EEG-GAN/EEG-GAN/analysis_scripts/outputs/{args.name}_stage{args.stage}.csv')
+    df.to_csv(f'/home/boehms/eeg-gan/EEG-GAN/EEG-GAN/analysis_scripts/outputs/{args.name}_stage{args.stage}.csv')

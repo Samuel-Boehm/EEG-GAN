@@ -20,11 +20,11 @@ FS = 512.
 SEGMENT_IVAL = (-0.5, 2.5)
 INPUT_LENGTH = int((SEGMENT_IVAL[1] - SEGMENT_IVAL[0]) * FS)
 N_PROGRESSIVE_STAGES = 6
-N_EPOCHS_PER_STAGE = 500
+N_EPOCHS_PER_STAGE = 1000
 
 EXPERIMENT = 'Thesis'
-DATASET = 'whitened'
-VERSION = 'spGAN_unfrozen'
+DATASET = 'baseline'
+VERSION = 'spGAN_unf_bl'
 
 DATAPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/{EXPERIMENT}'
 DEEP4PATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Models/{EXPERIMENT}'

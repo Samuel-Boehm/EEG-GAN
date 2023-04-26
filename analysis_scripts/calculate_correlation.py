@@ -1,4 +1,7 @@
 #  Author: Samuel Boehm <samuel-boehm@web.de>
+import sys
+# setting path
+sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
 import numpy as np
 import argparse
@@ -6,6 +9,7 @@ import pandas as pd
 import os 
 from tqdm import tqdm
 import joblib
+
 
 from eeggan.data.dataset import Data
 from eeggan.data.preprocess.resample import downsample
@@ -16,12 +20,12 @@ MAPPING = {'right': 0, 'rest': 1}
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--name', type=str, required=True)
-parser.add_argument('--gan_path', type=str, required=False, default='/home/samuelboehm/boehms/eeg-gan/EEG-GAN/Data/Results/Thesis/')
+parser.add_argument('--gan_path', type=str, required=False, default='/home/boehms/eeg-gan/EEG-GAN/Data/Results/Thesis/')
 parser.add_argument('--data_name', type=str, required=True)
 parser.add_argument('--stage', type=int, required=True)
 parser.add_argument('--subject', type=int, required=False)
-parser.add_argument('--data_path', type=str, required=False, default='/home/samuelboehm/boehms/eeg-gan/EEG-GAN/Data/Data/Thesis/')
-parser.add_argument('--deep4_path', type=str, required=False, default='/home/samuelboehm/boehms/eeg-gan/EEG-GAN/Data/Models/Thesis/')
+parser.add_argument('--data_path', type=str, required=False, default='/home/boehms/eeg-gan/EEG-GAN/Data/Data/Thesis/')
+parser.add_argument('--deep4_path', type=str, required=False, default='/home/boehms/eeg-gan/EEG-GAN/Data/Models/Thesis/')
 parser.add_argument('--downsample', type=bool, required=False, default=False)
 args = parser.parse_args()
 
@@ -84,4 +88,4 @@ if __name__ == '__main__':
     df.loc['mean'] = means
     df.loc['std'] = stds
 
-    df.to_csv(f'/home/samuelboehm/boehms/eeg-gan/EEG-GAN/EEG-GAN/analysis_scripts/outputs/{args.name}_correlation_stage{args.stage}.csv')
+    df.to_csv(f'/home/boehms/eeg-gan/EEG-GAN/EEG-GAN/analysis_scripts/outputs/{args.name}_correlation_stage{args.stage}.csv')
