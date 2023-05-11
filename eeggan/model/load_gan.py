@@ -7,8 +7,8 @@ from typing import Tuple
 from collections import OrderedDict
 
 
-from eeggan.training.discriminator import Discriminator
-from eeggan.training.generator import Generator
+from eeggan.model.GANFramework.discriminator import Discriminator
+from eeggan.model.GANFramework.generator import Generator
 from eeggan.model.builder import ProgressiveModelBuilder
 
 

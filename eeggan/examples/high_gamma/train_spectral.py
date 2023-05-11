@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from eeggan.cuda import to_cuda, init_cuda
-from eeggan.examples.high_gamma.braindecode_hack import IntermediateOutputWrapper
+from eeggan.classifier.IntermediateOutput import IntermediateOutputWrapper
 from eeggan.data.dataclasses import Data
 from eeggan.data.preprocess.resample import downsample
 from eeggan.data.create_dataset import load_dataset, load_deeps4

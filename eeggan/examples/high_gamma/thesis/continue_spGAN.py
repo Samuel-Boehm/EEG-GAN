@@ -10,7 +10,7 @@ sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 from eeggan.training.progressive.handler import SpectralProgessionHandler
 from eeggan.training.trainer.gan_softplus_spectral import SpectralTrainer
 from eeggan.examples.high_gamma.train_spectral import train_spectral
-from eeggan.examples.high_gamma.load_gan import load_spectral_GAN
+from eeggan.model.GANFramework.load_gan import load_spectral_GAN
 
 EXPERIMENT = 'Thesis'
 DATASET = 'whitened'

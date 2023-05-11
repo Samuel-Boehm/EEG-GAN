@@ -12,7 +12,7 @@ sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 from eeggan.training.progressive.handler import ProgressionHandler
 from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 from eeggan.examples.high_gamma.train import train
-from eeggan.examples.high_gamma.load_gan import load_GAN
+from eeggan.model.GANFramework.load_gan import load_GAN
 
 EXPERIMENT = 'Thesis'
 DATASET = 'baseline'

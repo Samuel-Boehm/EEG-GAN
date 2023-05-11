@@ -10,12 +10,20 @@ import torch
 lr = 1 * 0.01
 weight_decay = 0.5 * 0.001
 batch_size = 64
-n_epochs = 256
+n_epochs = 128
 
-dataset_path = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/eeggan2.0'
+dataset_path = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/SchirrmeisterChs'
 
-CHANNELS = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P7', 'P3', 'Pz', 'P4',
-            'P8', 'O1', 'O2', 'M1', 'M2'] 
+CHANNELS = ['FC5', 'FC1', 'FC2', 'FC6', 'C3', 'C4', 'CP5',
+                 'CP1', 'CP2', 'CP6', 'FC3', 'FCz', 'FC4', 'C5', 'C1', 'C2',
+                 'C6',
+                 'CP3', 'CPz', 'CP4', 'FFC5h', 'FFC3h', 'FFC4h', 'FFC6h',
+                 'FCC5h',
+                 'FCC3h', 'FCC4h', 'FCC6h', 'CCP5h', 'CCP3h', 'CCP4h', 'CCP6h',
+                 'CPP5h',
+                 'CPP3h', 'CPP4h', 'CPP6h', 'FFC1h', 'FFC2h', 'FCC1h', 'FCC2h',
+                 'CCP1h',
+                 'CCP2h', 'CPP1h', 'CPP2h']
 
 windows_dataset = load_concat_dataset(
     path=dataset_path,

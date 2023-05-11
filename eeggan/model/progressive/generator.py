@@ -6,7 +6,7 @@ from typing import List
 
 from torch import nn
 
-from eeggan.training.generator import Generator
+from eeggan.model.generator import Generator
 
 """
 Karras, T., Aila, T., Laine, S., & Lehtinen, J. (2017).

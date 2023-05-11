@@ -1,10 +1,9 @@
-#  Author: Kay Hartmann <kg.hartma@gmail.com>
+#  Author: Samuel Böhm <samuel-boehm@web.de>
 
-from abc import ABCMeta
+from abc import ABC, abstractmethod
 from torch import nn
 
-
-class Discriminator(nn.Module, metaclass=ABCMeta):
+class Discriminator(nn.Module, ABC):
     """
     Base descriminator Class
     """
@@ -35,3 +34,12 @@ class Discriminator(nn.Module, metaclass=ABCMeta):
             x = self.blocks[i].fade_sequence(x)
         output = x
         return output
+
+    @abstractmethod
+    def forward(self):
+        pass
+
+    @abstractmethod
+    def training_step(self):
+        pass
+

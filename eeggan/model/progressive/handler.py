@@ -1,7 +1,7 @@
 #  Author: Kay Hartmann <kg.hartma@gmail.com>
 
-from eeggan.training.progressive.discriminator import ProgressiveDiscriminator
-from eeggan.training.progressive.generator import ProgressiveGenerator
+from eeggan.model.progressive.discriminator import ProgressiveDiscriminator
+from eeggan.model.progressive.generator import ProgressiveGenerator
 
 
 class ProgressionHandler:

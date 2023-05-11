@@ -3,7 +3,7 @@ import sys
 # setting path
 sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
-from eeggan.examples.high_gamma.braindecode_hack import IntermediateOutputWrapper
+from eeggan.classifier.IntermediateOutput import IntermediateOutputWrapper
 from eeggan.training.handlers.metrics import WassersteinMetric, InceptionMetric, ClassificationMetric, FrechetMetric
 from eeggan.data.dataclasses import Data
 from eeggan.data.create_dataset import load_deeps4

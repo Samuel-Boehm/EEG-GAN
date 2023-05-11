@@ -5,7 +5,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from eeggan.examples.high_gamma.braindecode_hack import IntermediateOutputWrapper
+from eeggan.classifier.IntermediateOutput import IntermediateOutputWrapper
 from ignite.engine import Events
 from ignite.metrics import MetricUsage
 from matplotlib import pyplot

@@ -18,7 +18,7 @@ from eeggan.training.trainer.gan_softplus import GanSoftplusTrainer
 
 from torch.utils.tensorboard import SummaryWriter
 
-n_epochs_per_stage = 1000
+n_epochs_per_stage = 2000
 
 VERSION = 'full_set_1_continue'
 EXPERIMENT = 'ZCA_prewhitened'
@@ -27,14 +27,44 @@ SUBJECT_ID = 1
 
 RESULTPATH = f'/home/boehms/eeg-gan/EEG-GAN/Data/Results/{EXPERIMENT}'
 
-STAGE = 6
+STAGE = 5
+
 
 writer = SummaryWriter(log_dir=f'/home/boehms/eeg-gan/EEG-GAN/Data/Tensorboard/{EXPERIMENT}/{VERSION}')
 
 # Load state dics into generator and discriminator
 STATE_DICT = torch.load(f'/home/boehms/eeg-gan/EEG-GAN/Data/Results/ZCA_prewhitened/full_set_1/1/states_stage_{STAGE-1}.pt')
 
-DEFAULT_CONFIG = joblib.load('/home/boehms/eeg-gan/EEG-GAN/Data/Results/ZCA_prewhitened/full_set_1/1-14/config.dict')
+
+DEFAULT_CONFIG = dict(
+    n_chans=21,  # number of channels in data
+    n_classes=2,  # number of classes in data
+    orig_fs=FS,  # sampling rate of data
+
+    n_batch=128,  # batch size
+    n_stages=N_PROGRESSIVE_STAGES,  # number of progressive stages
+    n_epochs_per_stage=n_epochs_per_stage,  # epochs in each progressive stage
+    n_epochs_metrics=50,
+    plot_every_epoch=250,
+    n_epochs_fade=int(0.1 * n_epochs_per_stage),
+    use_fade=False,
+    freeze_stages=True,
+
+    n_latent=200,  # latent vector size
+    r1_gamma=10.,
+    r2_gamma=0.,
+    lr_d=0.005,  # discriminator learning rate
+    lr_g=0.001,  # generator learning rate
+    betas=(0., 0.99),  # optimizer betas
+
+    n_filters=120,
+    n_time=INPUT_LENGTH,
+
+    upsampling='conv',
+    downsampling='conv',
+    discfading='cubic',
+    genfading='cubic',
+)
 
 default_model_builder = Baseline(DEFAULT_CONFIG['n_stages'], DEFAULT_CONFIG['n_latent'], DEFAULT_CONFIG['n_time'],
                                  DEFAULT_CONFIG['n_chans'], DEFAULT_CONFIG['n_classes'], DEFAULT_CONFIG['n_filters'],
@@ -74,7 +104,10 @@ def run(subj_ind: int, result_name: str, dataset_path: str, deep4_path: str, res
     
     trainer.add_event_handler(Events.EPOCH_COMPLETED(every=1), progression_handler.advance_alpha)
 
-   
+    print(progression_handler.generator.cur_block)
+    print(progression_handler.discriminator.cur_block)
+
+    
     generator.train()
     discriminator.train()
 

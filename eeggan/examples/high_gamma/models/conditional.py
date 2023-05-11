@@ -24,7 +24,7 @@ class Conditional(ProgressiveModelBuilder):
         n_time (int): number of timepoints (length of signal)
         n_channels(int): number of channels to generate (e.q. EEG channels)
         n_classes(int): number of different classes (e.q. right_hand, left_hand, rest ...)
-        n_filters (int): number of filters ??? #
+        n_filters (int): number of filters
         upsampling (str): upsampling method (default: linear, options: nearest, linear, area, cubic, conv)
         downsampling (str): downsampling method (default: linear, options: nearest, linear, area, cubic, conv)
         discfading (str): fading method (default: linear)
