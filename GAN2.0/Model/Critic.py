@@ -1,8 +1,11 @@
+# Project: EEG-GAN
+# Author: Samuel Boehm
+# E-Mail: <samuel-boehm@web.de>
+
 import torch.nn as nn
 import torch
 import  numpy as np
-from typing import Iterable
-from modules import ConvBlockStage, PrintLayer, WS
+from Modules import ConvBlockStage, PrintLayer, WS
 
 
 class CriticStage(nn.Module):
@@ -112,14 +115,9 @@ class Critic(nn.Module):
         """
 
         x = torch.unsqueeze(x, 0)
-        
         for i in range(stage):
-           
            x = nn.functional.interpolate(x, scale_factor=(1, 0.5), mode='bicubic')
-
         x = torch.squeeze(x, 0)
-
-
         return x
     
 

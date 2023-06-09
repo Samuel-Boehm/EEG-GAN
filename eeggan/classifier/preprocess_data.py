@@ -38,22 +38,26 @@ def ZCA_whitening(X):
 
 
 # safe path for dataset
-dataset_path = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/SchirrmeisterChs'
+dataset_path = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/clinical2'
 
 # targed sfreq
 sfreq = 256
 
 # Channels to pick
-channels = ['FC5', 'FC1', 'FC2', 'FC6', 'C3', 'C4', 'CP5',
-                 'CP1', 'CP2', 'CP6', 'FC3', 'FCz', 'FC4', 'C5', 'C1', 'C2',
-                 'C6',
-                 'CP3', 'CPz', 'CP4', 'FFC5h', 'FFC3h', 'FFC4h', 'FFC6h',
-                 'FCC5h',
-                 'FCC3h', 'FCC4h', 'FCC6h', 'CCP5h', 'CCP3h', 'CCP4h', 'CCP6h',
-                 'CPP5h',
-                 'CPP3h', 'CPP4h', 'CPP6h', 'FFC1h', 'FFC2h', 'FCC1h', 'FCC2h',
-                 'CCP1h',
-                 'CCP2h', 'CPP1h', 'CPP2h']
+#channels = ['FC5', 'FC1', 'FC2', 'FC6', 'C3', 'C4', 'CP5',
+#                 'CP1', 'CP2', 'CP6', 'FC3', 'FCz', 'FC4', 'C5', 'C1', 'C2',
+#                 'C6',
+#                 'CP3', 'CPz', 'CP4', 'FFC5h', 'FFC3h', 'FFC4h', 'FFC6h',
+#                 'FCC5h',
+#                 'FCC3h', 'FCC4h', 'FCC6h', 'CCP5h', 'CCP3h', 'CCP4h', 'CCP6h',
+#                 'CPP5h',
+#                 'CPP3h', 'CPP4h', 'CPP6h', 'FFC1h', 'FFC2h', 'FCC1h', 'FCC2h',
+#                 'CCP1h',
+#                 'CCP2h', 'CPP1h', 'CPP2h']
+
+channels = ['Fp1','Fp2','F7','F3','Fz','F4','F8',
+            'T7','C3','Cz','C4','T8','P7','P3',
+            'Pz','P4','P8','O1','O2','M1','M2']
 
 # Parameters for exponential moving standardization
 factor_new = 1e-3
@@ -66,8 +70,7 @@ dataset = HGD(subject_ids=list(range(1, 15)))
 
 # Define Preprocessor
 
-preprocessors = [
-    
+preprocessors = [    
     Preprocessor('set_eeg_reference', ref_channels='average', projection=False),
     Preprocessor('pick_channels', ch_names=channels),
     Preprocessor(lambda data: np.multiply(data, convert_factor)),
@@ -76,7 +79,7 @@ preprocessors = [
     # Preprocessor('pick_types', eeg=True, meg=False, stim=False),  # Keep EEG sensors
     Preprocessor(exponential_moving_standardize,  # Exponential moving standardization
                  factor_new=factor_new, init_block_size=init_block_size),
-    # Preprocessor(ZCA_whitening, apply_on_array=True, channel_wise=False)
+    Preprocessor(ZCA_whitening, apply_on_array=True, channel_wise=False)
 ]
 
 # Transform the data
@@ -86,8 +89,7 @@ print('finised preprocessor')
 
 # Create wondowed dataset
 windows_dataset = create_windows_from_events(
-    dataset, trial_start_offset_samples=0, trial_stop_offset_samples=int(0.5*sfreq),
-    window_size_samples=int(2.5*sfreq), window_stride_samples=100,
+    dataset, trial_start_offset_samples=int(-.5*sfreq),
     drop_last_window=False, picks=channels)
 
 windows_dataset.save(path=dataset_path, overwrite=True,)

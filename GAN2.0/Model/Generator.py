@@ -1,8 +1,12 @@
+# Project: EEG-GAN
+# Author: Samuel Boehm
+# E-Mail: <samuel-boehm@web.de>
+
 import torch.nn as nn
 import torch
 import numpy as np
 
-from modules import PixelNorm, ConvBlockStage, PrintLayer, WS
+from Modules import PixelNorm, ConvBlockStage, PrintLayer, WS
 
 class GeneratorStage(nn.Module):
     """
@@ -110,8 +114,6 @@ def build_generator(latent_dim, embedding_dim, n_filters, n_time, n_stages, n_ch
     n_time_first_layer = int(np.floor(n_time / 2 ** (n_stages-1)))
     blocks = []
 
-    
-
     # Note that the first conv stage in the generator differs from the others
     # because it takes the latent vector as input
     first_conv = nn.Sequential(
@@ -119,17 +121,15 @@ def build_generator(latent_dim, embedding_dim, n_filters, n_time, n_stages, n_ch
         nn.Unflatten(1, (n_filters, n_time_first_layer)),
         nn.LeakyReLU(0.2),
         PixelNorm(),
-        
         ConvBlockStage(n_filters, 0, generator=True),
-
         )
     
     upsample = nn.Sequential(
                 WS(nn.ConvTranspose1d(n_filters, n_filters, 4, stride=2, padding=1)),
                 nn.LeakyReLU(0.2)
-            )
+        )
     
-    generator_out = WS(nn.Conv1d(n_filters, n_channels, kernel_size=1, ))
+    generator_out = WS(nn.Conv1d(n_filters, n_channels, kernel_size=1,))
 
 
 
@@ -139,7 +139,8 @@ def build_generator(latent_dim, embedding_dim, n_filters, n_time, n_stages, n_ch
     for stage in range(1, n_stages):
         stage_conv = nn.Sequential(
             upsample,
-            ConvBlockStage(n_filters, stage, generator=True))
+            ConvBlockStage(n_filters, stage, generator=True),
+        )
 
         # Out sequence is independent of stage
         blocks.append(GeneratorStage(stage_conv, generator_out, upsample))

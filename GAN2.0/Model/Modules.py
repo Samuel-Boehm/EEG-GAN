@@ -1,10 +1,11 @@
-from torch.nn.init import calculate_gain
+# Project: EEG-GAN
+# Author: Samuel Boehm
+# E-Mail: <samuel-boehm@web.de>
+
 import torch.nn as nn
 import torch
-
 import numpy as np
-
-
+from torch.nn.init import calculate_gain
 
 class WeightScale(object):
     """

@@ -1,18 +1,15 @@
-import torch.nn as nn
-import numpy as np
+# Project: EEG-GAN
+# Author: Samuel Boehm
+# E-Mail: <samuel-boehm@web.de>
+
 import torch
 from pytorch_lightning.core import LightningModule
 from torch.nn.functional import softplus
 from torch import autograd
-from generator import Generator, build_generator
-from critic import Critic, build_critic
-from ProgressionHandler import ProgressionHandler
-from torch.utils.data import DataLoader
+from Generator import Generator, build_generator
+from Critic import Critic, build_critic
 
-
-
-
-class GAN(LightningModule, ProgressionHandler):
+class GAN(LightningModule):
     def __init__(
         self,
         n_channels,
@@ -53,7 +50,6 @@ class GAN(LightningModule, ProgressionHandler):
                                          n_classes=n_classes,
                                          )
         
-        self.progress = ProgressionHandler(self.generator, self.critic, n_stages, epochs_per_stage)
         
         # in these epochs a new block is added
         self.progression_epochs = []
@@ -66,15 +62,6 @@ class GAN(LightningModule, ProgressionHandler):
         
     def training_step(self, batch_real):
         
-        # If current epoch is a 'progression_epoch' trigger the progression
-        if self.trainer.current_epoch in self.progression_epochs:
-            self.current_stage += 1
-            print(f'Progressing to Stage {self.current_stage}')
-            # Set stages in GAN:
-            self.progress.set_stage(self.current_stage)
-            # Downsample data in Dataloader to current stage: 
-
-
         X_real, y_real = batch_real
 
         optimizer_g, optimizer_c = self.optimizers()
@@ -102,21 +89,19 @@ class GAN(LightningModule, ProgressionHandler):
                 + (0.001 * torch.mean(fx_real ** 2))
             )
 
-        self.log("c_loss_real", loss_critic, prog_bar=True)
+        self.log("critic_loss", loss_critic, prog_bar=True)
         self.manual_backward(loss_critic, retain_graph=True)
 
         optimizer_c.step()
         optimizer_c.zero_grad()
         self.untoggle_optimizer(optimizer_c)
 
-
         # train generator
         self.toggle_optimizer(optimizer_g)
-
         
         fx_fake = self.critic(X_fake, y_fake)
         g_loss = softplus(-fx_fake).mean()
-        self.log("g_loss", g_loss, prog_bar=True)
+        self.log("generator_loss", g_loss, prog_bar=True)
         self.manual_backward(g_loss)
         optimizer_g.step()
         optimizer_g.zero_grad()

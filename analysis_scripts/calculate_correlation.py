@@ -34,8 +34,6 @@ gan_path = os.path.join(args.gan_path, args.name)
 
 
 def calculate_Corelation(real:Data, fake:Data, mapping=MAPPING):
-
-
     conditional_dict = {}
 
     for key in mapping.keys():
