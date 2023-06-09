@@ -7,8 +7,9 @@ import numpy.linalg as linalg
 import mne
 
 from moabb.datasets import Schirrmeister2017
-from braindecode.datautil.preprocess import exponential_moving_standardize
-from DataSet import Dataset
+from braindecode.preprocessing.preprocess import exponential_moving_standardize
+from DataSet import EEGGAN_Dataset
+from tqdm import tqdm
 
 def ZCA_whitening(X:np.ndarray):
     '''
@@ -73,7 +74,7 @@ def _preprocess_and_stack(raw: mne.io.Raw, channels:list, interval_times:tuple, 
     X = mne_epochs.get_data()
     X = X.astype(dtype=np.float32)
     X = np.multiply(X, 1e6)
-    X = ZCA_whitening(X)
+    # X = ZCA_whitening(X)
     # Normalize:
     X = X - X.mean()
     X = X / X.std()
@@ -98,10 +99,10 @@ def fetch_and_unpack_schirrmeister2017_moabb_data(channels: list,
 
     """
     # Get raw data from MOABB
-    ds = Dataset(['subject', 'session', 'split'], fs)
+    ds = EEGGAN_Dataset(['subject', 'session', 'split'], fs)
     mne.set_log_level('WARNING')
     data = Schirrmeister2017().get_data()
-    for subj_id, subj_data in data.items():
+    for subj_id, subj_data in tqdm(data.items()):
         for sess_id, sess_data in subj_data.items():
             for run_id, raw in sess_data.items():
                 X, y = _preprocess_and_stack(raw, channels, interval_times, fs, mapping)
@@ -115,12 +116,12 @@ if __name__ == '__main__':
     channels = ['Fp1','Fp2','F7','F3','Fz','F4','F8',
             'T7','C3','Cz','C4','T8','P7','P3',
             'Pz','P4','P8','O1','O2','M1','M2']
+    
     interval_times = (-0.5, 2.5)
     fs = 256
     mapping={'right_hand':0, 'rest':1}
 
-
     ds = fetch_and_unpack_schirrmeister2017_moabb_data(channels, interval_times, fs, mapping)
-    ds.save('/home/boehms/eeg-gan/Data/clinical')
+    ds.save('/home/samuelboehm/reworkedGAN/Data/clinical')
 
 

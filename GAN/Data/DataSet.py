@@ -4,11 +4,12 @@
 
 import  numpy as np
 import pandas as pd
-import pickle
+import torch
 import itertools
+from torch.utils.data import Dataset
 
 
-class Dataset:
+class EEGGAN_Dataset(Dataset):
     """
     Dataset class for storing data and labels.
     
@@ -51,7 +52,7 @@ class Dataset:
         '''
         # Save tags to DataFrame: 
         tag_values.append(list(range(self.data.shape[0], self.data.shape[0] + data.shape[0])))
-        self.splits = self.splits.append(pd.DataFrame([tag_values], columns=self.splits.columns), ignore_index=True)
+        self.splits = pd.concat([self.splits, pd.DataFrame([tag_values], columns=self.splits.columns)], ignore_index=True)
         
         # Append Data and Label arrays:
         self.data = np.concatenate((self.data, data), axis=0) if self.data.size else data
@@ -76,4 +77,4 @@ class Dataset:
             }
     
     def save(self, path):
-        pickle.dump(self, open(path , 'wb'))
+        torch.save(self, path)
