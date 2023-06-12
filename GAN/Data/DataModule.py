@@ -11,7 +11,6 @@ from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADER
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import pickle
 
 class HighGammaModule(LightningDataModule):
     '''
@@ -40,9 +39,10 @@ class HighGammaModule(LightningDataModule):
         self.n_stages = n_stages
         super().__init__()
 
-    def setup(self) -> None:
-        self.ds = pickle.load(open(self.data_dir, 'rb'))
-    
+    def setup(self, stage=None) -> None:
+        self.ds = torch.load(self.data_dir)
+        self.orignal_set = torch.clone(self.ds.data)
+
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         return DataLoader(self.ds,
                           batch_size=self.batch_size,
@@ -53,10 +53,10 @@ class HighGammaModule(LightningDataModule):
         return super().test_dataloader()
     
     def set_stage(self, stage: int):
-        # Resample data for stage
-        x = torch.unsqueeze(self.ds.data, 0)
-        for i in range(int(self.n_stages - stage) - 1):
+
+        # Resample original set for stage
+        x = torch.unsqueeze(self.orignal_set, 0)
+        for i in range(int(self.n_stages - stage)):
             x = nn.functional.interpolate(x, scale_factor=(1, 0.5), mode="bicubic")
         x = torch.squeeze(x, 0)
-        
         self.ds.data = x

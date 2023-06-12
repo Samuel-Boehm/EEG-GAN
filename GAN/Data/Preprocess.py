@@ -51,11 +51,11 @@ def _preprocess_and_stack(raw: mne.io.Raw, channels:list, interval_times:tuple, 
     # Preprocess:
     raw = raw.pick(picks=channels)
     raw.load_data()
-    # raw.set_eeg_reference('average', projection=False)
-    # raw.apply_function(np.clip, channel_wise=False, a_min=-800., a_max=800.)
+    raw.set_eeg_reference('average', projection=False)
+    raw.apply_function(np.clip, channel_wise=False, a_min=-800., a_max=800.)
     raw.resample(fs)
-    # raw.apply_function(exponential_moving_standardize, channel_wise=False,
-    #                    init_block_size=1000, factor_new=0.001, eps=1e-4)
+    raw.apply_function(exponential_moving_standardize, channel_wise=False,
+                       init_block_size=1000, factor_new=0.001, eps=1e-4)
     
     # Extract events (trials):
     events, events_id = mne.events_from_annotations(raw, mapping)
@@ -73,11 +73,11 @@ def _preprocess_and_stack(raw: mne.io.Raw, channels:list, interval_times:tuple, 
     
     X = mne_epochs.get_data()
     X = X.astype(dtype=np.float32)
-    # X = np.multiply(X, 1e6)
+    X = np.multiply(X, 1e6)
     # X = ZCA_whitening(X)
     # Normalize:
-    # X = X - X.mean()
-    # X = X / X.std()
+    X = X - X.mean()
+    X = X / X.std()
 
     return X, np.array(y)
 

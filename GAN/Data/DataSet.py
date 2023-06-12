@@ -7,6 +7,7 @@ import pandas as pd
 import torch
 import itertools
 from torch.utils.data import Dataset
+from torch import from_numpy
 
 
 class EEGGAN_Dataset(Dataset):
@@ -77,4 +78,6 @@ class EEGGAN_Dataset(Dataset):
             }
     
     def save(self, path):
+        self.data = from_numpy(self.data)
+        self.target = from_numpy(self.target)
         torch.save(self, path)

@@ -6,8 +6,8 @@ import torch
 from pytorch_lightning.core import LightningModule
 from torch.nn.functional import softplus
 from torch import autograd
-from Generator import Generator, build_generator
-from Critic import Critic, build_critic
+from Model.Critic import Critic, build_critic
+from Model.Generator import Generator, build_generator
 
 class GAN(LightningModule):
     def __init__(
