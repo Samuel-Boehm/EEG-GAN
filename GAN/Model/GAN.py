@@ -3,7 +3,7 @@
 # E-Mail: <samuel-boehm@web.de>
 
 import torch
-from pytorch_lightning.core import LightningModule
+from lightning import LightningModule
 from torch.nn.functional import softplus
 from torch import autograd
 from Model.Critic import Critic, build_critic
