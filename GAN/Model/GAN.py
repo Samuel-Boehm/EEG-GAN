@@ -8,8 +8,9 @@ from torch.nn.functional import softplus
 from torch import autograd
 from Model.Critic import Critic, build_critic
 from Model.Generator import Generator, build_generator
+from Handler.VisualizationHandler import VisualizationHandler
 
-class GAN(LightningModule):
+class GAN(LightningModule, VisualizationHandler):
     def __init__(
         self,
         n_channels,
@@ -17,6 +18,8 @@ class GAN(LightningModule):
         n_time,
         n_stages,
         n_filters,
+        fs,
+        plot_path:str,
         latent_dim: int = 100,
         lambda_gp = 10,
         lr: float = 0.0002,
@@ -24,8 +27,10 @@ class GAN(LightningModule):
         b2: float = 0.999,
         batch_size: int = 32,
         epochs_per_stage: int = 200,
+        plot_interval: int = 100,
         **kwargs,
-    ):
+    ):  
+        VisualizationHandler.__init__(self, filepath=plot_path, fs=fs)
         super().__init__()
         self.save_hyperparameters()
         self.automatic_optimization = False
@@ -107,7 +112,10 @@ class GAN(LightningModule):
         optimizer_g.zero_grad()
         self.untoggle_optimizer(optimizer_g)
 
-    
+        if self.trainer.current_epoch % self.hparams.epochs_per_stage == 0:
+            self.plot_spectrum(X_real, X_fake, self.trainer.current_epoch)
+
+
     def configure_optimizers(self):
         lr = self.hparams.lr
         b1 = self.hparams.b1
