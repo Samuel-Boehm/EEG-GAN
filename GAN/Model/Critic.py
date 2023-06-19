@@ -88,9 +88,7 @@ class Critic(nn.Module):
         
         embedding:torch.Tensor = self.label_embedding(y).view(y.shape[0], 1, self.n_time)
         embedding = self.downsample_to_stage(embedding, self._stage)
-        print('_'*10, 'Forward Critic', '_'*10)
-        print(embedding.shape)
-        print(x.shape)
+
         x = torch.cat([x, embedding], 1) # batch_size x n_channels + 1 x n_time 
 
         for i in range(self._stage, len(self.blocks)):

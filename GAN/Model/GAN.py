@@ -65,7 +65,7 @@ class GAN(LightningModule, VisualizationHandler):
     def forward(self, z, y):
         return self.generator(z, y)
         
-    def training_step(self, batch_real):
+    def training_step(self, batch_real, batch_idx):
         
         X_real, y_real = batch_real
 
