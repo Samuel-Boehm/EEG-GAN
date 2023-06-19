@@ -60,7 +60,7 @@ class GAN(LightningModule):
     def forward(self, z, y):
         return self.generator(z, y)
         
-    def training_step(self, batch_real):
+    def training_step(self, batch_real, batch_idx):
         
         X_real, y_real = batch_real
 
@@ -106,7 +106,6 @@ class GAN(LightningModule):
         optimizer_g.step()
         optimizer_g.zero_grad()
         self.untoggle_optimizer(optimizer_g)
-
     
     def configure_optimizers(self):
         lr = self.hparams.lr
