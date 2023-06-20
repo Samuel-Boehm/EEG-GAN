@@ -139,5 +139,5 @@ analysis_scripts/
 EEG_GAN_Notebook.ipynb
 Dataset/whitened_Deep4.dataset
 
-# Ignore Ligning Logs
-GAN2.0/lightning_logs
+# Set path on each machine individually:
+GAN/paths.py
