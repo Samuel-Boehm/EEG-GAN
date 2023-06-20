@@ -2,12 +2,11 @@
 import sys
 sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
-from pytorch_lightning import LightningDataModule
+from lightning import LightningDataModule
 # Project: EEG-GAN
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -43,13 +42,13 @@ class HighGammaModule(LightningDataModule):
         self.ds = torch.load(self.data_dir)
         self.orignal_set = torch.clone(self.ds.data)
 
-    def train_dataloader(self) -> TRAIN_DATALOADERS:
+    def train_dataloader(self):
         return DataLoader(self.ds,
                           batch_size=self.batch_size,
                           num_workers=self.num_workers,
                           shuffle=True)
      
-    def test_dataloader(self) -> EVAL_DATALOADERS:
+    def test_dataloader(self):
         return super().test_dataloader()
     
     def set_stage(self, stage: int):

@@ -27,7 +27,7 @@ class GAN(LightningModule, VisualizationHandler):
         b2: float = 0.999,
         batch_size: int = 32,
         epochs_per_stage: int = 200,
-        plot_interval: int = 100,
+        plot_interval: int = 5,
         **kwargs,
     ):  
         VisualizationHandler.__init__(self, filepath=plot_path, fs=fs)
@@ -60,6 +60,11 @@ class GAN(LightningModule, VisualizationHandler):
         self.progression_epochs = []
         for i in range(n_stages):
             self.progression_epochs.append(int(i*epochs_per_stage))
+        
+        # Init lists for real and fake data, this is used for plotting
+
+        self.generated_data = []
+        self.real_data = []
 
 
     def forward(self, z, y):
@@ -112,9 +117,17 @@ class GAN(LightningModule, VisualizationHandler):
         optimizer_g.zero_grad()
         self.untoggle_optimizer(optimizer_g)
 
+        self.generated_data.append(X_fake)
+        self.real_data.append(X_real)
+    
+    def on_train_epoch_end(self):
+        batch_real = torch.cat(self.real_data)
+        batch_fake = torch.cat(self.generated_data)
         if self.trainer.current_epoch % self.hparams.epochs_per_stage == 0:
-            self.plot_spectrum(X_real, X_fake, self.trainer.current_epoch)
-
+            self.plot_spectrum(batch_real, batch_fake, self.trainer.current_epoch)
+     
+        self.real_data.clear()
+        self.generated_data.clear()
 
     def configure_optimizers(self):
         lr = self.hparams.lr

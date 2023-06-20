@@ -2,10 +2,9 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-import pytorch_lightning as pl
+from lightning import Callback
 
-
-class Scheduler(pl.Callback):
+class Scheduler(Callback):
     def on_train_epoch_start(self, trainer, model):
         
         '''

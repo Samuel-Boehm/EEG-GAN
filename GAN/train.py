@@ -2,23 +2,18 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-import sys
-sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN/GAN/Data')
-
-
 from Model.GAN import GAN
 from lightning import Trainer
 import torch
 import os
 from Data.DataModule import HighGammaModule as HDG
 from Handler.ProgressionHandler import Scheduler
+from paths import data_path, results_path
 
 ## TODO: We need a versioning system to combine plots, hyperparameters and logs. 
 
-dataset_path = f'/home/boehms/eeg-gan/EEG-GAN/Data/Data/reworkedData/clinical'
-
-
-plot_path = f'/home/boehms/eeg-gan/EEG-GAN/log/plots/' 
+# Define dataset to use
+dataset_path = os.path.join(data_path, 'clinical')
 
 
 channels = ['Fp1','Fp2','F7','F3','Fz','F4','F8',
@@ -33,9 +28,9 @@ GAN_PARAMS = {
     'n_stages':6,
     'n_filters':120,
     'fs':256,
-    'plot_path':plot_path,
+    'plot_path':os.path.join(results_path, 'lightning_logs'),
     'latent_dim':210,
-    'epochs_per_stage':1000,
+    'epochs_per_stage':15,
     }
 
 # Init DataModule
@@ -49,7 +44,7 @@ def main():
             max_epochs=GAN_PARAMS['epochs_per_stage'] * GAN_PARAMS['n_stages'],
             reload_dataloaders_every_n_epochs=GAN_PARAMS['epochs_per_stage'],
             callbacks=[Scheduler()],
-            default_root_dir="/home/boehms/eeg-gan/EEG-GAN/",
+            default_root_dir=results_path,
             strategy='ddp_find_unused_parameters_true'
     )
     
