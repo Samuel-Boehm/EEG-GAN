@@ -13,7 +13,8 @@ import sys
 
 # This step is needed to set the correct path for the data module
 # most likely there is a better way to do this
-sys.path.append(os.path.join(__file__, "Data"))
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(ROOT_DIR, "Data"))
 
 #### Please configure the following paths: ####
 
@@ -25,4 +26,5 @@ data_path = f'/home/samuelboehm/reworkedGAN/Data'
 # Path to the directory where the results will be saved. 
 # NOTE: the lightning module will use this path to create a subdirectory.
 # This subdirectory will contain versions with checkpoints, logs and hyperparameters.
-results_path = 'home/samuelboehm/reworkedGAN'
+results_path = '/home/samuelboehm/reworkedGAN/'
+
