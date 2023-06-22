@@ -107,7 +107,8 @@ class Generator(nn.Module):
         """
         raise NotImplementedError
     
-def build_generator(latent_dim, embedding_dim, n_filters, n_time, n_stages, n_channels, n_classes) -> Generator:
+def build_generator(n_filters, n_time, n_stages, n_channels, n_classes,
+                    latent_dim, embedding_dim, ) -> Generator:
     
     
     # Generator:

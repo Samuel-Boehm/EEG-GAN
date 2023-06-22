@@ -141,3 +141,4 @@ Dataset/whitened_Deep4.dataset
 
 # Set path on each machine individually:
 GAN/paths.py
+

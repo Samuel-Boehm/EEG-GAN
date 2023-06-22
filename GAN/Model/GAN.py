@@ -3,6 +3,7 @@
 # E-Mail: <samuel-boehm@web.de>
 
 import torch
+import os
 from lightning import LightningModule
 from torch.nn.functional import softplus
 from torch import autograd
@@ -11,52 +12,80 @@ from Model.Generator import Generator, build_generator
 from Handler.VisualizationHandler import VisualizationHandler
 
 class GAN(LightningModule, VisualizationHandler):
-    def __init__(
-        self,
-        n_channels,
-        n_classes,
-        n_time,
-        n_stages,
-        n_filters,
-        fs,
-        plot_path:str,
-        latent_dim: int = 100,
-        lambda_gp = 10,
-        lr: float = 0.0002,
-        b1: float = 0.5,
-        b2: float = 0.999,
-        batch_size: int = 32,
-        epochs_per_stage: int = 200,
-        plot_interval: int = 5,
-        **kwargs,
+    def __init__(self, n_channels, n_classes, n_time, n_stages, n_filters,
+        fs, latent_dim: int = 100, lambda_gp = 10, lr_gen: float = 0.001,
+        lr_critic: float = 0.005, b1: float = 0.0, b2: float = 0.999,
+        batch_size: int = 32, epochs_per_stage: int = 200, plot_interval: int = 200,
+        embedding_dim: int = 10, **kwargs,
     ):  
-        VisualizationHandler.__init__(self, filepath=plot_path, fs=fs)
-        super().__init__()
+        """Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
+        LightningModule class and ist trained using the PyTorch Lightning Trainer framework.
+        Further it inherits from the VisualizationHandler class to provide visualization methods.
+
+        Args:
+            n_channels (int): number of EEG channels in the training data
+            
+            n_classes (int): number of classes in the training data
+            
+            n_time (int): number of time samples in the training data
+            
+            n_stages (int): number of stages for the progressive growing of the GAN
+            
+            n_filters (int): number of filters for the convolutional layers
+            
+            fs (int): sampling frequency of the training data. Needed to calculate the frequency 
+                during each stage.
+            
+            latent_dim (int, optional): dimension of the latent vector. Defaults to 100.
+            
+            lambda_gp (int, optional): lambda hyperparameter for the gradient penalty.
+                Defaults to 10.
+            
+            lr_gen (float, optional): generator learning rate. Defaults to 0.001.
+            
+            lr_critic (float, optional): critic learning rate. Defaults to 0.005.
+            
+            b1 (float, optional): first decay rate for the Adam optimizer. Defaults to 0.0.
+            
+            b2 (float, optional): second decay rate for the Adam optimizer. Defaults to 0.999.
+            
+            batch_size (int, optional): batch size. Defaults to 32.
+            
+            epochs_per_stage (int, optional): number of epochs per stage. Total number of training
+                stages is calculated by epochs_per:stage * n_stages. Defaults to 200.
+            
+            plot_interval (int, optional): interval for plotting. Defaults to 200.
+            
+            embedding_dim (int, optional): size of the embedding layer in the generator.
+                Defaults to 10.
+        
+        Methods:   
+            forward(x): forward pass through the model
+            training_step(batch, batch_idx): training step for the lightning module
+            configure_optimizers(): configure the optimizers for the lightning module
+            on_train_epoch_end(): method that is called at the end of each epoch
+            gradient_penalty(critic, real, fake): calculate the gradient penalty
+
+        For further methods see the VisualizationHandler and LightningModule classes.
+        """
+        
+        super().__init__(**kwargs)
+
+        # Save all hyperparameters
         self.save_hyperparameters()
         self.automatic_optimization = False
         self.current_stage = 1
-        self.embedding_dim = 10
 
-        # networks
-        self.generator: Generator = build_generator(
-                                        latent_dim=latent_dim,
-                                        embedding_dim=self.embedding_dim,
-                                        n_filters=n_filters,
-                                        n_time=n_time,
-                                        n_stages=n_stages,
-                                        n_channels=n_channels,
-                                        n_classes=n_classes,
-                                        )
+        # Build the generator model
+        self.generator: Generator = build_generator(n_filters, n_time, n_stages, n_channels,
+                                                    n_classes, latent_dim, embedding_dim,)
         
-        self.critic: Critic = build_critic(n_filters=n_filters,
-                                         n_time=n_time,
-                                         n_stages=n_stages,
-                                         n_channels=n_channels,
-                                         n_classes=n_classes,
-                                         )
+        # Build the critic model
+        self.critic: Critic = build_critic(n_filters, n_time, n_stages, n_channels, n_classes,)
         
         
-        # in these epochs a new block is added
+        # Determine fading epochs
+        # In these epochs a new block is added to the generator and the critic
         self.progression_epochs = []
         for i in range(n_stages):
             self.progression_epochs.append(int(i*epochs_per_stage))
@@ -66,7 +95,7 @@ class GAN(LightningModule, VisualizationHandler):
         self.generated_data = []
         self.real_data = []
 
-
+        
     def forward(self, z, y):
         return self.generator(z, y)
         
@@ -81,7 +110,9 @@ class GAN(LightningModule, VisualizationHandler):
         z = z.type_as(X_real)
 
         # generate fake batch:
-        y_fake = torch.randint(low=0, high=self.hparams.n_classes, size=(X_real.shape[0],), dtype=torch.int32)
+        y_fake = torch.randint(low=0, high=self.hparams.n_classes,
+                               size=(X_real.shape[0],), dtype=torch.int32)
+        
         y_fake  = y_fake.type_as(y_real)
 
         X_fake = self.forward(z, y_fake)
@@ -123,19 +154,27 @@ class GAN(LightningModule, VisualizationHandler):
     def on_train_epoch_end(self):
         batch_real = torch.cat(self.real_data)
         batch_fake = torch.cat(self.generated_data)
-        if self.trainer.current_epoch % self.hparams.epochs_per_stage == 0:
-            self.plot_spectrum(batch_real, batch_fake, self.trainer.current_epoch)
+
+        # each 'plot_intervall' stages plot the spectrum of the generated and real data
+        if self.trainer.current_epoch % self.hparams.plot_interval == 0:
+            # Set plotting params:
+            max_freq = int(self.hparams.fs / 2**(self.hparams.n_stages - self.current_stage))
+            plot_dir = os.path.join(self.logger.log_dir, "plots")
+
+            self.plot_spectrum(batch_real, batch_fake, self.trainer.current_epoch,
+                                max_freq, plot_dir,)
      
         self.real_data.clear()
         self.generated_data.clear()
 
     def configure_optimizers(self):
-        lr = self.hparams.lr
+        lr_gene = self.hparams.lr_gen
+        lr_critic = self.hparams.lr_critic
         b1 = self.hparams.b1
         b2 = self.hparams.b2
 
-        opt_g = torch.optim.Adam(self.generator.parameters(), lr=lr, betas=(b1, b2))
-        opt_c = torch.optim.Adam(self.critic.parameters(), lr=lr, betas=(b1, b2))
+        opt_g = torch.optim.Adam(self.generator.parameters(), lr=lr_gene, betas=(b1, b2))
+        opt_c = torch.optim.Adam(self.critic.parameters(), lr=lr_critic, betas=(b1, b2))
         return [opt_g, opt_c], []
     
 

@@ -6,16 +6,18 @@ from Visualization.utils import plot_spectrum
 
 
 class VisualizationHandler:
-    def __init__(self, filepath, fs) -> None:
-        self.filepath = filepath
-        self.fs = fs
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
-    def plot_spectrum(self, batch_real, batch_fake, epoch):
+    def plot_spectrum(self, batch_real, batch_fake, epoch, fs, filepath = None):
 
         if is_tensor(batch_real):
             batch_real = batch_real.detach().cpu().numpy()
         if is_tensor(batch_fake):
             batch_fake = batch_fake.detach().cpu().numpy()
 
-        plot_spectrum(batch_real, batch_fake, self.fs)
-        plt.savefig(os.path.join(self.filepath, f"spectrum_{epoch}.png"))
+        plot_spectrum(batch_real, batch_fake, fs)
+
+        if filepath:
+            plt.savefig(os.path.join(filepath, f"spectrum_{epoch}.png"))
+        plt.close()

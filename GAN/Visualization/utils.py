@@ -7,6 +7,7 @@ def labeled_tube_plot(x, data_y, tube_y, labels,
     x = np.asarray(x)
     data_y = np.asarray(data_y)
     tube_y = np.asarray(tube_y)
+
     if axes is None:
         axes = plt.gca()
 

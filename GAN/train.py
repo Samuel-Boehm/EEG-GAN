@@ -28,9 +28,8 @@ GAN_PARAMS = {
     'n_stages':6,
     'n_filters':120,
     'fs':256,
-    'plot_path':os.path.join(results_path, 'lightning_logs'),
     'latent_dim':210,
-    'epochs_per_stage':15,
+    'epochs_per_stage':1000,
     }
 
 # Init DataModule
@@ -47,7 +46,12 @@ def main():
             default_root_dir=results_path,
             strategy='ddp_find_unused_parameters_true'
     )
-    
+
+    # Create folder for plots:
+    plots_path = os.path.join(trainer.logger.log_dir, 'plots')
+    if not os.path.exists(plots_path):
+        os.makedirs(plots_path)
+
     trainer.fit(model, dm)
 
 if __name__ == '__main__':
