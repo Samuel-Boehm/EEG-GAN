@@ -2,11 +2,16 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from lightning import Callback
+from torch import is_tensor
+from Visualization.utils import plot_spectrum
+from lightning.pytorch.callbacks import Callback
+import torch
+from wandb import Image
+
 
 class Scheduler(Callback):
+    
     def on_train_epoch_start(self, trainer, model):
-        
         '''
         Each epoch start, check if we need to increase stage. If so, increase stage.
         '''

@@ -10,6 +10,8 @@ from moabb.datasets import Schirrmeister2017
 from braindecode.preprocessing.preprocess import exponential_moving_standardize
 from DataSet import EEGGAN_Dataset
 from tqdm import tqdm
+from paths import data_path
+import os
 
 def ZCA_whitening(X:np.ndarray):
     '''
@@ -122,6 +124,6 @@ if __name__ == '__main__':
     mapping={'right_hand':0, 'rest':1}
 
     ds = fetch_and_unpack_schirrmeister2017_moabb_data(channels, interval_times, fs, mapping)
-    ds.save('/home/samuelboehm/reworkedGAN/Data/clinical')
+    ds.save(os.path.join(data_path, 'clinical'))
 
 

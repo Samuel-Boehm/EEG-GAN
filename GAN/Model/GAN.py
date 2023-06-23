@@ -9,9 +9,8 @@ from torch.nn.functional import softplus
 from torch import autograd
 from Model.Critic import Critic, build_critic
 from Model.Generator import Generator, build_generator
-from Handler.VisualizationHandler import VisualizationHandler
 
-class GAN(LightningModule, VisualizationHandler):
+class GAN(LightningModule):
     def __init__(self, n_channels, n_classes, n_time, n_stages, n_filters,
         fs, latent_dim: int = 100, lambda_gp = 10, lr_gen: float = 0.001,
         lr_critic: float = 0.005, b1: float = 0.0, b2: float = 0.999,
@@ -20,7 +19,7 @@ class GAN(LightningModule, VisualizationHandler):
     ):  
         """Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
         LightningModule class and ist trained using the PyTorch Lightning Trainer framework.
-        Further it inherits from the VisualizationHandler class to provide visualization methods.
+        
 
         Args:
             n_channels (int): number of EEG channels in the training data
@@ -90,10 +89,11 @@ class GAN(LightningModule, VisualizationHandler):
         for i in range(n_stages):
             self.progression_epochs.append(int(i*epochs_per_stage))
         
-        # Init lists for real and fake data, this is used for plotting
-
+        # For each metric we want to log, we need to initialize a list
         self.generated_data = []
         self.real_data = []
+        self.loss_generator = []
+        self.loss_critic = []
 
         
     def forward(self, z, y):
@@ -130,7 +130,9 @@ class GAN(LightningModule, VisualizationHandler):
                 + (0.001 * torch.mean(fx_real ** 2))
             )
 
-        self.log("critic_loss", loss_critic, prog_bar=True)
+        # Log critic loss
+        self.loss_critic.append(loss_critic)
+
         self.manual_backward(loss_critic, retain_graph=True)
 
         optimizer_c.step()
@@ -142,30 +144,21 @@ class GAN(LightningModule, VisualizationHandler):
         
         fx_fake = self.critic(X_fake, y_fake)
         g_loss = softplus(-fx_fake).mean()
-        self.log("generator_loss", g_loss, prog_bar=True)
+        
+        # Log generator loss
+        self.loss_generator.append(g_loss)
+
         self.manual_backward(g_loss)
         optimizer_g.step()
         optimizer_g.zero_grad()
         self.untoggle_optimizer(optimizer_g)
 
+        # Collect metrics
         self.generated_data.append(X_fake)
         self.real_data.append(X_real)
-    
-    def on_train_epoch_end(self):
-        batch_real = torch.cat(self.real_data)
-        batch_fake = torch.cat(self.generated_data)
 
-        # each 'plot_intervall' stages plot the spectrum of the generated and real data
-        if self.trainer.current_epoch % self.hparams.plot_interval == 0:
-            # Set plotting params:
-            max_freq = int(self.hparams.fs / 2**(self.hparams.n_stages - self.current_stage))
-            plot_dir = os.path.join(self.logger.log_dir, "plots")
 
-            self.plot_spectrum(batch_real, batch_fake, self.trainer.current_epoch,
-                                max_freq, plot_dir,)
-     
-        self.real_data.clear()
-        self.generated_data.clear()
+
 
     def configure_optimizers(self):
         lr_gene = self.hparams.lr_gen

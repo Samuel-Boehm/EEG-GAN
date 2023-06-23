@@ -29,9 +29,11 @@ def labeled_tube_plot(x, data_y, tube_y, labels,
         axes.set_ylim(np.nanmin(data_y - tube_y), np.nanmax(data_y + tube_y))
     axes.legend()
 
+    return plt.gcf()
 
 
-def plot_spectrum(batch_real: np.ndarray, batch_fake: np.ndarray = None, fs = 256):
+
+def plot_spectrum(batch_real: np.ndarray, batch_fake: np.ndarray = None, fs = 256, name = ''):
     '''
     Plot the spectrum of the real and fake data
     Args:
@@ -51,8 +53,10 @@ def plot_spectrum(batch_real: np.ndarray, batch_fake: np.ndarray = None, fs = 25
         
 
 
-    labeled_tube_plot(freqs,
+    figure = labeled_tube_plot(freqs,
                       [real_mean, fake_mean],
                       [real_std, fake_std],
                       ["Real", "Fake"],
-                      "Mean spectral log amplitude", "Hz", "log(Amp)", None)
+                      f"Mean spectral log amplitude {name}", "Hz", "log(Amp)", None)
+    
+    return figure
