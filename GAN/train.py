@@ -15,7 +15,6 @@ from paths import data_path, results_path
 # Define dataset to use
 dataset_path = os.path.join(data_path, 'clinical')
 
-
 channels = ['Fp1','Fp2','F7','F3','Fz','F4','F8',
             'T7','C3','Cz','C4','T8','P7','P3',
             'Pz','P4','P8','O1','O2','M1','M2']
@@ -33,7 +32,7 @@ GAN_PARAMS = {
     }
 
 # Init DataModule
-dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=32, num_workers=4)
+dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=32, num_workers=2)
 
 
 def main():
@@ -46,6 +45,8 @@ def main():
             default_root_dir=results_path,
             strategy='ddp_find_unused_parameters_true'
     )
+
+
 
     # Create folder for plots:
     plots_path = os.path.join(trainer.logger.log_dir, 'plots')

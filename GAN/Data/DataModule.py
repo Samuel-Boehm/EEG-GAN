@@ -1,11 +1,11 @@
-#  Authors:	Samuel Böhm <samuel-boehm@web.de>
+# Project: EEG-GAN
+# Author: Samuel Boehm
+# E-Mail: <samuel-boehm@web.de>
+
 import sys
 sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
 from lightning import LightningDataModule
-# Project: EEG-GAN
-# Author: Samuel Boehm
-# E-Mail: <samuel-boehm@web.de>
 
 import torch
 import torch.nn as nn

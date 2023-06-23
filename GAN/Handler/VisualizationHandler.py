@@ -1,3 +1,7 @@
+# Project: EEG-GAN
+# Author: Samuel Boehm
+# E-Mail: <samuel-boehm@web.de>
+
 import matplotlib.pyplot as plt
 import numpy as np
 from torch import is_tensor
