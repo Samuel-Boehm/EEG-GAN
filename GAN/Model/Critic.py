@@ -44,11 +44,21 @@ class CriticStage(nn.Module):
         self.resample = resample_sequence
     
 
-    def forward(self, x, first=False, **kwargs):
+    def forward(self, x, first=False, alpha=1, **kwargs):
         
         if first:
-            x = self.in_sequence(x, **kwargs)
-        out = self.intermediate_sequence(x, **kwargs)
+            out = self.in_sequence(x, **kwargs)
+            if alpha < 1:
+                # downsample data directly after in_sequence
+                x = self.resample(out, **kwargs)
+                # pass data through intermediate_sequence
+                fx = self.intermediate_sequence(out, **kwargs)
+                # interpolate between x and fx
+                out = (1-alpha)*x + alpha*fx
+                # return interpolated data
+                return out
+        # if alpha >=1 or first == False:
+        out = self.intermediate_sequence(out, **kwargs)
         return out
 
 
@@ -78,9 +88,18 @@ class Critic(nn.Module):
 
         self.label_embedding = nn.Embedding(n_classes, n_time)
 
+        self.alpha = 0
+
     def set_stage(self, stage):
         self.cur_stage = stage
         self._stage = len(self.blocks) - self.cur_stage # Internal stage variable. Differs from GAN stage (cur_stage).
+
+        # In the first stage we do not need fading and therefore set alpha to 1
+        if self.cur_stage == 1:
+            self.alpha = 1
+        else:
+            self.alpha = 0
+
 
 
 
@@ -92,7 +111,7 @@ class Critic(nn.Module):
         x = torch.cat([x, embedding], 1) # batch_size x n_channels + 1 x n_time 
 
         for i in range(self._stage, len(self.blocks)):
-            x = self.blocks[i](x,  first=(i == self._stage))
+            x = self.blocks[i](x,  first=(i == self._stage), alpha=self.alpha, **kwargs)
         return x
     
     def downsample_to_stage(self, x, stage):

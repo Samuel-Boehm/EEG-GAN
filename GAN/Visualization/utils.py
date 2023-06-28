@@ -10,6 +10,7 @@ def labeled_tube_plot(x, data_y, tube_y, labels,
 
     if axes is None:
         axes = plt.gca()
+        axes.clear()
 
     colors = []
     for i, label in enumerate(labels):

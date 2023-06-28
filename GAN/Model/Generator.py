@@ -25,7 +25,7 @@ class GeneratorStage(nn.Module):
 
     Attributes
     ----------
-    convolution_sequence : nn.Sequence
+    intermediate_sequence : nn.Sequence
         Sequence of modules that process stage
 
     out_sequence : nn.Sequence
@@ -40,12 +40,19 @@ class GeneratorStage(nn.Module):
         self.intermediate_sequence = intermediate_sequence
         self.out_sequence = out_sequence
         self.resample = resample_sequence
-    
 
-    def forward(self, x, last=False, **kwargs):
-        out = self.intermediate_sequence(x, **kwargs)
+    def forward(self, x, last=False, alpha=1, **kwargs):
+        fx = self.intermediate_sequence(x, **kwargs)
         if last:
-            out = self.out_sequence(out, **kwargs)
+            if alpha < 1:
+                # If alpha < 1, we upsample the data...
+                x = self.resample(x, **kwargs)
+                # ...then we interpolate between x and fx...
+                interpolation = (1-alpha)*x + alpha * fx
+                # ...and pass it through the out_sequence:
+                out = self.out_sequence(interpolation, **kwargs)
+            else:
+                out = self.out_sequence(fx, **kwargs)
         return out
 
 
@@ -75,16 +82,25 @@ class Generator(nn.Module):
     def set_stage(self, stage):
         self.cur_stage = stage
         self._stage = self.cur_stage - 1 # Internal stage variable. Differs from GAN stage (cur_stage).
+        
+        # In the first stage we do not need fading and therefore set alpha to 1
+        if self.cur_stage == 1:
+            self.alpha = 1
+            print("Set alpha to 1")
+        else:
+            print("Set alpha to 0")
+            self.alpha = 0
 
     def forward(self, x, y, **kwargs):
         embedding = self.label_embedding(y)
         #embedding shape: batch_size x 10
         x = torch.cat([x, embedding], dim=1)
 
-
         for i in range(0, self.cur_stage):
-            x = self.blocks[i](x, last=(i == self._stage), **kwargs)
+            x = self.blocks[i](x, last=(i == self._stage), alpha=self.alpha, **kwargs)
         
+        # increase alpha:
+        self.alpha += 1/50
         return x
 
 

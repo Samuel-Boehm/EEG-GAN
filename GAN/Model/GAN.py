@@ -14,7 +14,7 @@ class GAN(LightningModule):
     def __init__(self, n_channels, n_classes, n_time, n_stages, n_filters,
         fs, latent_dim: int = 100, lambda_gp = 10, lr_gen: float = 0.001,
         lr_critic: float = 0.005, b1: float = 0.0, b2: float = 0.999,
-        batch_size: int = 32, epochs_per_stage: int = 200, plot_interval: int = 200,
+        batch_size: int = 32, epochs_per_stage: int = 200, 
         embedding_dim: int = 10, **kwargs,
     ):  
         """Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
@@ -22,22 +22,22 @@ class GAN(LightningModule):
         
 
         Args:
-            n_channels (int): number of EEG channels in the training data
+            n_channels (int):   number of EEG channels in the training data
             
-            n_classes (int): number of classes in the training data
+            n_classes (int):    number of classes in the training data
             
-            n_time (int): number of time samples in the training data
+            n_time (int):       number of time samples in the training data
             
-            n_stages (int): number of stages for the progressive growing of the GAN
+            n_stages (int):     number of stages for the progressive growing of the GAN
             
-            n_filters (int): number of filters for the convolutional layers
+            n_filters (int):    number of filters for the convolutional layers
             
-            fs (int): sampling frequency of the training data. Needed to calculate the frequency 
-                during each stage.
+            fs (int):           sampling frequency of the training data. 
+                                Needed to calculate the frequency during each stage.
             
             latent_dim (int, optional): dimension of the latent vector. Defaults to 100.
             
-            lambda_gp (int, optional): lambda hyperparameter for the gradient penalty.
+            lambda_gp (int, optional):lambda hyperparameter for the gradient penalty.
                 Defaults to 10.
             
             lr_gen (float, optional): generator learning rate. Defaults to 0.001.
@@ -52,8 +52,6 @@ class GAN(LightningModule):
             
             epochs_per_stage (int, optional): number of epochs per stage. Total number of training
                 stages is calculated by epochs_per:stage * n_stages. Defaults to 200.
-            
-            plot_interval (int, optional): interval for plotting. Defaults to 200.
             
             embedding_dim (int, optional): size of the embedding layer in the generator.
                 Defaults to 10.
@@ -94,6 +92,8 @@ class GAN(LightningModule):
         self.real_data = []
         self.loss_generator = []
         self.loss_critic = []
+        self.alpha_g = []
+        self.alpha_c = []
 
         
     def forward(self, z, y):
@@ -124,16 +124,15 @@ class GAN(LightningModule):
         fx_fake = self.critic(X_fake.detach(), y_fake)
         gp = self.gradient_penalty(X_real, X_fake, y_fake)
 
-        loss_critic = (
+        c_loss = (
                 -(torch.mean(fx_real) - torch.mean(fx_fake))
-                + self.hparams.lambda_gp * gp
+                + self.hparams.lambda_gp * gp 
                 + (0.001 * torch.mean(fx_real ** 2))
-            )
+           )
 
         # Log critic loss
-        self.loss_critic.append(loss_critic)
 
-        self.manual_backward(loss_critic, retain_graph=True)
+        self.manual_backward(c_loss, retain_graph=True)
 
         optimizer_c.step()
         optimizer_c.zero_grad()
@@ -144,9 +143,6 @@ class GAN(LightningModule):
         
         fx_fake = self.critic(X_fake, y_fake)
         g_loss = softplus(-fx_fake).mean()
-        
-        # Log generator loss
-        self.loss_generator.append(g_loss)
 
         self.manual_backward(g_loss)
         optimizer_g.step()
@@ -156,6 +152,12 @@ class GAN(LightningModule):
         # Collect metrics
         self.generated_data.append(X_fake)
         self.real_data.append(X_real)
+        self.loss_generator.append(g_loss.item())
+        self.loss_critic.append(c_loss.item())
+        # track generator alpha for debugging purposes
+        self.alpha_g.append(self.generator.alpha)
+        # track critic alpha for debugging purposes
+        self.alpha_c.append(self.critic.alpha)
 
 
 
@@ -206,3 +208,5 @@ class GAN(LightningModule):
         gradient_penalty = ((tmp) ** 2).mean()
 
         return gradient_penalty
+    
+    

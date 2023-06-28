@@ -30,14 +30,15 @@ GAN_PARAMS = {
     'n_filters':120,
     'fs':256,
     'latent_dim':210,
-    'epochs_per_stage':1000,
+    'epochs_per_stage':500,
+    'batch_size':128
     }
 
 # Init DataModule
-dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=32, num_workers=2)
+dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=GAN_PARAMS['batch_size'], num_workers=8)
 
 # Init Logger
-logger = WandbLogger(name='baseline', project='EEGGAN', save_dir=results_path)
+logger = WandbLogger(name='fading', project='EEGGAN', save_dir=results_path)
 
 def main():
     model = GAN(**GAN_PARAMS)
@@ -45,20 +46,13 @@ def main():
     trainer = Trainer(
             max_epochs=GAN_PARAMS['epochs_per_stage'] * GAN_PARAMS['n_stages'],
             reload_dataloaders_every_n_epochs=GAN_PARAMS['epochs_per_stage'],
-            callbacks=[Scheduler(), LoggingHandler()],
+            callbacks=[Scheduler(), LoggingHandler(50)],
             default_root_dir=results_path,
             strategy='ddp_find_unused_parameters_true',
             logger=logger,
     )
 
     logger.watch(model)
-
-
-    # Create folder for plots:
-    # print(trainer.logger.log_dir)
-    #plots_path = os.path.join(trainer.logger.log_dir, 'plots')
-    #if not os.path.exists(plots_path):
-    #    os.makedirs(plots_path)
 
     trainer.fit(model, dm)
 
