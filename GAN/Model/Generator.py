@@ -41,14 +41,14 @@ class GeneratorStage(nn.Module):
         self.out_sequence = out_sequence
         self.resample = resample_sequence
 
-    def forward(self, x, last=False, alpha=1, **kwargs):
+    def forward(self, x, last=False, alpha=1, fading=False, **kwargs):
         '''
         forward pass through generator stage. Depending on the stage,
         we either pass the data through the intermediate_sequence or
         '''
         fx = self.intermediate_sequence(x, **kwargs)
         if last:
-            if alpha < 1:
+            if fading and alpha < 1:
                 # If alpha < 1, we upsample the data...
                 x = self.resample(x, **kwargs)
                 # ...then we interpolate between x and fx...
@@ -79,12 +79,13 @@ class Generator(nn.Module):
         for conditional GAN
     """
 
-    def __init__(self, blocks, n_classes, embedding_dim, stage=1):
+    def __init__(self, blocks, n_classes, embedding_dim, stage=1, fading=False):
         super(Generator, self).__init__()
         self.blocks = nn.ModuleList(blocks)
         # set stage
         self.set_stage(stage)
         self.label_embedding = nn.Embedding(n_classes, embedding_dim)
+        self.fading = fading
 
     def set_stage(self, stage):
         self.cur_stage = stage

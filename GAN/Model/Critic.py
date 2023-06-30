@@ -44,11 +44,11 @@ class CriticStage(nn.Module):
         self.resample = resample_sequence
     
 
-    def forward(self, x, first=False, alpha=1, **kwargs):
+    def forward(self, x, first=False, alpha=1, fading=False, **kwargs):
         
         if first:
             x = self.in_sequence(x, **kwargs)
-            if alpha < 1:
+            if fading and alpha < 1:
                 # downsample data directly after in_sequence
                 ds_x = self.resample(x, **kwargs)
                 # pass data through intermediate_sequence
@@ -79,12 +79,13 @@ class Critic(nn.Module):
         stage during progression
     """
 
-    def __init__(self, n_time, n_channels, n_classes, blocks, stage=1):
+    def __init__(self, n_time, n_channels, n_classes, blocks, stage=1, fading=False):
         super(Critic, self).__init__()
         # noinspection PyTypeChecker
         self.blocks  = nn.ModuleList(blocks)
         self.set_stage(stage)
         self.n_time = n_time
+        self.fading = fading
 
         self.label_embedding = nn.Embedding(n_classes, n_time)
 
