@@ -44,21 +44,10 @@ class CriticStage(nn.Module):
         self.resample = resample_sequence
     
 
-    def forward(self, x, first=False, alpha=1, **kwargs):
-        
+    def forward(self, x, first=False, **kwargs):
         if first:
-            out = self.in_sequence(x, **kwargs)
-            if alpha < 1:
-                # downsample data directly after in_sequence
-                x = self.resample(out, **kwargs)
-                # pass data through intermediate_sequence
-                fx = self.intermediate_sequence(out, **kwargs)
-                # interpolate between x and fx
-                out = (1-alpha)*x + alpha*fx
-                # return interpolated data
-                return out
-        # if alpha >=1 or first == False:
-        out = self.intermediate_sequence(out, **kwargs)
+            x = self.in_sequence(x, **kwargs)
+        out = self.intermediate_sequence(x, **kwargs)
         return out
 
 
@@ -79,12 +68,13 @@ class Critic(nn.Module):
         stage during progression
     """
 
-    def __init__(self, n_time, n_channels, n_classes, blocks, stage=1):
+    def __init__(self, n_time, n_channels, n_classes, blocks, stage=1, fading=False):
         super(Critic, self).__init__()
         # noinspection PyTypeChecker
         self.blocks  = nn.ModuleList(blocks)
         self.set_stage(stage)
         self.n_time = n_time
+        self.fading = fading
 
         self.label_embedding = nn.Embedding(n_classes, n_time)
 
@@ -106,24 +96,39 @@ class Critic(nn.Module):
     def forward(self, x:torch.Tensor, y:torch.Tensor, **kwargs):
         
         embedding:torch.Tensor = self.label_embedding(y).view(y.shape[0], 1, self.n_time)
-        embedding = self.downsample_to_stage(embedding, self._stage)
+        embedding = self.downsample(embedding, self._stage)
 
         x = torch.cat([x, embedding], 1) # batch_size x n_channels + 1 x n_time 
 
         for i in range(self._stage, len(self.blocks)):
-            x = self.blocks[i](x,  first=(i == self._stage), alpha=self.alpha, **kwargs)
+            first = (i == self._stage)
+
+            if first and self.fading and self.alpha < 1:
+                # if this is the first stage, fading is used and alpha < 1
+                # we take the current input, downsample it for the next block
+                # match dimensions by using in_sequence and interpolate with
+                # the current bock output with the downsampled input. 
+                x_ = self.downsample(x, 1)
+                x_ = self.blocks[i-1].in_sequence(x_, **kwargs)
+
+                # pass x through new (current) block
+                x = self.blocks[i](x, first=first,  **kwargs)
+                # interpolate x_ and x
+                x = self.alpha * x + (1 - self.alpha) * x_  
+            else:
+                x = self.blocks[i](x,  first=first, **kwargs)
         return x
     
-    def downsample_to_stage(self, x, stage):
+    def downsample(self, x, steps):
         """
-        Scales down input to the size of current input stage.
+        Downscale input. Using bicubic interpolation.
     
         Parameters
         ----------
         x : tensor
             Input data
-        stage : int
-            Stage to which input should be downsampled
+        steps : int
+            for each step we downsample by a factor of 0.5
 
         Returns
         -------
@@ -132,13 +137,13 @@ class Critic(nn.Module):
         """
 
         x = torch.unsqueeze(x, 0)
-        for i in range(stage):
+        for i in range(steps):
            x = nn.functional.interpolate(x, scale_factor=(1, 0.5), mode='bicubic')
         x = torch.squeeze(x, 0)
         return x
     
 
-def build_critic(n_filters, n_time, n_stages, n_channels, n_classes):
+def build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
 
     n_channels += 1 # Add one channel for embedding
 
@@ -184,4 +189,4 @@ def build_critic(n_filters, n_time, n_stages, n_channels, n_classes):
 
 
     
-    return Critic(n_time, n_channels, n_classes, blocks)
+    return Critic(n_time, n_channels, n_classes, blocks, fading)

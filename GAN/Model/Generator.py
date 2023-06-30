@@ -41,18 +41,10 @@ class GeneratorStage(nn.Module):
         self.out_sequence = out_sequence
         self.resample = resample_sequence
 
-    def forward(self, x, last=False, alpha=1, **kwargs):
+    def forward(self, x, last=False, **kwargs):
         fx = self.intermediate_sequence(x, **kwargs)
         if last:
-            if alpha < 1:
-                # If alpha < 1, we upsample the data...
-                x = self.resample(x, **kwargs)
-                # ...then we interpolate between x and fx...
-                interpolation = (1-alpha)*x + alpha * fx
-                # ...and pass it through the out_sequence:
-                out = self.out_sequence(interpolation, **kwargs)
-            else:
-                out = self.out_sequence(fx, **kwargs)
+            out = self.out_sequence(fx, **kwargs)
         return out
 
 
@@ -72,12 +64,13 @@ class Generator(nn.Module):
         for conditional GAN
     """
 
-    def __init__(self, blocks, n_classes, embedding_dim, stage=1):
+    def __init__(self, blocks, n_classes, embedding_dim, stage=1, fading=False):
         super(Generator, self).__init__()
         self.blocks = nn.ModuleList(blocks)
         # set stage
         self.set_stage(stage)
         self.label_embedding = nn.Embedding(n_classes, embedding_dim)
+        self.fading = fading
 
     def set_stage(self, stage):
         self.cur_stage = stage
@@ -86,9 +79,7 @@ class Generator(nn.Module):
         # In the first stage we do not need fading and therefore set alpha to 1
         if self.cur_stage == 1:
             self.alpha = 1
-            print("Set alpha to 1")
         else:
-            print("Set alpha to 0")
             self.alpha = 0
 
     def forward(self, x, y, **kwargs):
@@ -97,34 +88,54 @@ class Generator(nn.Module):
         x = torch.cat([x, embedding], dim=1)
 
         for i in range(0, self.cur_stage):
-            x = self.blocks[i](x, last=(i == self._stage), alpha=self.alpha, **kwargs)
+            last = (i == self._stage)
+
+            if last and self.fading and self.alpha < 1:
+                # if this is the last stage, fading is active and alpha < 1
+                # we copy the output of the previous stage, and upsample it
+                # and interpolate it with the output of the current stage.
+                x_ = self.blocks[i-1].out_sequence(x, **kwargs)
+                x_ = self.upsample(x_, 1)
+
+                # pass x through last stage
+                x = self.blocks[i](x, last=last, **kwargs)
+
+                # interpolate
+                x = self.alpha * x + (1 - self.alpha) * x_
+
+            else:
+                x = self.blocks[i](x, last=last, **kwargs)
         
         # increase alpha:
         self.alpha += 1/50
         return x
 
 
-    def upsample_to_stage(self, x, stage):
+    def upsample(self, x, steps):
         """
-        Scales up input to the size of current input stage.
-        Utilizes `ProgressiveGeneratorBlock.fade_sequence` from each stage.
+        Upsample input.
+        uses bicubic interpolation. 
 
         Parameters
         ----------
         x : tensor
             Input data
-        stage : int
-            Stage to which input should be upwnsampled
+        steps : int
+            for each step, the data is upsampled by a factor of 2
 
         Returns
         -------
         output : tensor
             Upsampled data
         """
-        raise NotImplementedError
+        x = torch.unsqueeze(x, 0)
+        for i in range(steps):
+           x = nn.functional.interpolate(x, scale_factor=(1, 2), mode='bicubic')
+        x = torch.squeeze(x, 0)
+        return x
     
 def build_generator(n_filters, n_time, n_stages, n_channels, n_classes,
-                    latent_dim, embedding_dim, ) -> Generator:
+                    latent_dim, embedding_dim, fading) -> Generator:
     
     
     # Generator:
@@ -162,6 +173,6 @@ def build_generator(n_filters, n_time, n_stages, n_channels, n_classes,
         # Out sequence is independent of stage
         blocks.append(GeneratorStage(stage_conv, generator_out, upsample))
         
-    return Generator(blocks, n_classes, embedding_dim)
+    return Generator(blocks, n_classes, embedding_dim, fading)
 
 

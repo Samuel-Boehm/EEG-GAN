@@ -15,7 +15,7 @@ class GAN(LightningModule):
         fs, latent_dim: int = 100, lambda_gp = 10, lr_gen: float = 0.001,
         lr_critic: float = 0.005, b1: float = 0.0, b2: float = 0.999,
         batch_size: int = 32, epochs_per_stage: int = 200, 
-        embedding_dim: int = 10, **kwargs,
+        embedding_dim: int = 10, fading: bool = False, **kwargs,
     ):  
         """Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
         LightningModule class and ist trained using the PyTorch Lightning Trainer framework.
@@ -75,10 +75,10 @@ class GAN(LightningModule):
 
         # Build the generator model
         self.generator: Generator = build_generator(n_filters, n_time, n_stages, n_channels,
-                                                    n_classes, latent_dim, embedding_dim,)
+                                                    n_classes, latent_dim, embedding_dim, fading)
         
         # Build the critic model
-        self.critic: Critic = build_critic(n_filters, n_time, n_stages, n_channels, n_classes,)
+        self.critic: Critic = build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading)
         
         
         # Determine fading epochs
@@ -131,7 +131,6 @@ class GAN(LightningModule):
            )
 
         # Log critic loss
-
         self.manual_backward(c_loss, retain_graph=True)
 
         optimizer_c.step()

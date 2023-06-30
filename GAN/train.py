@@ -31,14 +31,15 @@ GAN_PARAMS = {
     'fs':256,
     'latent_dim':210,
     'epochs_per_stage':500,
-    'batch_size':128
+    'batch_size':128,
+    'fading':True,
     }
 
 # Init DataModule
 dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=GAN_PARAMS['batch_size'], num_workers=8)
 
 # Init Logger
-logger = WandbLogger(name='fading', project='EEGGAN', save_dir=results_path)
+logger = WandbLogger(name='fading0.2', project='EEGGAN', save_dir=results_path)
 
 def main():
     model = GAN(**GAN_PARAMS)
