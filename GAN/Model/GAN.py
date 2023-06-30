@@ -94,6 +94,7 @@ class GAN(LightningModule):
         self.loss_critic = []
         self.alpha_g = []
         self.alpha_c = []
+        self.gp = []
 
         
     def forward(self, z, y):
@@ -131,7 +132,6 @@ class GAN(LightningModule):
            )
 
         # Log critic loss
-
         self.manual_backward(c_loss, retain_graph=True)
 
         optimizer_c.step()
@@ -158,8 +158,7 @@ class GAN(LightningModule):
         self.alpha_g.append(self.generator.alpha)
         # track critic alpha for debugging purposes
         self.alpha_c.append(self.critic.alpha)
-
-
+        self.gp.append(gp.item())
 
 
     def configure_optimizers(self):
@@ -202,6 +201,7 @@ class GAN(LightningModule):
         gradients = autograd.grad(outputs=critic_interpolates, inputs=interpolates,
                                     grad_outputs=ones,
                                     create_graph=True, retain_graph=True, only_inputs=True)[0]
+        
         gradients = gradients.view(gradients.size(0), -1)
         tmp = (gradients.norm(2, dim=1) - 1)
 

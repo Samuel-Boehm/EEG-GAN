@@ -42,13 +42,17 @@ logger = WandbLogger(name='fading', project='EEGGAN', save_dir=results_path)
 
 def main():
     model = GAN(**GAN_PARAMS)
+    print('DOES TORCH SEE CUDA?', torch.cuda.is_available())
 
     trainer = Trainer(
+            accelerator='gpu',
+            devices=4,
+            num_nodes=1,
             max_epochs=GAN_PARAMS['epochs_per_stage'] * GAN_PARAMS['n_stages'],
             reload_dataloaders_every_n_epochs=GAN_PARAMS['epochs_per_stage'],
             callbacks=[Scheduler(), LoggingHandler(50)],
             default_root_dir=results_path,
-            strategy='ddp_find_unused_parameters_true',
+            strategy='ddp_find_unused_parameters_true', 
             logger=logger,
     )
 

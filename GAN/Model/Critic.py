@@ -47,18 +47,18 @@ class CriticStage(nn.Module):
     def forward(self, x, first=False, alpha=1, **kwargs):
         
         if first:
-            out = self.in_sequence(x, **kwargs)
+            x = self.in_sequence(x, **kwargs)
             if alpha < 1:
                 # downsample data directly after in_sequence
-                x = self.resample(out, **kwargs)
+                ds_x = self.resample(x, **kwargs)
                 # pass data through intermediate_sequence
-                fx = self.intermediate_sequence(out, **kwargs)
+                fx = self.intermediate_sequence(x, **kwargs)
                 # interpolate between x and fx
-                out = (1-alpha)*x + alpha*fx
+                out = (1-alpha)*ds_x + alpha*fx
                 # return interpolated data
                 return out
         # if alpha >=1 or first == False:
-        out = self.intermediate_sequence(out, **kwargs)
+        out = self.intermediate_sequence(x, **kwargs)
         return out
 
 

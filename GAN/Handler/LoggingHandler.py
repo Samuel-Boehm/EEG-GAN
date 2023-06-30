@@ -29,9 +29,14 @@ class LoggingHandler(Callback):
         batch_fake = torch.cat(pl_module.generated_data).detach().cpu().numpy()
 
         # Each epoch log: 
-        trainer.logger.experiment.log({'loss generator': torch.mean(torch.Tensor(pl_module.loss_generator))})
-        trainer.logger.experiment.log({'loss critic': torch.mean(torch.Tensor(pl_module.loss_critic))})
-        trainer.logger.experiment.log({'epoch': trainer.current_epoch})
+        trainer.logger.experiment.log({'loss generator': torch.mean(torch.Tensor(pl_module.loss_generator)),
+                                       'epoch': trainer.current_epoch,
+                                       'loss critic': torch.mean(torch.Tensor(pl_module.loss_critic)),
+                                       'gp': torch.mean(torch.Tensor(pl_module.gp))
+                                       })
+        # Logs for debugging:
+        trainer.logger.experiment.log({'alpha_g': torch.mean(torch.Tensor(pl_module.alpha_g))})
+        trainer.logger.experiment.log({'alpha_c': torch.mean(torch.Tensor(pl_module.alpha_c))})
 
         
 
@@ -56,9 +61,11 @@ class LoggingHandler(Callback):
         pl_module.generated_data.clear()
         pl_module.loss_generator.clear()
         pl_module.loss_critic.clear()
+        pl_module.alpha_g.clear()
+        pl_module.alpha_c.clear()
+        pl_module.gp.clear()
 
 
-    
     def calculate_FID(self,):
         pass
     

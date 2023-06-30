@@ -42,6 +42,10 @@ class GeneratorStage(nn.Module):
         self.resample = resample_sequence
 
     def forward(self, x, last=False, alpha=1, **kwargs):
+        '''
+        forward pass through generator stage. Depending on the stage,
+        we either pass the data through the intermediate_sequence or
+        '''
         fx = self.intermediate_sequence(x, **kwargs)
         if last:
             if alpha < 1:
@@ -51,9 +55,12 @@ class GeneratorStage(nn.Module):
                 interpolation = (1-alpha)*x + alpha * fx
                 # ...and pass it through the out_sequence:
                 out = self.out_sequence(interpolation, **kwargs)
+                return out
             else:
                 out = self.out_sequence(fx, **kwargs)
-        return out
+                return out
+            
+        return fx
 
 
 class Generator(nn.Module):
@@ -86,9 +93,7 @@ class Generator(nn.Module):
         # In the first stage we do not need fading and therefore set alpha to 1
         if self.cur_stage == 1:
             self.alpha = 1
-            print("Set alpha to 1")
         else:
-            print("Set alpha to 0")
             self.alpha = 0
 
     def forward(self, x, y, **kwargs):
@@ -100,7 +105,6 @@ class Generator(nn.Module):
             x = self.blocks[i](x, last=(i == self._stage), alpha=self.alpha, **kwargs)
         
         # increase alpha:
-        self.alpha += 1/50
         return x
 
 
