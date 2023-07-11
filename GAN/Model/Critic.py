@@ -180,13 +180,8 @@ def build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
         nn.Linear(n_filters * n_time_last_stage, 1),
     )
 
-
-
-
-
-    
     blocks.append(CriticStage(last_conv, critic_in, downsample))
 
 
     
-    return Critic(n_time, n_channels, n_classes, blocks, fading)
+    return Critic(n_time, n_channels, n_classes, blocks, fading=fading)

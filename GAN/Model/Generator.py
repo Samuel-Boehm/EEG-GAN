@@ -42,9 +42,9 @@ class GeneratorStage(nn.Module):
         self.resample = resample_sequence
 
     def forward(self, x, last=False, **kwargs):
-        fx = self.intermediate_sequence(x, **kwargs)
+        out = self.intermediate_sequence(x, **kwargs)
         if last:
-            out = self.out_sequence(fx, **kwargs)
+            out = self.out_sequence(out, **kwargs)
         return out
 
 
@@ -89,7 +89,6 @@ class Generator(nn.Module):
 
         for i in range(0, self.cur_stage):
             last = (i == self._stage)
-
             if last and self.fading and self.alpha < 1:
                 # if this is the last stage, fading is active and alpha < 1
                 # we copy the output of the previous stage, and upsample it
@@ -105,9 +104,7 @@ class Generator(nn.Module):
 
             else:
                 x = self.blocks[i](x, last=last, **kwargs)
-        
-        # increase alpha:
-        self.alpha += 1/50
+
         return x
 
 
@@ -173,6 +170,6 @@ def build_generator(n_filters, n_time, n_stages, n_channels, n_classes,
         # Out sequence is independent of stage
         blocks.append(GeneratorStage(stage_conv, generator_out, upsample))
         
-    return Generator(blocks, n_classes, embedding_dim, fading)
+    return Generator(blocks, n_classes, embedding_dim, fading=fading)
 
 

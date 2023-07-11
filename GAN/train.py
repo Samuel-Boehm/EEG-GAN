@@ -11,6 +11,7 @@ from Handler.ProgressionHandler import Scheduler
 from Handler.LoggingHandler import LoggingHandler
 from paths import data_path, results_path
 from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 
 
@@ -31,7 +32,7 @@ GAN_PARAMS = {
     'fs':256,
     'latent_dim':210,
     'epochs_per_stage':500,
-    'batch_size':128,
+    'batch_size':32,
     'fading':True,
     }
 
@@ -41,13 +42,17 @@ dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=GAN_PARAMS['batch_size
 # Init Logger
 logger = WandbLogger(name='fading0.2', project='EEGGAN', save_dir=results_path)
 
+# Init Checkpoint
+checkpoint_callback = ModelCheckpoint(every_n_epochs=GAN_PARAMS['epochs_per_stage'],
+                                      save_top_k=-1, save_last=True)
+
 def main():
     model = GAN(**GAN_PARAMS)
 
     trainer = Trainer(
             max_epochs=GAN_PARAMS['epochs_per_stage'] * GAN_PARAMS['n_stages'],
             reload_dataloaders_every_n_epochs=GAN_PARAMS['epochs_per_stage'],
-            callbacks=[Scheduler(), LoggingHandler(50)],
+            callbacks=[Scheduler(), LoggingHandler(50), checkpoint_callback],
             default_root_dir=results_path,
             strategy='ddp_find_unused_parameters_true',
             logger=logger,

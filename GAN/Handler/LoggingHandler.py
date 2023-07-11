@@ -18,29 +18,29 @@ class LoggingHandler(Callback):
     def __init__(self, metric_interval:int=200):
         self.metric_interval = metric_interval
 
-    def on_train_epoch_end(self, trainer, pl_module):
+    def on_train_epoch_end(self, trainer, model):
         """
         Called when the train epoch ends.
         'pl_module' is the LightningModule and therefore can access all its methods and properties of our model
         """
 
         # Metrics are calculated using np arrays, so we need to convert the tensors to np arrays.
-        batch_real = torch.cat(pl_module.real_data).detach().cpu().numpy()
-        batch_fake = torch.cat(pl_module.generated_data).detach().cpu().numpy()
+        batch_real = torch.cat(model.real_data).detach().cpu().numpy()
+        batch_fake = torch.cat(model.generated_data).detach().cpu().numpy()
 
         # Each epoch log: 
-        trainer.logger.experiment.log({'loss generator': torch.mean(torch.Tensor(pl_module.loss_generator))})
-        trainer.logger.experiment.log({'loss critic': torch.mean(torch.Tensor(pl_module.loss_critic))})
-        trainer.logger.experiment.log({'epoch': trainer.current_epoch})
-
-        
+        trainer.logger.experiment.log({'loss generator': torch.mean(torch.Tensor(model.loss_generator)),
+                                       'loss critic': torch.mean(torch.Tensor(model.loss_critic)),
+                                       'epoch': trainer.current_epoch,
+                                       'gp': torch.mean(torch.Tensor(model.gp)),
+                                       })
 
         # Log metrics such as FID, IS, SWD, plots etc -
         # they are more heavy to calculate, so we do not calculate them each epoch but only every metric_interval epochs.
         # a final calculation is done in the end of the training.
         if trainer.current_epoch % self.metric_interval == 0 or trainer.current_epoch == trainer.max_epochs - 1:
             # Set plotting params:
-            max_freq = int(pl_module.hparams.fs / 2**(pl_module.hparams.n_stages - pl_module.current_stage))
+            max_freq = int(model.hparams.fs / 2**(model.hparams.n_stages - model.current_stage))
 
             spectrum = plot_spectrum(batch_real, batch_fake, max_freq,
                                     f'epoch: {trainer.current_epoch}',)
@@ -52,10 +52,11 @@ class LoggingHandler(Callback):
         
 
         # Clear all variables
-        pl_module.real_data.clear()
-        pl_module.generated_data.clear()
-        pl_module.loss_generator.clear()
-        pl_module.loss_critic.clear()
+        model.real_data.clear()
+        model.generated_data.clear()
+        model.loss_generator.clear()
+        model.loss_critic.clear()
+        model.gp.clear()
 
 
     

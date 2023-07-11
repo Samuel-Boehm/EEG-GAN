@@ -16,6 +16,10 @@ class Scheduler(Callback):
         Each epoch start, check if we need to increase stage. If so, increase stage.
         '''
         
+        # increase alpha after each epoch
+        model.generator.alpha += 1/50
+        model.critic.alpha += 1/50
+        
         if trainer.current_epoch in model.progression_epochs:
             # set stage in data, critic and generator
             trainer.datamodule.set_stage(model.current_stage)

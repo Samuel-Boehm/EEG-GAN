@@ -55,6 +55,8 @@ class GAN(LightningModule):
             
             embedding_dim (int, optional): size of the embedding layer in the generator.
                 Defaults to 10.
+
+            fading (bool, optional): if True, fading between old and new blocks is used. Defaults to False.
         
         Methods:   
             forward(x): forward pass through the model
@@ -63,7 +65,7 @@ class GAN(LightningModule):
             on_train_epoch_end(): method that is called at the end of each epoch
             gradient_penalty(critic, real, fake): calculate the gradient penalty
 
-        For further methods see the VisualizationHandler and LightningModule classes.
+        For further methods LightningModule documentation.
         """
         
         super().__init__(**kwargs)
@@ -94,6 +96,7 @@ class GAN(LightningModule):
         self.loss_critic = []
         self.alpha_g = []
         self.alpha_c = []
+        self.gp = []
 
         
     def forward(self, z, y):
@@ -153,10 +156,12 @@ class GAN(LightningModule):
         self.real_data.append(X_real)
         self.loss_generator.append(g_loss.item())
         self.loss_critic.append(c_loss.item())
+        self.gp.append(gp)
         # track generator alpha for debugging purposes
         self.alpha_g.append(self.generator.alpha)
         # track critic alpha for debugging purposes
         self.alpha_c.append(self.critic.alpha)
+
 
 
 
