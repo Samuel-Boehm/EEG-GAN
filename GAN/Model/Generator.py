@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch
 import numpy as np
 
-from Model.Modules import PixelNorm, ConvBlockStage, PrintLayer, WS
+from GAN.Model.Modules import PixelNorm, ConvBlockStage, PrintLayer, WS
 
 class GeneratorStage(nn.Module):
     """

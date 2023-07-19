@@ -7,8 +7,8 @@ import os
 from lightning import LightningModule
 from torch.nn.functional import softplus
 from torch import autograd
-from Model.Critic import Critic, build_critic
-from Model.Generator import Generator, build_generator
+from GAN.Model.Critic import Critic, build_critic
+from GAN.Model.Generator import Generator, build_generator
 
 class GAN(LightningModule):
     def __init__(self, n_channels, n_classes, n_time, n_stages, n_filters,
