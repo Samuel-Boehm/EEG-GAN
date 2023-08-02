@@ -9,8 +9,7 @@ def labeled_tube_plot(x, data_y, tube_y, labels,
     tube_y = np.asarray(tube_y)
 
     if axes is None:
-        axes = plt.gca()
-        axes.clear()
+        figure, axes = plt.subplots()
 
     colors = []
     for i, label in enumerate(labels):
@@ -30,7 +29,7 @@ def labeled_tube_plot(x, data_y, tube_y, labels,
         axes.set_ylim(np.nanmin(data_y - tube_y), np.nanmax(data_y + tube_y))
     axes.legend()
 
-    return plt.gcf()
+    return figure, axes
 
 
 
@@ -54,10 +53,15 @@ def plot_spectrum(batch_real: np.ndarray, batch_fake: np.ndarray = None, fs = 25
         
 
 
-    figure = labeled_tube_plot(freqs,
+    figure, ax = labeled_tube_plot(freqs,
                       [real_mean, fake_mean],
                       [real_std, fake_std],
                       ["Real", "Fake"],
                       f"Mean spectral log amplitude {name}", "Hz", "log(Amp)", None)
+    
+    
+    ax.text(.01, .99, f'n: {str(batch_real.shape[0])} - fs: {fs} - data shape: {batch_fake.shape}', fontsize=12, ha='left', va='top', transform=ax.transAxes,
+            bbox={'facecolor': 'white', 'alpha': 0.4, 'pad': 4})
+        
     
     return figure

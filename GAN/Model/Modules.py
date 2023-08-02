@@ -36,7 +36,6 @@ class WeightScale(object):
         del module._parameters[name]
 
         # Constant from He et al. 2015
-
         c = gain / np.sqrt(np.prod(list(weight.size())[1:]))
         setattr(module, name + '_c', float(c))
         module.register_parameter(name + '_unscaled', nn.Parameter(weight.data))
@@ -59,7 +58,7 @@ class WeightScale(object):
 def WS(module, gain=calculate_gain('leaky_relu'), name='weight'):
     """
     Helper function that applies equalized learning rate to weights.
-    This is used to make the code more readable
+    This is only used to make the code more readable
 
     Parameters
     ----------
@@ -72,6 +71,7 @@ def WS(module, gain=calculate_gain('leaky_relu'), name='weight'):
     """
     WeightScale.apply(module, name, gain)
     return module
+
 
 class PixelNorm(nn.Module):
     """

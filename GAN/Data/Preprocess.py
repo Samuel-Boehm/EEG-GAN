@@ -9,7 +9,7 @@ import mne
 from moabb.datasets import Schirrmeister2017
 from braindecode.preprocessing.preprocess import exponential_moving_standardize
 from tqdm import tqdm
-from GAN.DataSet import EEGGAN_Dataset
+from GAN.Data.DataSet import EEGGAN_Dataset
 from GAN.paths import data_path
 import os
 

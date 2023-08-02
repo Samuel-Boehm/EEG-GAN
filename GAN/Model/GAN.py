@@ -17,7 +17,8 @@ class GAN(LightningModule):
         batch_size: int = 32, epochs_per_stage: int = 200, 
         embedding_dim: int = 10, fading: bool = False, **kwargs,
     ):  
-        """Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
+        """
+        Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
         LightningModule class and ist trained using the PyTorch Lightning Trainer framework.
         
 
@@ -33,7 +34,7 @@ class GAN(LightningModule):
             n_filters (int):    number of filters for the convolutional layers
             
             fs (int):           sampling frequency of the training data. 
-                                Needed to calculate the frequency during each stage.
+                                This is just here so we can save it in the hparams dict.
             
             latent_dim (int, optional): dimension of the latent vector. Defaults to 100.
             
@@ -89,13 +90,14 @@ class GAN(LightningModule):
         for i in range(n_stages):
             self.progression_epochs.append(int(i*epochs_per_stage))
         
-        # For each metric we want to log, we need to initialize a list
+        # For each metric we want to log, we need to initialize a list inside the metrics dict.
+        
         self.generated_data = []
         self.real_data = []
+        self.y_real = []
+        self.y_fake = []
         self.loss_generator = []
         self.loss_critic = []
-        self.alpha_g = []
-        self.alpha_c = []
         self.gp = []
 
         
@@ -147,23 +149,22 @@ class GAN(LightningModule):
         g_loss = softplus(-fx_fake).mean()
 
         self.manual_backward(g_loss)
+        
         optimizer_g.step()
         optimizer_g.zero_grad()
         self.untoggle_optimizer(optimizer_g)
 
-        # Collect metrics
-        self.generated_data.append(X_fake)
-        self.real_data.append(X_real)
+        # Collect data during training for metrics:
+        self.generated_data.append(X_fake.detach().cpu().numpy())
+        self.real_data.append(X_real.detach().cpu().numpy())
+        self.y_real.append(y_real.detach().cpu().numpy())
+        self.y_fake.append(y_fake.detach().cpu().numpy())
+
         self.loss_generator.append(g_loss.item())
         self.loss_critic.append(c_loss.item())
-        self.gp.append(gp)
-        # track generator alpha for debugging purposes
-        self.alpha_g.append(self.generator.alpha)
-        # track critic alpha for debugging purposes
-        self.alpha_c.append(self.critic.alpha)
+        self.gp.append(gp.item())
 
-
-
+        torch.cuda.empty_cache()
 
 
     def configure_optimizers(self):

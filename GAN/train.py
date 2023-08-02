@@ -13,8 +13,6 @@ from GAN.paths import data_path, results_path
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 
-
-
 # Define dataset to use
 dataset_path = os.path.join(data_path, 'clinical')
 
@@ -27,7 +25,7 @@ GAN_PARAMS = {
     'n_channels':len(channels),
     'n_classes':2,
     'n_time':768,
-    'n_stages':6,
+    'n_stages':3,
     'n_filters':120,
     'fs':256,
     'latent_dim':210,
@@ -37,14 +35,19 @@ GAN_PARAMS = {
     }
 
 # Init DataModule
-dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=GAN_PARAMS['batch_size'], num_workers=8)
+dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=GAN_PARAMS['batch_size'], num_workers=2)
 
 # Init Logger
-logger = WandbLogger(name='fading0.2', project='EEGGAN', save_dir=results_path)
+logger = WandbLogger(name='3 stages - improved gc', project='EEGGAN', save_dir=results_path, )
 
 # Init Checkpoint
-checkpoint_callback = ModelCheckpoint(every_n_epochs=GAN_PARAMS['epochs_per_stage'],
-                                      save_top_k=-1, save_last=True)
+checkpoint_callback = ModelCheckpoint(every_n_epochs=GAN_PARAMS['epochs_per_stage'], auto_insert_metric_name=True,
+                                    filename='checkpoint_{epoch}', save_top_k=-1, monitor='epoch', mode='max', save_last=True,
+                                    save_weights_only=True, 
+                                    )
+
+# Init logging handler
+logging_handler = LoggingHandler(25, channels)
 
 def main():
     model = GAN(**GAN_PARAMS)
@@ -52,7 +55,7 @@ def main():
     trainer = Trainer(
             max_epochs=GAN_PARAMS['epochs_per_stage'] * GAN_PARAMS['n_stages'],
             reload_dataloaders_every_n_epochs=GAN_PARAMS['epochs_per_stage'],
-            callbacks=[Scheduler(), LoggingHandler(50), checkpoint_callback],
+            callbacks=[Scheduler(), logging_handler, checkpoint_callback],
             default_root_dir=results_path,
             strategy='ddp_find_unused_parameters_true',
             logger=logger,

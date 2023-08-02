@@ -7,16 +7,20 @@ import torch
 from torch import is_tensor
 from lightning.pytorch.callbacks import Callback
 from wandb import Image
+from matplotlib.pyplot import close as close_figures
+import os
+
 
 
 from Visualization.utils import plot_spectrum
 from GAN.Metrics.SWD import calculate_sliced_wasserstein_distance, create_wasserstein_transform_matrix
-
+from GAN.Visualization.stft_plots import plot_bin_stats
 
 class LoggingHandler(Callback):
 
-    def __init__(self, metric_interval:int=200):
+    def __init__(self, metric_interval:int=200, channel_names:list=None,):
         self.metric_interval = metric_interval
+        self.channel_names = channel_names
 
     def on_train_epoch_end(self, trainer, model):
         """
@@ -25,17 +29,24 @@ class LoggingHandler(Callback):
         """
 
         # Metrics are calculated using np arrays, so we need to convert the tensors to np arrays.
-        batch_real = torch.cat(model.real_data).detach().cpu().numpy()
-        batch_fake = torch.cat(model.generated_data).detach().cpu().numpy()
+        batch_real = np.concatenate(model.real_data)
+        batch_fake = np.concatenate(model.generated_data)
+
+        y_real = np.concatenate(model.y_real)
+        y_fake = np.concatenate(model.y_fake)
+
+        SWD, _ = self.calculate_SWD(batch_real, batch_fake)
 
         # Each epoch log: 
-        trainer.logger.experiment.log({'loss generator': torch.mean(torch.Tensor(model.loss_generator)),
-                                       'loss critic': torch.mean(torch.Tensor(model.loss_critic)),
+        trainer.logger.experiment.log({'loss generator': np.mean(model.loss_generator),
+                                       'loss critic': np.mean(model.loss_critic),
                                        'epoch': trainer.current_epoch,
-                                       'gp': torch.mean(torch.Tensor(model.gp)),
+                                       'gp': np.mean(model.gp),
+                                       'SWD': SWD,
                                        })
+        
 
-        # Log metrics such as FID, IS, SWD, plots etc -
+        # Log metrics such as FID, IS, plots etc -
         # they are more heavy to calculate, so we do not calculate them each epoch but only every metric_interval epochs.
         # a final calculation is done in the end of the training.
         if trainer.current_epoch % self.metric_interval == 0 or trainer.current_epoch == trainer.max_epochs - 1:
@@ -43,20 +54,44 @@ class LoggingHandler(Callback):
             max_freq = int(model.hparams.fs / 2**(model.hparams.n_stages - model.current_stage))
 
             spectrum = plot_spectrum(batch_real, batch_fake, max_freq,
-                                    f'epoch: {trainer.current_epoch}',)
+                                        f'epoch: {trainer.current_epoch}',)
             
             trainer.logger.experiment.log({'spectrum': Image(spectrum)})
 
-            SWD, _ = self.calculate_SWD(batch_real, batch_fake)
-            trainer.logger.experiment.log({'SWD': SWD})
-        
 
+        # Plots such as the bin percentage, and the time domain plot are only calculated at stage end.
+        # Also we will collect some statistical measures here.
+        # !!!!!!!! Attention !!!!!!!! 
+        # This part is still work in progress and not finished yet.
+        # hardcode the mapping for now
+
+        if trainer.current_epoch % self.metric_interval == 0 or trainer.current_epoch == trainer.max_epochs - 1:
+            MAPPING = {'right': 0, 'rest': 1}
+            for key in MAPPING.keys():
+                conditional_real = batch_real[y_real == MAPPING[key]]
+                conditional_fake = batch_fake[y_fake == MAPPING[key]]
+
+                # calculate frequency in current stage: 
+                fs_stage = int(model.hparams.fs / 2**(model.hparams.n_stages - model.current_stage))
+                
+                fig_stats, fig_real, fig_fake = plot_bin_stats(conditional_real, conditional_fake,
+                                fs_stage, self.channel_names, None, str(key), False)
+                
+                trainer.logger.experiment.log({f'{str(key)}_stats': Image(fig_stats)})
+                trainer.logger.experiment.log({f'{str(key)}_real': Image(fig_real)})
+                trainer.logger.experiment.log({f'{str(key)}_fake': Image(fig_fake)})
+        
         # Clear all variables
         model.real_data.clear()
         model.generated_data.clear()
+        model.y_real.clear()
+        model.y_fake.clear()
         model.loss_generator.clear()
         model.loss_critic.clear()
         model.gp.clear()
+
+        # close all figures
+        close_figures('all')
 
 
     

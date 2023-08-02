@@ -46,6 +46,11 @@ class GeneratorStage(nn.Module):
         if last:
             out = self.out_sequence(out, **kwargs)
         return out
+    
+    def stage_requires_grad(self, requires_grad:bool):
+        for module in [self.intermediate_sequence, self.out_sequence, self.resample]:
+            for param in module.parameters():
+                param.requires_grad = requires_grad
 
 
 class Generator(nn.Module):
@@ -72,9 +77,16 @@ class Generator(nn.Module):
         self.label_embedding = nn.Embedding(n_classes, embedding_dim)
         self.fading = fading
 
+        # Freeze the entire network and unfreeze only used blocks using 'set_stage'
+        for block in self.blocks:
+            block.stage_requires_grad(False)
+
     def set_stage(self, stage):
         self.cur_stage = stage
         self._stage = self.cur_stage - 1 # Internal stage variable. Differs from GAN stage (cur_stage).
+
+        for i in range(0, self.cur_stage):
+            self.blocks[i].stage_requires_grad(True)
         
         # In the first stage we do not need fading and therefore set alpha to 1
         if self.cur_stage == 1:
