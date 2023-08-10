@@ -3,7 +3,7 @@
 # E-Mail: <samuel-boehm@web.de>
 
 import numpy as np
-import torch as nn
+import torch.nn as nn
 import torch
 from GAN.Model.Modules import PixelNorm, ConvBlockStage, PrintLayer, WS
 
@@ -26,7 +26,6 @@ class spectralCriticStage(nn.Module):
     def forward(self, x, **kwargs):
         x = self.leaky(self.lin(x))
         return x
-
 
 
 class spectralCritic(nn.Module):
@@ -67,7 +66,7 @@ class spectralCritic(nn.Module):
         fft_mean = fft_abs.mean(axis=(0, 1)).squeeze()
         return fft_mean
 
-def build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
+def build_sp_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
 
     # Calculate the number of timepoints in the last layer
     # n_stages - 1 since we dont downsample after the last convolution
@@ -80,5 +79,5 @@ def build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
         blocks.append(spectralCriticStage(int(n_time / 2 ** stage ), 1))
 
     
-    return spectralCritic(n_time, n_channels, n_classes, blocks, fading=fading)
+    return spectralCritic(blocks, stage, fading)
 

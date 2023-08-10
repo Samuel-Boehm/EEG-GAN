@@ -43,6 +43,7 @@ class LoggingHandler(Callback):
                                        'epoch': trainer.current_epoch,
                                        'gp': np.mean(model.gp),
                                        'SWD': SWD,
+                                       'fd loss': np.mean(model.fd_loss),
                                        })
         
 
@@ -63,7 +64,7 @@ class LoggingHandler(Callback):
         # Also we will collect some statistical measures here.
         # !!!!!!!! Attention !!!!!!!! 
         # This part is still work in progress and not finished yet.
-        # hardcode the mapping for now
+        # hardcoded the mapping for now
 
         if trainer.current_epoch % self.metric_interval == 0 or trainer.current_epoch == trainer.max_epochs - 1:
             MAPPING = {'right': 0, 'rest': 1}

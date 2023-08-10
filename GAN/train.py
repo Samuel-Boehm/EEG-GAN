@@ -38,16 +38,17 @@ GAN_PARAMS = {
 dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=GAN_PARAMS['batch_size'], num_workers=2)
 
 # Init Logger
-logger = WandbLogger(name='3 stages - improved gc', project='EEGGAN', save_dir=results_path, )
+logger = WandbLogger(name='sp_critic', project='EEGGAN', save_dir=results_path, )
 
 # Init Checkpoint
-checkpoint_callback = ModelCheckpoint(every_n_epochs=GAN_PARAMS['epochs_per_stage'], auto_insert_metric_name=True,
-                                    filename='checkpoint_{epoch}', save_top_k=-1, monitor='epoch', mode='max', save_last=True,
+checkpoint_callback = ModelCheckpoint(every_n_epochs=GAN_PARAMS['epochs_per_stage'],
+                                    auto_insert_metric_name=True, filename='checkpoint_{epoch}',
+                                    save_top_k=-1, monitor='epoch', mode='max', save_last=True,
                                     save_weights_only=True, 
                                     )
 
 # Init logging handler
-logging_handler = LoggingHandler(25, channels)
+logging_handler = LoggingHandler(250, channels)
 
 def main():
     model = GAN(**GAN_PARAMS)

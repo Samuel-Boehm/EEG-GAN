@@ -9,6 +9,7 @@ from torch.nn.functional import softplus
 from torch import autograd
 from GAN.Model.Critic import Critic, build_critic
 from GAN.Model.Generator import Generator, build_generator
+from GAN.Model.spectral_Critic import spectralCritic, build_sp_critic
 
 class GAN(LightningModule):
     def __init__(self, n_channels, n_classes, n_time, n_stages, n_filters,
@@ -74,7 +75,7 @@ class GAN(LightningModule):
         # Save all hyperparameters
         self.save_hyperparameters()
         self.automatic_optimization = False
-        self.current_stage = 1
+        self.current_stage = 0
 
         # Build the generator model
         self.generator: Generator = build_generator(n_filters, n_time, n_stages, n_channels,
@@ -82,6 +83,11 @@ class GAN(LightningModule):
         
         # Build the critic model
         self.critic: Critic = build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading)
+
+        # Build the spectral critic model
+        self.sp_critic: spectralCritic = build_sp_critic(n_filters, n_time, n_stages, n_channels,
+                                                         n_classes, fading,
+                                                        )
         
         
         # Determine fading epochs
@@ -99,6 +105,7 @@ class GAN(LightningModule):
         self.loss_generator = []
         self.loss_critic = []
         self.gp = []
+        self.fd_loss = []
 
         
     def forward(self, z, y):
@@ -108,7 +115,7 @@ class GAN(LightningModule):
         
         X_real, y_real = batch_real
 
-        optimizer_g, optimizer_c = self.optimizers()
+        optimizer_g, optimizer_c, optimizer_spc = self.optimizers()
 
         # generate noise and labels:
         z = torch.randn(X_real.shape[0], self.hparams.latent_dim)
@@ -122,31 +129,24 @@ class GAN(LightningModule):
 
         X_fake = self.forward(z, y_fake)
 
-        # train critic
+        # train critic in time domain
         self.toggle_optimizer(optimizer_c)
-        
-        fx_real = self.critic(X_real, y_real)
-        fx_fake = self.critic(X_fake.detach(), y_fake)
-        gp = self.gradient_penalty(X_real, X_fake, y_fake)
+        c_loss, gp = self.train_critic(X_real, y_real, X_fake, y_fake, self.critic, optimizer_c)
 
-        c_loss = (
-                -(torch.mean(fx_real) - torch.mean(fx_fake))
-                + self.hparams.lambda_gp * gp 
-                + (0.001 * torch.mean(fx_real ** 2))
-           )
-
-        # Log critic loss
-        self.manual_backward(c_loss, retain_graph=True)
-
-        optimizer_c.step()
-        optimizer_c.zero_grad()
-        self.untoggle_optimizer(optimizer_c)
+        # train critic in frequency domain
+        self.toggle_optimizer(optimizer_spc)
+        self.train_critic(X_real, y_real, X_fake, y_fake, self.sp_critic, optimizer_spc)
 
         # train generator
         self.toggle_optimizer(optimizer_g)
         
         fx_fake = self.critic(X_fake, y_fake)
-        g_loss = softplus(-fx_fake).mean()
+        fx_spc = self.sp_critic(X_fake)
+
+        loss_td = softplus(-fx_fake).mean()
+        loss_fd = softplus(-fx_spc).mean()
+
+        g_loss = (1 * loss_td + .2 * loss_fd) / (1+.2)
 
         self.manual_backward(g_loss)
         
@@ -164,6 +164,8 @@ class GAN(LightningModule):
         self.loss_critic.append(c_loss.item())
         self.gp.append(gp.item())
 
+        self.fd_loss.append(loss_fd.item())
+
         torch.cuda.empty_cache()
 
 
@@ -175,10 +177,11 @@ class GAN(LightningModule):
 
         opt_g = torch.optim.Adam(self.generator.parameters(), lr=lr_gene, betas=(b1, b2))
         opt_c = torch.optim.Adam(self.critic.parameters(), lr=lr_critic, betas=(b1, b2))
-        return [opt_g, opt_c], []
+        opt_spc = torch.optim.Adam(self.sp_critic.parameters(), lr=lr_critic, betas=(b1, b2))
+        return [opt_g, opt_c, opt_spc], []
     
 
-    def gradient_penalty(self, batch_real, batch_fake, y_fake):
+    def gradient_penalty(self, batch_real, batch_fake, y_fake, critic):
         """
 		Improved WGAN gradient penalty
 
@@ -188,6 +191,11 @@ class GAN(LightningModule):
 			Batch of real data
 		batch_fake : tensor
 			Batch of fake data
+        y_fake : tensor
+            Labels for the fake data - just to pass along to the critic
+        critic : torch.nn.Module
+            current critic model to calculate penalty for
+
 
 		Returns
 		-------
@@ -200,7 +208,7 @@ class GAN(LightningModule):
 
         interpolates = alpha * batch_real + ((1 - alpha) * batch_fake)
 
-        critic_interpolates = self.critic(interpolates, y_fake)
+        critic_interpolates = critic(interpolates, y_fake)
 
         ones = torch.ones(critic_interpolates.size(), device=self.device)
 
@@ -213,5 +221,27 @@ class GAN(LightningModule):
         gradient_penalty = ((tmp) ** 2).mean()
 
         return gradient_penalty
+    
+    def train_critic(self, X_real, y_real, X_fake, y_fake, critic, optim):
+
+        self.toggle_optimizer(optim)
+        
+        fx_real = critic(X_real, y_real)
+        fx_fake = critic(X_fake.detach(), y_fake)
+        gp = self.gradient_penalty(X_real, X_fake, y_fake, critic)
+
+        c_loss = (
+                -(torch.mean(fx_real) - torch.mean(fx_fake))
+                + self.hparams.lambda_gp * gp 
+                + (0.001 * torch.mean(fx_real ** 2))
+           )
+
+        self.manual_backward(c_loss, retain_graph=True)
+
+        optim.step()
+        optim.zero_grad()
+        self.untoggle_optimizer(optim)
+
+        return c_loss, gp
     
     
