@@ -124,24 +124,11 @@ class GAN(LightningModule):
 
         # train critic
         self.toggle_optimizer(optimizer_c)
+
+        print('+++++++++++ Here +++++++++++++++++++++++')
+        print(X_real.requires_grad, X_fake.requires_grad, y_fake.requires_grad )
+        c_loss, gp = self.train_critic(X_real, y_real, X_fake, y_fake, self.critic, optimizer_c)
         
-        fx_real = self.critic(X_real, y_real)
-        fx_fake = self.critic(X_fake.detach(), y_fake)
-        gp = self.gradient_penalty(X_real, X_fake, y_fake)
-
-        c_loss = (
-                -(torch.mean(fx_real) - torch.mean(fx_fake))
-                + self.hparams.lambda_gp * gp 
-                + (0.001 * torch.mean(fx_real ** 2))
-           )
-
-        # Log critic loss
-        self.manual_backward(c_loss, retain_graph=True)
-
-        optimizer_c.step()
-        optimizer_c.zero_grad()
-        self.untoggle_optimizer(optimizer_c)
-
         # train generator
         self.toggle_optimizer(optimizer_g)
         
@@ -178,7 +165,7 @@ class GAN(LightningModule):
         return [opt_g, opt_c], []
     
 
-    def gradient_penalty(self, batch_real, batch_fake, y_fake):
+    def gradient_penalty(self, batch_real, batch_fake, y_fake, critic):
         """
 		Improved WGAN gradient penalty
 
@@ -200,7 +187,7 @@ class GAN(LightningModule):
 
         interpolates = alpha * batch_real + ((1 - alpha) * batch_fake)
 
-        critic_interpolates = self.critic(interpolates, y_fake)
+        critic_interpolates = critic(interpolates, y_fake)
 
         ones = torch.ones(critic_interpolates.size(), device=self.device)
 
@@ -213,5 +200,29 @@ class GAN(LightningModule):
         gradient_penalty = ((tmp) ** 2).mean()
 
         return gradient_penalty
+    
+    def train_critic(self, X_real, y_real, X_fake, y_fake, critic, optim):
+
+        self.toggle_optimizer(optim)
+        
+        fx_real = critic(X_real, y_real)
+        fx_fake = critic(X_fake, y_fake)
+        gp = self.gradient_penalty(X_real, X_fake, y_fake, critic)
+
+        c_loss = (
+                -(torch.mean(fx_real) - torch.mean(fx_fake))
+                + self.hparams.lambda_gp * gp 
+                + (0.001 * torch.mean(fx_real ** 2))
+        )
+
+        self.manual_backward(c_loss, retain_graph=True )
+
+        optim.step()
+        optim.zero_grad()
+        self.untoggle_optimizer(optim)
+
+        return c_loss, gp
+
+
     
     
