@@ -114,32 +114,23 @@ class GAN(LightningModule):
         z = torch.randn(X_real.shape[0], self.hparams.latent_dim)
         z = z.type_as(X_real)
 
-        # generate fake batch:
         y_fake = torch.randint(low=0, high=self.hparams.n_classes,
-                               size=(X_real.shape[0],), dtype=torch.int32)
-        
+                               size=(X_real.shape[0],), dtype=torch.int32)        
         y_fake  = y_fake.type_as(y_real)
-
+        
+        # generate fake batch:
         X_fake = self.forward(z, y_fake)
 
-        # train critic
-        self.toggle_optimizer(optimizer_c)
-
-        print('+++++++++++ Here +++++++++++++++++++++++')
-        print(X_real.requires_grad, X_fake.requires_grad, y_fake.requires_grad )
+        ## optimize critic        
         c_loss, gp = self.train_critic(X_real, y_real, X_fake, y_fake, self.critic, optimizer_c)
         
-        # train generator
-        self.toggle_optimizer(optimizer_g)
-        
+        ## optimize generator
         fx_fake = self.critic(X_fake, y_fake)
         g_loss = softplus(-fx_fake).mean()
-
-        self.manual_backward(g_loss)
         
-        optimizer_g.step()
         optimizer_g.zero_grad()
-        self.untoggle_optimizer(optimizer_g)
+        self.manual_backward(g_loss)
+        optimizer_g.step()
 
         # Collect data during training for metrics:
         self.generated_data.append(X_fake.detach().cpu().numpy())
@@ -202,24 +193,18 @@ class GAN(LightningModule):
         return gradient_penalty
     
     def train_critic(self, X_real, y_real, X_fake, y_fake, critic, optim):
-
-        self.toggle_optimizer(optim)
         
         fx_real = critic(X_real, y_real)
-        fx_fake = critic(X_fake, y_fake)
+        fx_fake = critic(X_fake.detach(), y_fake.detach())
         gp = self.gradient_penalty(X_real, X_fake, y_fake, critic)
 
-        c_loss = (
-                -(torch.mean(fx_real) - torch.mean(fx_fake))
+        c_loss = (-(torch.mean(fx_real) - torch.mean(fx_fake))
                 + self.hparams.lambda_gp * gp 
-                + (0.001 * torch.mean(fx_real ** 2))
-        )
+                + (0.001 * torch.mean(fx_real ** 2)))
 
-        self.manual_backward(c_loss, retain_graph=True )
-
-        optim.step()
         optim.zero_grad()
-        self.untoggle_optimizer(optim)
+        self.manual_backward(c_loss, retain_graph=True)
+        optim.step()
 
         return c_loss, gp
 
