@@ -116,7 +116,6 @@ class Generator(nn.Module):
 
             else:
                 x = self.blocks[i](x, last=last, **kwargs)
-
         return x
 
 
@@ -183,5 +182,3 @@ def build_generator(n_filters, n_time, n_stages, n_channels, n_classes,
         blocks.append(GeneratorStage(stage_conv, generator_out, upsample))
         
     return Generator(blocks, n_classes, embedding_dim, fading=fading)
-
-

@@ -25,6 +25,7 @@ class Scheduler(Callback):
             trainer.datamodule.set_stage(model.current_stage)
             model.generator.set_stage(model.current_stage)
             model.critic.set_stage(model.current_stage)
+            model.sp_critic.set_stage(model.current_stage)
 
             # increase stage
             model.current_stage += 1 

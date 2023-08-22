@@ -99,9 +99,6 @@ class Critic(nn.Module):
         else:
             self.alpha = 0
 
-
-
-
     def forward(self, x:torch.Tensor, y:torch.Tensor, **kwargs):
         
         embedding:torch.Tensor = self.label_embedding(y).view(y.shape[0], 1, self.n_time)

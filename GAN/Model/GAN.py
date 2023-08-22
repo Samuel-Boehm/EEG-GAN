@@ -13,10 +13,10 @@ from GAN.Model.spectral_Critic import spectralCritic, build_sp_critic
 
 class GAN(LightningModule):
     def __init__(self, n_channels, n_classes, n_time, n_stages, n_filters,
-        fs, latent_dim: int = 100, lambda_gp = 10, lr_gen: float = 0.001,
-        lr_critic: float = 0.005, b1: float = 0.0, b2: float = 0.999,
-        batch_size: int = 32, epochs_per_stage: int = 200, 
-        embedding_dim: int = 10, fading: bool = False, **kwargs,
+        fs, latent_dim:int = 100, lambda_gp:float = 10., lr_gen:float = 0.001,
+        lr_critic:float = 0.005, b1:float = 0.0, b2:float = 0.999,
+        batch_size:int = 32, epochs_per_stage:int = 200, 
+        embedding_dim:int = 10, fading:bool = False, alpha:float = 1, beta:float = .2, **kwargs,
     ):  
         """
         Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
@@ -59,6 +59,10 @@ class GAN(LightningModule):
                 Defaults to 10.
 
             fading (bool, optional): if True, fading between old and new blocks is used. Defaults to False.
+
+            alpha (float, optional): alpha parameter to weight the amount of the time domain loss. Defaults to 1.
+
+            beta (float, optional): beta parameter to weight the amount of the frequency domain loss. Defaults to .2.
         
         Methods:   
             forward(x): forward pass through the model
@@ -75,7 +79,7 @@ class GAN(LightningModule):
         # Save all hyperparameters
         self.save_hyperparameters()
         self.automatic_optimization = False
-        self.current_stage = 0
+        self.current_stage = 1
 
         # Build the generator model
         self.generator: Generator = build_generator(n_filters, n_time, n_stages, n_channels,
@@ -129,30 +133,24 @@ class GAN(LightningModule):
 
         X_fake = self.forward(z, y_fake)
 
-        # train critic in time domain
-        self.toggle_optimizer(optimizer_c)
+        # optimize critic in time domain
         c_loss, gp = self.train_critic(X_real, y_real, X_fake, y_fake, self.critic, optimizer_c)
 
-        # train critic in frequency domain
-        self.toggle_optimizer(optimizer_spc)
+        # optimize critic in frequency domain
         self.train_critic(X_real, y_real, X_fake, y_fake, self.sp_critic, optimizer_spc)
 
-        # train generator
-        self.toggle_optimizer(optimizer_g)
-        
+        ## optimize generator   
         fx_fake = self.critic(X_fake, y_fake)
-        fx_spc = self.sp_critic(X_fake)
+        fx_spc = self.sp_critic(X_fake, y_fake)
 
         loss_td = softplus(-fx_fake).mean()
         loss_fd = softplus(-fx_spc).mean()
 
-        g_loss = (1 * loss_td + .2 * loss_fd) / (1+.2)
+        g_loss = (self.hparams.alpha * loss_td + self.hparams.beta * loss_fd) / (self.hparams.alpha + self.hparams.beta)
 
-        self.manual_backward(g_loss)
-        
-        optimizer_g.step()
         optimizer_g.zero_grad()
-        self.untoggle_optimizer(optimizer_g)
+        self.manual_backward(g_loss)
+        optimizer_g.step()
 
         # Collect data during training for metrics:
         self.generated_data.append(X_fake.detach().cpu().numpy())
@@ -224,10 +222,8 @@ class GAN(LightningModule):
     
     def train_critic(self, X_real, y_real, X_fake, y_fake, critic, optim):
 
-        self.toggle_optimizer(optim)
-        
         fx_real = critic(X_real, y_real)
-        fx_fake = critic(X_fake.detach(), y_fake)
+        fx_fake = critic(X_fake.detach(), y_fake.detach())
         gp = self.gradient_penalty(X_real, X_fake, y_fake, critic)
 
         c_loss = (
@@ -235,12 +231,10 @@ class GAN(LightningModule):
                 + self.hparams.lambda_gp * gp 
                 + (0.001 * torch.mean(fx_real ** 2))
            )
-
-        self.manual_backward(c_loss, retain_graph=True)
-
-        optim.step()
+        
         optim.zero_grad()
-        self.untoggle_optimizer(optim)
+        self.manual_backward(c_loss, retain_graph=True)
+        optim.step()
 
         return c_loss, gp
     
