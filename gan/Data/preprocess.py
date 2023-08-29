@@ -9,8 +9,8 @@ import mne
 from moabb.datasets import Schirrmeister2017
 from braindecode.preprocessing.preprocess import exponential_moving_standardize
 from tqdm import tqdm
-from GAN.Data.DataSet import EEGGAN_Dataset
-from GAN.paths import data_path
+from gan.Data.DataSet import EEGGAN_Dataset
+from gan.paths import data_path
 import os
 
 def ZCA_whitening(X:np.ndarray):

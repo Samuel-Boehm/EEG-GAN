@@ -7,8 +7,8 @@ import os
 from lightning import LightningModule
 from torch.nn.functional import softplus
 from torch import autograd
-from GAN.Model.Critic import Critic, build_critic
-from GAN.Model.Generator import Generator, build_generator
+from gan.model.critic import Critic, build_critic
+from gan.model.generator import Generator, build_generator
 
 class GAN(LightningModule):
     def __init__(self, n_channels, n_classes, n_time, n_stages, n_filters,
@@ -154,7 +154,9 @@ class GAN(LightningModule):
         optimizer_g.zero_grad()
         self.untoggle_optimizer(optimizer_g)
 
-        # Collect data during training for metrics:
+        # Collect data during training for metrics.
+        # This is necessary because if we train on multiple GPUs the batch size is split, to calculate
+        # the metrics over
         self.generated_data.append(X_fake.detach().cpu().numpy())
         self.real_data.append(X_real.detach().cpu().numpy())
         self.y_real.append(y_real.detach().cpu().numpy())

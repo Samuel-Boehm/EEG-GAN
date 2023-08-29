@@ -5,7 +5,7 @@
 import torch.nn as nn
 import torch
 import  numpy as np
-from GAN.Model.Modules import ConvBlockStage, PrintLayer, WS
+from gan.model.modules import ConvBlockStage, PrintLayer, WS
 
 
 class CriticStage(nn.Module):

@@ -3,7 +3,7 @@
 # E-Mail: <samuel-boehm@web.de>
 
 from torch import is_tensor
-from Visualization.utils import plot_spectrum
+from visualization.utils import plot_spectrum
 from lightning.pytorch.callbacks import Callback
 import torch
 from wandb import Image
