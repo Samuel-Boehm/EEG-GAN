@@ -9,7 +9,7 @@ from wandb import Image
 from matplotlib.pyplot import close as close_figures
 from gan.Data.batch import batch_data
 from gan.metrics.metric import Metric
-
+import torch
 
 
 class LoggingHandler(Callback):
@@ -97,6 +97,10 @@ class LoggingHandler(Callback):
             np.savetxt("/home/boehms/eeg-gan/EEG-GAN/temp_plots/block1_conv2.csv", filter_block1.detach().cpu().numpy())
             np.savetxt("/home/boehms/eeg-gan/EEG-GAN/temp_plots/block2_conv2.csv", filter_block2.detach().cpu().numpy())
             np.savetxt("/home/boehms/eeg-gan/EEG-GAN/temp_plots/block3_conv2.csv", filter_block3.detach().cpu().numpy())
+
+            torch.save(module.generator.state_dict(), "/home/boehms/eeg-gan/EEG-GAN/temp_plots/generator.pth")
+            torch.save(module.critic.state_dict(), "/home/boehms/eeg-gan/EEG-GAN/temp_plots/critic.pth")
+            torch.save(module.state_dict(), "/home/boehms/eeg-gan/EEG-GAN/temp_plots/model.pth")
 
     
 

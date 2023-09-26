@@ -136,10 +136,9 @@ class GAN(LightningModule):
            )
 
         # Log critic loss
-        self.manual_backward(c_loss, retain_graph=True)
-
-        optimizer_c.step()
         optimizer_c.zero_grad()
+        self.manual_backward(c_loss, retain_graph=True)
+        optimizer_c.step()
         self.untoggle_optimizer(optimizer_c)
 
         # train generator
@@ -149,9 +148,10 @@ class GAN(LightningModule):
         g_loss = softplus(-fx_fake).mean()
 
         self.manual_backward(g_loss)
-        
-        optimizer_g.step()
+
+
         optimizer_g.zero_grad()
+        optimizer_g.step()
         self.untoggle_optimizer(optimizer_g)
 
         # Collect data during training for metrics.

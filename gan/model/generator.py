@@ -48,8 +48,8 @@ class GeneratorStage(nn.Module):
         return out
     
     def stage_requires_grad(self, requires_grad:bool):
-        for module in [self.intermediate_sequence, self.out_sequence, self.resample]:
-            for param in module.parameters():
+        for sequence in [self.intermediate_sequence, self.out_sequence, self.resample]:
+            for param in sequence.parameters():
                 param.requires_grad = requires_grad
 
 
