@@ -148,7 +148,7 @@ def build_generator(n_filters, n_time, n_stages, n_channels, n_classes,
     
     # Generator:
     n_time_first_layer = int(np.floor(n_time / 2 ** (n_stages-1)))
-    blocks = []
+    blocks = nn.ModuleList()
 
     # Note that the first conv stage in the generator differs from the others
     # because it takes the latent vector as input

@@ -158,7 +158,7 @@ def build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
     n_time_last_stage = int(np.floor(n_time / 2 ** (n_stages - 1)))
     
     # Critic:
-    blocks = []
+    blocks = nn.ModuleList()
 
         
     critic_in = nn.Sequential(
