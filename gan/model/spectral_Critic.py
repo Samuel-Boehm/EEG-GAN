@@ -5,7 +5,7 @@
 import numpy as np
 import torch.nn as nn
 import torch
-from GAN.Model.Modules import PixelNorm, ConvBlockStage, PrintLayer, WS
+from gan.model.modules import PixelNorm, ConvBlockStage, PrintLayer, WS
 
 
 class spectralCriticStage(nn.Module):

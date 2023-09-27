@@ -2,14 +2,14 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from GAN.Model.GAN import GAN
+from gan.model.gan import GAN
 from lightning import Trainer
 import torch
 import os
-from GAN.Data.DataModule import HighGammaModule as HDG
-from GAN.Handler.ProgressionHandler import Scheduler
-from GAN.Handler.LoggingHandler import LoggingHandler
-from GAN.paths import data_path, results_path
+from gan.data.DataModule import HighGammaModule as HDG
+from gan.handler.ProgressionHandler import Scheduler
+from gan.handler.LoggingHandler import LoggingHandler
+from gan.paths import data_path, results_path
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 

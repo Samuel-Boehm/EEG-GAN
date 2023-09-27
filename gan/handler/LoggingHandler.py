@@ -12,9 +12,9 @@ import os
 
 
 
-from Visualization.utils import plot_spectrum
-from GAN.Metrics.SWD import calculate_sliced_wasserstein_distance, create_wasserstein_transform_matrix
-from GAN.Visualization.stft_plots import plot_bin_stats
+from visualization.utils import plot_spectrum
+from gan.metrics.SWD import calculate_sliced_wasserstein_distance, create_wasserstein_transform_matrix
+from gan.visualization.stft_plots import plot_bin_stats
 
 class LoggingHandler(Callback):
 
