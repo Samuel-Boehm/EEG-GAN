@@ -30,7 +30,7 @@ GAN_PARAMS = {
     'fs':256,
     'latent_dim':210,
     'epochs_per_stage':2000,
-    'batch_size':32,
+    'batch_size':128,
     'fading':True,
     'alpha':1,
     'beta':.01,
@@ -40,7 +40,7 @@ GAN_PARAMS = {
 dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=GAN_PARAMS['batch_size'], num_workers=2)
 
 # Init Logger
-logger = WandbLogger(name='spcGAN v0.3', project='EEGGAN', save_dir=results_path, )
+logger = WandbLogger(name='spcGAN', version='0.1', project='EEGGAN', save_dir=results_path,)
 
 # Init Checkpoint
 checkpoint_callback = ModelCheckpoint(every_n_epochs=GAN_PARAMS['epochs_per_stage'],
