@@ -7,6 +7,10 @@ import torch
 import numpy as np
 from torch.nn.init import calculate_gain
 
+# For weight norm
+from torch.nn.parameter import Parameter
+
+
 class WeightScale(object):
     """
     Implemented for PyTorch using WeightNorm implementation
@@ -27,9 +31,9 @@ class WeightScale(object):
         c = getattr(module, self.name + '_c')
         tmp = c * w
         return tmp
-
+    
     @staticmethod
-    def apply(module, name, gain):
+    def apply(module, name:str, gain: int)-> 'WeightScale':
         fn = WeightScale(name)
         weight = getattr(module, name)
         # remove w from parameter list
@@ -37,21 +41,25 @@ class WeightScale(object):
 
         # Constant from He et al. 2015
         c = gain / np.sqrt(np.prod(list(weight.size())[1:]))
+        module.register_parameter(name + '_unscaled', Parameter(weight.data))
         setattr(module, name + '_c', float(c))
-        module.register_parameter(name + '_unscaled', nn.Parameter(weight.data))
         setattr(module, name, fn.compute_weight(module))
+
         # recompute weight before every forward()
         module.register_forward_pre_hook(fn)
         return fn
 
-    def remove(self, module):
+
+    def remove(self, module: nn.Module):
         weight = self.compute_weight(module)
         delattr(module, self.name)
         del module._parameters[self.name + '_unscaled']
         del module._parameters[self.name + '_c']
-        module.register_parameter(self.name, nn.Parameter(weight.data))
+        setattr(module, self.name, Parameter(weight.data))
 
-    def __call__(self, module, inputs, **kwargs):
+        # module.register_parameter(self.name, nn.Parameter(weight.data))
+
+    def __call__(self, module: nn.Module, inputs, **kwargs) -> None:
         setattr(module, self.name, self.compute_weight(module))
 
 
@@ -121,7 +129,7 @@ class ConvBlockStage(nn.Module):
         self.pn = PixelNorm()
 
     def forward(self, x):
-        x = self.conv1(x)
+        x = self.conv1(x)        
         x = self.conv2(x)
         x = self.leaky(x)
         x = self.pn(x) if self.generator else x

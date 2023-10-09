@@ -20,8 +20,6 @@ class spectralCriticStage(nn.Module):
 
     def __init__(self, in_size, out_size):
         super(spectralCriticStage, self).__init__()
-        print('Linear sizes')
-        print(in_size, out_size)
         self.lin = nn.Linear(in_size, out_size)
         self.leaky = nn.LeakyReLU(0.2)
 
@@ -74,7 +72,7 @@ def build_sp_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
     n_time_last_stage = int(np.floor(n_time / 2 ** (n_stages - 1)))
     
     # Critic:
-    blocks = []
+    blocks = nn.ModuleList()
 
     for stage in  range(n_stages):
         blocks.append(spectralCriticStage(int(((n_time / 2 ** stage) / 2 ) + 1), 1))

@@ -13,8 +13,8 @@ import sys
 
 # This step is needed to set the correct path for the data module
 # most likely there is a better way to do this
-# ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-# sys.path.append(os.path.join(ROOT_DIR, "Data"))
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(ROOT_DIR, "data"))
 
 #### Please configure the following paths: ####
 

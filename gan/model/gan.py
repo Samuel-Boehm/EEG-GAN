@@ -2,7 +2,9 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
+import sys
 import torch
+import numpy as np
 import os
 from lightning import LightningModule
 from torch.nn.functional import softplus
@@ -52,8 +54,10 @@ class GAN(LightningModule):
             
             batch_size (int, optional): batch size. Defaults to 32.
             
-            epochs_per_stage (int, optional): number of epochs per stage. Total number of training
-                stages is calculated by epochs_per:stage * n_stages. Defaults to 200.
+            epochs_per_stage (int or list, optional): number of epochs per stage. Total number of training
+                stages is calculated by epochs_per:stage * n_stages. Defaults to 200 epochs per stage.
+                If a list is passed, the length of the list must be equal to n_stages. With a list,
+                the number of epochs per stage is determined by the values in the list.
             
             embedding_dim (int, optional): size of the embedding layer in the generator.
                 Defaults to 10.
@@ -97,9 +101,27 @@ class GAN(LightningModule):
         # Determine fading epochs
         # In these epochs a new block is added to the generator and the critic
         self.progression_epochs = []
-        for i in range(n_stages):
-            self.progression_epochs.append(int(i*epochs_per_stage))
-        
+
+        if isinstance(epochs_per_stage, int):
+            for i in range(n_stages):
+                self.progression_epochs.append(epochs_per_stage*i)
+        elif isinstance(epochs_per_stage, list): 
+            pass
+
+            if len(epochs_per_stage) != n_stages:
+                raise ValueError (
+                f"len(epochs_per_stage) != n_stages. Number of stages must be equal to the"
+                f"number of epochs per stage. Got {len(epochs_per_stage)} epochs and {n_stages} stages."
+                f"{epochs_per_stage}")
+            else:
+                self.progression_epochs = np.cumsum(epochs_per_stage)
+                self.progression_epochs = np.insert(self.progression_epochs, 0, 0)[:-1]
+                # We need to add a 0 to the beginning of the list, because we need to trigger the 
+                # 'set_stage' method at the beginning of the training.
+                
+        else:
+            raise TypeError("epochs_per_stage must be either int or list")
+
         # For each metric we want to log, we need to initialize a list inside the metrics dict.
         
         self.generated_data = []

@@ -5,11 +5,15 @@
 from torch import is_tensor
 from visualization.utils import plot_spectrum
 from lightning.pytorch.callbacks import Callback
-import torch
-from wandb import Image
+
 
 
 class Scheduler(Callback):
+
+    def __init__(self, fading_period, **kwargs):
+        super().__init__()
+        self.fading_period = fading_period
+
     
     def on_train_epoch_start(self, trainer, model):
         '''
@@ -17,8 +21,8 @@ class Scheduler(Callback):
         '''
         
         # increase alpha after each epoch
-        model.generator.alpha += 1/50
-        model.critic.alpha += 1/50
+        model.generator.alpha += 1/self.fading_period
+        model.critic.alpha += 1/self.fading_period
         
         if trainer.current_epoch in model.progression_epochs:
             # set stage in data, critic and generator

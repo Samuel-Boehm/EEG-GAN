@@ -52,7 +52,6 @@ class HighGammaModule(LightningDataModule):
         return super().test_dataloader()
     
     def set_stage(self, stage: int):
-
         # Resample original set for stage
         x = torch.unsqueeze(self.orignal_set, 0)
         for i in range(int(self.n_stages - stage)):
