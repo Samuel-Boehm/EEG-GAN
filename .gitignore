@@ -135,6 +135,7 @@ dmypy.json
 eeggan/examples/high_gamma/high_gamma_rest_right_10_20/.run.py.swp
 eeggan/examples/high_gamma/high_gamma_wgan/.run.py.swp
 
+
 EEG_GAN_Notebook.ipynb
 Dataset/whitened_Deep4.dataset
 analysis_scripts/outputs
