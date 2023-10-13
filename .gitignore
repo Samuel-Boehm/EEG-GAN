@@ -137,6 +137,7 @@ eeggan/examples/high_gamma/high_gamma_wgan/.run.py.swp
 
 EEG_GAN_Notebook.ipynb
 Dataset/whitened_Deep4.dataset
+analysis_scripts/outputs
 
 # Set path on each machine individually:
 GAN/paths.py
