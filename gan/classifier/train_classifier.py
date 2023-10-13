@@ -1,23 +1,31 @@
-import joblib
+import sys
+sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
+
 from braindecode.models.deep4 import Deep4Net
 from braindecode import EEGClassifier
-
+from gan.paths import data_path
 from skorch.callbacks import LRScheduler
 from skorch.helper import predefined_split
-
+from skorch.dataset import Dataset as skDataset
 import torch
+import sys
+import os
+
+dataset_path = os.path.join(data_path, 'generated')
+
 
 lr = 1 * 0.01
 weight_decay = 0.5 * 0.001
 batch_size = 64
-n_epochs = 512
+n_epochs = 128
 
-dataset_path = f'/home/samuelboehm/reworkedGAN/Data/clinical'
 
-dataset = joblib.load(dataset_path)
 
-train_set = splitted['train']
-valid_set = splitted['test']
+_dataset = torch.load(dataset_path)
+
+
+train_set = skDataset(_dataset[:1800][0], _dataset[:1800][1])
+valid_set = skDataset(_dataset[1800:][0], _dataset[1800:][1])
 
 
 cuda = torch.cuda.is_available()
@@ -25,8 +33,9 @@ device = 'cuda' if cuda else 'cpu'
 if cuda:
     torch.backends.cudnn.benchmarch = True
 
-n_classes = 4
-n_chans = len(CHANNELS)
+n_classes = 2
+n_chans = 21
+
 input_window_samples = train_set[0][0].shape[1]
 
 model = Deep4Net(
@@ -57,3 +66,9 @@ clf = EEGClassifier(
 
 
 clf.fit(train_set, y=None, epochs=n_epochs)
+
+model.cpu()
+
+path = f'/home/boehms/eeg-gan/EEG-GAN/temp_plots/deep4.model'
+
+torch.save(model.state_dict(), path)

@@ -162,12 +162,12 @@ def build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
 
         
     critic_in = nn.Sequential(
-        WS(nn.Conv1d(n_channels, n_filters, kernel_size=1, stride=1)),
+        WS(nn.Conv1d(n_channels, n_filters, kernel_size=1, stride=1)), #WS()
         nn.LeakyReLU(0.2),
     )
 
     downsample = nn.Sequential(nn.ReflectionPad1d(1),
-                                WS(nn.Conv1d(n_filters, n_filters, kernel_size=4, stride=2)), 
+                                WS(nn.Conv1d(n_filters, n_filters, kernel_size=4, stride=2)), #WS()
                                 nn.LeakyReLU(0.2))
 
     for stage in range(1, n_stages):

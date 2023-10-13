@@ -8,6 +8,9 @@ import numpy as np
 
 from gan.model.modules import PixelNorm, ConvBlockStage, PrintLayer, WS
 
+
+
+
 class GeneratorStage(nn.Module):
     """
     Description
@@ -161,11 +164,11 @@ def build_generator(n_filters, n_time, n_stages, n_channels, n_classes,
         )
     
     upsample = nn.Sequential(
-                WS(nn.ConvTranspose1d(n_filters, n_filters, 4, stride=2, padding=1)),
+                WS(nn.ConvTranspose1d(n_filters, n_filters, 4, stride=2, padding=1)), #WS()
                 nn.LeakyReLU(0.2)
         )
     
-    generator_out = WS(nn.Conv1d(n_filters, n_channels, kernel_size=1,))
+    generator_out = WS(nn.Conv1d(n_filters, n_channels, kernel_size=1,)) #WS()
 
 
 

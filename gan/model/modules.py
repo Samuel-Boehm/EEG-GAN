@@ -9,6 +9,9 @@ from torch.nn.init import calculate_gain
 
 # For weight norm
 from torch.nn.parameter import Parameter
+from torch.nn.utils.parametrizations import spectral_norm
+from torch.nn.utils import weight_norm
+
 
 
 class WeightScale(object):
@@ -122,12 +125,13 @@ class ConvBlockStage(nn.Module):
 
         self.generator = generator
 
-        self.conv1 = WS(nn.Conv1d(n_filters, n_filters, groups=groups, kernel_size=kernel_size, stride=stride, padding=padding))
-        self.conv2 = WS(nn.Conv1d(n_filters, n_filters, groups=groups, kernel_size=kernel_size + 2, stride=stride, padding=padding + 1))
-        self.conv3 = WS(nn.Conv1d(n_filters, n_filters, groups=n_filters, kernel_size=1, stride=stride, padding=0))
+        self.conv1 = WS(nn.Conv1d(n_filters, n_filters, groups=groups, kernel_size=kernel_size, stride=stride, padding=padding)) #WS() 
+        self.conv2 = WS(nn.Conv1d(n_filters, n_filters, groups=groups, kernel_size=kernel_size + 2, stride=stride, padding=padding + 1)) #WS()
+        self.conv3 = WS(nn.Conv1d(n_filters, n_filters, groups=n_filters, kernel_size=1, stride=stride, padding=0)) #WS()
         self.leaky = nn.LeakyReLU(0.2)
         self.pn = PixelNorm()
 
+    
     def forward(self, x):
         x = self.conv1(x)        
         x = self.conv2(x)

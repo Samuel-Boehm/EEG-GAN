@@ -47,7 +47,7 @@ GAN_PARAMS = {
 dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=GAN_PARAMS['batch_size'], num_workers=2)
 
 # Init Logger
-logger = WandbLogger(name='spcGAN', project='EEGGAN', save_dir=results_path,)
+logger = WandbLogger(name='weight_norm', project='EEGGAN', save_dir=results_path,)
 
 # Init Checkpoint
 checkpoint_callback = ModelCheckpoint(every_n_epochs=500,
