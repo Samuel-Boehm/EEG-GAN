@@ -58,3 +58,9 @@ class HighGammaModule(LightningDataModule):
             x = nn.functional.interpolate(x, scale_factor=(1, 0.5), mode="bicubic")
         x = torch.squeeze(x, 0)
         self.ds.data = x
+
+    def select_subset(self, idx):
+        self.ds.data = self.ds.data[idx][0]
+        self.ds.target = self.ds.target[idx][1]
+
+        print(f'Subset size: {self.ds.data.shape}')

@@ -72,24 +72,30 @@ class Generator(nn.Module):
         for conditional GAN
     """
 
-    def __init__(self, blocks, n_classes, embedding_dim, stage=1, fading=False):
+    def __init__(self, blocks, n_classes, embedding_dim, stage=1, fading=False, freeze=False):
         super(Generator, self).__init__()
         self.blocks = nn.ModuleList(blocks)
-        # set stage
-        self.set_stage(stage)
         self.label_embedding = nn.Embedding(n_classes, embedding_dim)
         self.fading = fading
+        self.freeze = freeze
 
-        # Freeze the entire network and unfreeze only used blocks using 'set_stage'
-        for block in self.blocks:
-            block.stage_requires_grad(False)
+        # set stage
+        self.set_stage(stage)
 
     def set_stage(self, stage):
         self.cur_stage = stage
         self._stage = self.cur_stage - 1 # Internal stage variable. Differs from GAN stage (cur_stage).
 
-        for i in range(0, self.cur_stage):
-            self.blocks[i].stage_requires_grad(True)
+        if self.freeze:
+            # Freeze all blocks
+            for block in self.blocks:
+                block.stage_requires_grad(False)
+            # Unfreeze current block
+            self.blocks[self._stage].stage_requires_grad(True)
+        else:
+            # Unfreeze all stages
+            for block in self.blocks:
+                block.stage_requires_grad(True)
         
         # In the first stage we do not need fading and therefore set alpha to 1
         if self.cur_stage == 1:
@@ -146,7 +152,7 @@ class Generator(nn.Module):
         return x
     
 def build_generator(n_filters, n_time, n_stages, n_channels, n_classes,
-                    latent_dim, embedding_dim, fading) -> Generator:
+                    latent_dim, embedding_dim, fading, freeze) -> Generator:
     
     
     # Generator:
@@ -184,4 +190,4 @@ def build_generator(n_filters, n_time, n_stages, n_channels, n_classes,
         # Out sequence is independent of stage
         blocks.append(GeneratorStage(stage_conv, generator_out, upsample))
         
-    return Generator(blocks, n_classes, embedding_dim, fading=fading)
+    return Generator(blocks, n_classes, embedding_dim, fading=fading, freeze=freeze)

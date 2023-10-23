@@ -18,7 +18,7 @@ class GAN(LightningModule):
         fs, latent_dim:int = 100, lambda_gp:float = 10., lr_gen:float = 0.001,
         lr_critic:float = 0.005, b1:float = 0.0, b2:float = 0.999,
         batch_size:int = 32, epochs_per_stage:int = 200, 
-        embedding_dim:int = 10, fading:bool = False, alpha:float = 1, beta:float = .2, **kwargs,
+        embedding_dim:int = 10, fading:bool = False, alpha:float = 1, beta:float = .2, freeze:bool=False, **kwargs,
     ):  
         """
         Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
@@ -87,10 +87,10 @@ class GAN(LightningModule):
 
         # Build the generator model
         self.generator: Generator = build_generator(n_filters, n_time, n_stages, n_channels,
-                                                    n_classes, latent_dim, embedding_dim, fading)
+                                                    n_classes, latent_dim, embedding_dim, fading, freeze)
         
         # Build the critic model
-        self.critic: Critic = build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading)
+        self.critic: Critic = build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading, freeze)
 
         # Build the spectral critic model
         self.sp_critic: spectralCritic = build_sp_critic(n_filters, n_time, n_stages, n_channels,

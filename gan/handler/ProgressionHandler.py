@@ -2,8 +2,7 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from torch import is_tensor
-from visualization.utils import plot_spectrum
+
 from lightning.pytorch.callbacks import Callback
 
 

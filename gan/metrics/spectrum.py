@@ -7,7 +7,7 @@ from gan.metrics.metric import Metric
 from lightning.pytorch import Trainer, LightningModule
 from gan.data.batch import batch_data
 from wandb import Image
-from visualization.utils import plot_spectrum
+from gan.visualization.utils import plot_spectrum
 
 class Spectrum(Metric):
 

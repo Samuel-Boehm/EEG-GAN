@@ -71,27 +71,31 @@ class Critic(nn.Module):
         stage during progression
     """
 
-    def __init__(self, n_time, n_channels, n_classes, blocks, stage=1, fading=False):
+    def __init__(self, n_time, n_channels, n_classes, blocks, stage=1, fading=False, freeze=False):
         super(Critic, self).__init__()
         self.blocks  = nn.ModuleList(blocks)
-        self.set_stage(stage)
         self.n_time = n_time
         self.fading = fading
-
+        self.freeze = freeze
         self.label_embedding = nn.Embedding(n_classes, n_time)
-
         self.alpha = 0
+        self.set_stage(stage)
 
-        # Freeze the entire network and unfreeze only used blocks using 'set_stage'
-        for block in self.blocks:
-            block.stage_requires_grad(False)
 
     def set_stage(self, stage):
         self.cur_stage = stage
         self._stage = len(self.blocks) - self.cur_stage # Internal stage variable. Differs from GAN stage (cur_stage).
 
-        for i in range(self._stage, len(self.blocks)):
-            self.blocks[i].stage_requires_grad(True)
+        if self.freeze:
+            # Freeze all blocks
+            for block in self.blocks:
+                block.stage_requires_grad(False)
+            # Unfreeze current block
+            self.blocks[self._stage].stage_requires_grad(True)
+        else:
+            # Unfreeze all stages
+            for block in self.blocks:
+                block.stage_requires_grad(True)
 
         # In the first stage we do not need fading and therefore set alpha to 1
         if self.cur_stage == 1:
@@ -149,7 +153,7 @@ class Critic(nn.Module):
         return x
     
 
-def build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
+def build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading, freeze):
 
     n_channels += 1 # Add one channel for embedding
 
@@ -190,4 +194,4 @@ def build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
 
 
     
-    return Critic(n_time, n_channels, n_classes, blocks, fading=fading)
+    return Critic(n_time, n_channels, n_classes, blocks, fading=fading, freeze=freeze)

@@ -9,9 +9,8 @@ from gan.paths import results_path, data_path
 from gan.data.DataSet import EEGGAN_Dataset
 
 
-path = "EEGGAN/4vj37rcg"
-stage = 5
-
+path = "EEGGAN/twlqedvh"
+stage = 4
 
 
 model = GAN.load_from_checkpoint(
@@ -70,5 +69,5 @@ y_fake = y_fake.detach().numpy()
 ds = EEGGAN_Dataset(['session',], fs_stage)
 
 ds.add_data(X_fake, y_fake, [1,])
-ds.save(os.path.join(data_path, 'generated'))
+ds.save(os.path.join(data_path, 'generated_stage4'))
 
