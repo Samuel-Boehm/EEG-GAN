@@ -12,7 +12,8 @@ def compute_stft(batch: np.ndarray, fs: float, wsize: int):
     batch of trials (trials x channels x timepoints). 
 
 
-    Args:
+    Arguments:
+    ----------
         batch (ndarray): batch of data with shape 
         trials x channels x timepoints
         
@@ -21,6 +22,7 @@ def compute_stft(batch: np.ndarray, fs: float, wsize: int):
         wsize (int): window size for stft
 
     Returns:
+    ----------
         stft_arr (ndarray): array of stft for each channel in each trial
         with shape trials x channels x freq_window x time_window
         
@@ -58,7 +60,8 @@ def plot_stft(stft_power: np.ndarray, t: np.ndarray, f: np.ndarray, title: str,
     """
     Plot multi channel time-frequency-power spectrum from stft for 21 channels.
 
-    Args:
+    Arguments:
+    ----------
         stft_power (ndarray): Array of stft-power calculations of 
         shape channels x freq_window x time_window
         
@@ -72,6 +75,7 @@ def plot_stft(stft_power: np.ndarray, t: np.ndarray, f: np.ndarray, title: str,
         
         channel_names (list(str), optional): list of Channel names. Defaults to empty None
     Returns:
+    ----------
         figure (figure): figure object
     """
     cm = 1/2.54  # centimeters in inches
@@ -160,20 +164,20 @@ def blc(stft_array: np.ndarray, t: np.ndarray, blc_win: tuple = None):
     Applies baseline corretion of a batch of 
     Short Time Fourier Transformations(STFT).
 
-    Parameters
+    Arguments:
     ----------
-    stft_array : array of short time fourier transormations of shape
-    trials x channels x freq_window x time_window
+        stft_array : array of short time fourier transormations of shape
+            trials x channels x freq_window x time_window
 
-    t : array of segment times (as returned from scipy.signal.stft)
+        t : array of segment times (as returned from scipy.signal.stft)
 
-    blc_win : start and stop time as reference for baseline corretion
-    if None: whole timeframe is taken for blc
+        blc_win : start and stop time as reference for baseline corretion
+            if None: whole timeframe is taken for blc
 
-    Returns
-    -------
-    med_log : median of the relative power over all trials 
-    with base 10 logarithm applied. Shape: channels x freq_window x time_window
+    Returns:
+    ----------
+        med_log : median of the relative power over all trials with base
+        10 logarithm applied. Shape: channels x freq_window x time_window
         
     '''
 
@@ -273,16 +277,22 @@ def calc_bin_stats(real_X: np.ndarray, fake_X: np.ndarray, fs: int,):
     Returns the corrected p-values reshaped to the shape of the stft. Bins are considered to be 
     similar if the p-value is bigger than 0.3.
 
-    Args:
+    Arguments:
+    ----------
         real_X (ndarray): Array of real data with shape trials x channels x timepoints
+        
         fake_X (ndarray): Array of fake data with shape trials x channels x timepoints
+        
         fs (int): Sampling frequency of the data
 
     Returns:
+    ----------
         median_real (ndarray): Array of stft for real data
+        
         shape: channels x freq_window x time_window
         
         median_fake (ndarray): Array of stft for fake data
+        
         shape: channels x freq_window x time_window
         
         corr_pval (ndarray): Array of corrected p-values with shape freq_window x time_window
@@ -324,7 +334,29 @@ def calc_bin_stats(real_X: np.ndarray, fake_X: np.ndarray, fs: int,):
 
 def calc_bin_stats_for_mapping(real_X, real_y, fake_X, fake_y, fs: int,
                          mapping: dict):
-    '''If an out path is provided all plots are saved there'''
+    '''
+    Calculates the p-values for each bin of the stft and corrects them for multiple comparisons.
+    If an out path is provided all plots are saved there
+
+    Arguments:
+    ----------
+        real_X (ndarray): Array of real data with shape trials x channels x timepoints
+
+        real_y (ndarray): Array of real labels with shape trials x 1
+
+        fake_X (ndarray): Array of fake data with shape trials x channels x timepoints
+
+        fake_y (ndarray): Array of fake labels with shape trials x 1
+
+        fs (int): Sampling frequency of the data
+
+        mapping (dict): Dictionary with mapping of labels to conditions
+    
+    Returns:
+    ----------
+        resuts_dict (dict): Dictionary with ffts for each condition on real and fake
+        dict[condition] = [real_stft, fake_stft, p_vals, f, t]
+    '''
 
     # Creating a dictionary with real and fake data for each condition 
     # dict[condition] = [real_data, fake_data]
@@ -347,7 +379,9 @@ def calc_bin_stats_for_mapping(real_X, real_y, fake_X, fake_y, fs: int,
     return resuts_dict
    
 def plot_bin_stats(real_X: np.ndarray, fake_X, fs,
-                    channels:list, path:str=None, title:str='plot', show_plots=True): 
+                    channels:list, path:str=None, title:str='plot', show_plots=True):
+    
+ 
 
     real_stft, fake_stft, pvals, f, t = calc_bin_stats(real_X, fake_X, fs)
 

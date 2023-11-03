@@ -16,7 +16,10 @@ import sys
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(ROOT_DIR, "data"))
 
-#### Please configure the following paths: ####
+###############################################################################
+#                    Please configure the following paths:                    #
+###############################################################################
+
 
 # Path to the data directory, when using Data/Preprcess.py this path will be 
 # used to save the preprocessed data. This will also be the path to load the

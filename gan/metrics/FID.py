@@ -7,7 +7,6 @@
 
 import numpy as np
 from typing import List, Tuple
-from scipy import linalg
 from lightning.pytorch import Trainer, LightningModule
 
 import torch
@@ -17,138 +16,83 @@ from torch.utils.data import DataLoader
 
 from gan.data.batch import batch_data
 from gan.metrics.metric import Metric
+from gan.utils import to_device
 
 
-def get_activations(data, model, batch_size=100, dims=2800, device='cuda',
-                    num_workers=1):
+def calculate_activation_statistics(act: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    with torch.no_grad():
+        act = act.reshape(act.shape[0], -1)
+        fact = act.shape[0] - 1
+        mu = torch.mean(act, dim=0, keepdim=True)
+        act = act - mu.expand_as(act)
+        sigma = act.t().mm(act) / fact
+        return mu, sigma
+
+
+# From https://github.com/tkarras/progressive_growing_of_gans/blob/master/metrics/frechet_inception_distance.py
+def _calculate_FID(mu1: torch.Tensor, sigma1: torch.Tensor, mu2: torch.Tensor,
+                                sigma2: torch.Tensor) -> torch.Tensor:
     r"""
-    Calculates the activations of the MaxPool layer in block 4 for all samples.
-
-    Params:
-    -- data        : batch of data with shape (n_samples, n_channels, n_samples)
-    -- model       : Instance of Deep4 model 
-    -- batch_size  : Batch size for the model to process at once.
-                     Make sure that the number of samples is a multiple of
-                     the batch size, otherwise some samples are ignored. This
-                     behavior is retained to match the original FID score
-                     implementation.
-    -- dims        : Dimensionality of features returned by Deep4
-    -- device      : Device to run calculations
-    -- num_workers : Number of parallel dataloader workers
-    Returns:
-    -- A numpy array of dimension (n_samples, dims) that contains the
-       activations of the given tensor when feeding Deep4 with the
-       query tensor.
-    """
-    model.eval()
-    model.to(device)
-
-    if batch_size > len(data):
-        print(('Warning: batch size is bigger than the data size. '
-               'Setting batch size to data size'))
-        batch_size = len(data)
-
-    dataloader = DataLoader(data,
-                            batch_size=batch_size,
-                            shuffle=False,
-                            drop_last=False,
-                            num_workers=num_workers)
-
-    pred_arr = np.empty((len(data), dims))
-
-    start_idx = 0
-    
-    for batch in dataloader:
-        batch = batch.to(device)
-        with torch.no_grad():
-            pred = model(batch)[0]
-
-        pred = pred.reshape(pred.shape[0], -1).cpu().numpy()
-
-        pred_arr[start_idx:start_idx + pred.shape[0]] = pred
-
-        start_idx = start_idx + pred.shape[0]
-
-    return pred_arr
-
-def calculate_activation_statistics(data, model, batch_size=50, dims=2800,
-                                    device='cuda', num_workers=1):
-    r"""
-    Calculation of the statistics used by the FID.
-    Params:
-    -- data       : batch of data with shape (n_samples, n_channels, n_samples)
-    -- model       : Instance of Deep4 model
-    -- batch_size  : The images numpy array is split into batches with
-                     batch size batch_size. A reasonable batch size
-                     depends on the hardware.
-    -- dims        : Dimensionality of features returned by Deep4
-    -- device      : Device to run calculations
-    -- num_workers : Number of parallel dataloader workers
-    Returns:
-    -- mu    : The mean over samples of the activations of the MaxPool layer of
-               the Deep4 model.
-    -- sigma : The covariance matrix of the activations of the MaxPool layer of
-               the Deep4 model.
-    """
-    act = get_activations(data, model, batch_size, dims, device, num_workers)
-    mu = np.mean(act, axis=0)
-    sigma = np.cov(act, rowvar=False)
-    return mu, sigma
-
-
-def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
-    r"""
-    Numpy implementation of the Frechet Distance.
+    Numpy implementation of the Frechet Distance betweem activations.
     The Frechet distance between two multivariate Gaussians X_1 ~ N(mu_1, C_1)
     and X_2 ~ N(mu_2, C_2) is
-            d^2 = ||mu_1 - mu_2||^2 + Tr(C_1 + C_2 - 2*sqrt(C_1*C_2)).
-    Stable version by Dougal J. Sutherland.
-    Params:
-    -- mu1   : Numpy array containing the activations of a layer of the
-               inception net (like returned by the function 'get_predictions')
-               for generated samples.
-    -- mu2   : The sample mean over activations, precalculated on an
-               representative data set.
-    -- sigma1: The covariance matrix over activations for generated samples.
-    -- sigma2: The covariance matrix over activations, precalculated on an
-               representative data set.
     Returns:
-    --   : The Frechet Distance.
+    -- dist  : The Frechet Distance.
+    Raises:
+    -- InvalidFIDException if nan occures.
     """
+    with torch.no_grad():
+        m = torch.square(mu1 - mu2).sum()
+        d = torch.bmm(sigma1, sigma2)
+        s = sqrtm_newton(d)
+        dists = m + torch.diagonal(sigma1 + sigma2 - 2 * s, dim1=-2, dim2=-1).sum(-1)
+        return dists
 
-    mu1 = np.atleast_1d(mu1)
-    mu2 = np.atleast_1d(mu2)
 
-    sigma1 = np.atleast_2d(sigma1)
-    sigma2 = np.atleast_2d(sigma2)
+# https://colab.research.google.com/drive/1wSO1MFh_ZCfOnejFnW1vkD71jaJy2Olu#scrollTo=Ju79uoiTQku6&line=1&uniqifier=1
+def sqrtm_newton(A: torch.Tensor) -> torch.Tensor:
+    with torch.no_grad():
+        numIters = 20
+        batchSize = A.shape[0]
+        dim = A.shape[1]
+        normA = A.mul(A).sum(dim=1).sum(dim=1).sqrt()
+        Y = A.div(normA.view(batchSize, 1, 1).expand_as(A))
+        I = torch.eye(dim, dim).view(1, dim, dim).repeat(batchSize, 1, 1).type(A.dtype).to(A)
+        Z = torch.eye(dim, dim).view(1, dim, dim).repeat(batchSize, 1, 1).type(A.dtype).to(A)
+        for i in range(numIters):
+            T = 0.5 * (3.0 * I - Z.bmm(Y))
+            Y = Y.bmm(T)
+            Z = T.bmm(Z)
+        sA = Y * torch.sqrt(normA).view(batchSize, 1, 1).expand_as(A)
+        return sA
+    
+def calculate_FID(real: torch.Tensor, fake: torch.Tensor,
+                  deep4s: Module, device = 'cuda') -> Tuple[float, float]:
+    r'''
+    Calculates the Frechet Inception Distance (FID) between two batches of data.
+    Args:
+        real: The real data.
+        fake: The fake data.
+        deep4s: A list of Deep4 models. Note: to access the intermediate layers, 
+                the Deep4 model needs to be wrapped with the IntermediateOutputWrapper.
+    '''
+    with torch.no_grad():
+        real = real[:, :, :, None]
+        fake = fake[:, :, :, None]
+        to_device(device, real, fake,)
+        real_dl = DataLoader(real, batch_size=128, num_workers=2,)
+        fake_dl = DataLoader(fake, batch_size=128, num_workers=2,)
 
-    assert mu1.shape == mu2.shape, \
-        'Training and test mean vectors have different lengths'
-    assert sigma1.shape == sigma2.shape, \
-        'Training and test covariances have different dimensions'
-
-    diff = mu1 - mu2
-
-    # Product might be almost singular
-    covmean, _ = linalg.sqrtm(sigma1.dot(sigma2), disp=False)
-    if not np.isfinite(covmean).all():
-        msg = ('fid calculation produces singular product; '
-               'adding %s to diagonal of cov estimates') % eps
-        print(msg)
-        offset = np.eye(sigma1.shape[0]) * eps
-        covmean = linalg.sqrtm((sigma1 + offset).dot(sigma2 + offset))
-
-    # Numerical error might give slight imaginary component
-    if np.iscomplexobj(covmean):
-        if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
-            m = np.max(np.abs(covmean.imag))
-            raise ValueError('Imaginary component {}'.format(m))
-        covmean = covmean.real
-
-    tr_covmean = np.trace(covmean)
-
-    return (diff.dot(diff) + np.trace(sigma1) + np.trace(sigma2) - 2 * tr_covmean)
-
+        dists = []
+        for deep4 in deep4s:
+            for real_batch, fake_batch in zip(real_dl, fake_dl):
+                mu_real, sig_real = calculate_activation_statistics(deep4(real_batch)[0])
+                mu_fake, sig_fake = calculate_activation_statistics(deep4(fake_batch)[0])
+                dist = _calculate_FID(mu_real[None, :, :], sig_real[None, :, :],
+                                      mu_fake[None, :, :], sig_fake[None, :, :]).item()
+                dists.append(dist)
+        print(len(dists), 'number of distances calculated.')
+        return np.mean(dists).item(), np.std(dists).item()
 
 
 class FrechetMetric(Metric):
@@ -158,25 +102,14 @@ class FrechetMetric(Metric):
         self.deep4s = deep4s
         super().__init__(*args, **kwargs)
 
-    def __call__(self, trainer: Trainer, module: LightningModule, batch: batch_data) -> Tuple:
+    def __call__(self, trainer: Trainer, module: LightningModule, batch: batch_data) -> Tuple[float, float]:
 
         r"""
         Returns the mean and standard deviation of the Frechet distance between real and fake data.
         """
 
-        with torch.no_grad():
-            X_real = Tensor(batch.real)
-            X_real = X_real[:, :, :, None]
+        mean, std = calculate_FID(batch.real, batch.fake, self.deep4s)
 
-            X_fake = Tensor(batch.fake)
-            X_fake = X_fake[:, :, :, None]
+        return mean, std
 
-            dists = []
-
-            for deep4 in self.deep4s:
-                mu_real, sig_real = calculate_activation_statistics(X_real, deep4, device='cuda')
-                mu_fake, sig_fake = calculate_activation_statistics(X_fake, deep4, device='cuda')
-                dist = calculate_frechet_distance(mu_real, sig_real, mu_fake, sig_fake).item()
-                dists.append(dist)
-
-            return np.mean(dists).item(), np.std(dists).item()
+        

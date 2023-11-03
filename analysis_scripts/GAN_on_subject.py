@@ -75,41 +75,41 @@ dm.setup()
 
 def main():
 
-    for i in range(2, 15):
-        model = GAN.load_from_checkpoint(
-                checkpoint_path=os.path.join(results_path, path, "checkpoints/last.ckpt"),
-                map_location=torch.device('cpu'),
-                )
+    subject = 4
+    model = GAN.load_from_checkpoint(
+            checkpoint_path=os.path.join(results_path, path, "checkpoints/last.ckpt"),
+            map_location=torch.device('cpu'),
+            )
 
-        # Set Stage:
-        model.generator.set_stage(1)
-        model.critic.set_stage(1)
+    # Set Stage:
+    model.generator.set_stage(1)
+    model.critic.set_stage(1)
 
-        model.generator.fading = False
-        model.critic.fading = False
-        
-        train_idx, test_idx = dataset.splits['idx'][dataset.splits.subject == i].values
+    model.generator.fading = False
+    model.critic.fading = False
 
-        # For GAN training we pool all data together:
-        idx = np.concatenate((train_idx, test_idx))
+    train_idx, test_idx = dataset.splits['idx'][dataset.splits.subject == subject].values
 
-        dm.select_subset(idx)
+    # For GAN training we pool all data together:
+    idx = np.concatenate((train_idx, test_idx))
 
-        # Init Logger and Trainer for each subject:
+    dm.select_subset(idx)
 
-        logger = WandbLogger(name=f'Subject_training{i}', project='EEGGAN', save_dir=results_path,)
+    # Init Logger and Trainer for each subject:
 
-        trainer = Trainer(
-            max_epochs=int(np.sum(GAN_PARAMS['epochs_per_stage'])),
-            reload_dataloaders_every_n_epochs=1,
-            callbacks=[training_schedule, logging_handler, checkpoint_callback],
-            default_root_dir=results_path,
-            strategy='ddp_find_unused_parameters_true',
-            logger=logger,)
+    logger = WandbLogger(name=f'Subject_training{subject}', project='EEGGAN', save_dir=results_path,)
 
-        logger.watch(model)
+    trainer = Trainer(
+        max_epochs=int(np.sum(GAN_PARAMS['epochs_per_stage'])),
+        reload_dataloaders_every_n_epochs=1,
+        callbacks=[training_schedule, logging_handler, checkpoint_callback],
+        default_root_dir=results_path,
+        strategy='ddp_find_unused_parameters_true',
+        logger=logger,)
 
-        trainer.fit(model, dm)
+    logger.watch(model)
+
+    trainer.fit(model, dm)
 
 if __name__ == '__main__':
     main()

@@ -142,3 +142,4 @@ analysis_scripts/outputs
 
 # Set path on each machine individually:
 GAN/paths.py
+analysis_scripts/model_report.pdf

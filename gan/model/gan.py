@@ -14,69 +14,96 @@ from gan.model.generator import Generator, build_generator
 from gan.model.spectral_Critic import spectralCritic, build_sp_critic
 
 class GAN(LightningModule):
+    r"""
+    Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
+    LightningModule class and ist trained using the PyTorch Lightning Trainer framework.
+    
+
+    Attributes:
+    ----------
+        n_channels (int)
+            number of EEG channels in the training data
+        
+        n_classes (int)
+            number of classes in the training data
+        
+        n_time (int)
+            number of time samples in the training data
+        
+        n_stages (int)
+            number of stages for the progressive growing of the GAN
+        
+        n_filters (int)
+            number of filters for the convolutional layers
+        
+        fs (int):
+            sampling frequency of the training data. 
+            This is just here so its collected in the hparams dict.
+        
+        latent_dim (int, optional)
+            dimension of the latent vector. Defaults to 100.
+        
+        lambda_gp (int, optional)
+            lambda hyperparameter for the gradient penalty. Defaults to 10.
+        
+        lr_gen (float, optional)
+            generator learning rate. Defaults to 0.001.
+        
+        lr_critic (float, optional)
+            critic learning rate. Defaults to 0.005.
+        
+        b1 (float, optional)
+            first decay rate for the Adam optimizer. Defaults to 0.0.
+        
+        b2 (float, optional)
+            second decay rate for the Adam optimizer. Defaults to 0.999.
+        
+        batch_size (int, optional)
+            batch size. Defaults to 32.
+        
+        epochs_per_stage (int or list, optional)
+            number of epochs per stage. Total number of training stages is calculated by
+            epochs_per:stage * n_stages. Defaults to 200 epochs per stage. If a list is passed,
+            the length of the list must be equal to n_stages. With a list, the number of epochs
+            per stage is determined by the values in the list.
+        
+        embedding_dim (int, optional)
+            size of the embedding layer in the generator. Defaults to 10.
+
+        fading (bool, optional)
+            if True, fading between old and new blocks is used. Defaults to False.
+
+        alpha (float, optional)
+            alpha parameter to weight the amount of the time domain loss. Defaults to 1.
+
+        beta (float, optional)
+            beta parameter to weight the amount of the frequency domain loss. Defaults to .2.
+    
+    Methods:
+    ----------
+        forward(x)
+            forward pass through the model
+
+        training_step(batch, batch_idx)
+            defines the training step for the lightning module
+
+        configure_optimizers()
+            configure the optimizers for the lightning module
+
+        on_train_epoch_end()
+            method that is called at the end of each epoch
+        
+        gradient_penalty(critic, real, fake)
+            calculate the gradient penalty
+
+    For further methods LightningModule documentation.
+    """
     def __init__(self, n_channels, n_classes, n_time, n_stages, n_filters,
         fs, latent_dim:int = 100, lambda_gp:float = 10., lr_gen:float = 0.001,
         lr_critic:float = 0.005, b1:float = 0.0, b2:float = 0.999,
         batch_size:int = 32, epochs_per_stage:int = 200, 
         embedding_dim:int = 10, fading:bool = False, alpha:float = 1, beta:float = .2, freeze:bool=False, **kwargs,
     ):  
-        """
-        Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
-        LightningModule class and ist trained using the PyTorch Lightning Trainer framework.
-        
-
-        Args:
-            n_channels (int):   number of EEG channels in the training data
-            
-            n_classes (int):    number of classes in the training data
-            
-            n_time (int):       number of time samples in the training data
-            
-            n_stages (int):     number of stages for the progressive growing of the GAN
-            
-            n_filters (int):    number of filters for the convolutional layers
-            
-            fs (int):           sampling frequency of the training data. 
-                                This is just here so we can save it in the hparams dict.
-            
-            latent_dim (int, optional): dimension of the latent vector. Defaults to 100.
-            
-            lambda_gp (int, optional):lambda hyperparameter for the gradient penalty.
-                Defaults to 10.
-            
-            lr_gen (float, optional): generator learning rate. Defaults to 0.001.
-            
-            lr_critic (float, optional): critic learning rate. Defaults to 0.005.
-            
-            b1 (float, optional): first decay rate for the Adam optimizer. Defaults to 0.0.
-            
-            b2 (float, optional): second decay rate for the Adam optimizer. Defaults to 0.999.
-            
-            batch_size (int, optional): batch size. Defaults to 32.
-            
-            epochs_per_stage (int or list, optional): number of epochs per stage. Total number of training
-                stages is calculated by epochs_per:stage * n_stages. Defaults to 200 epochs per stage.
-                If a list is passed, the length of the list must be equal to n_stages. With a list,
-                the number of epochs per stage is determined by the values in the list.
-            
-            embedding_dim (int, optional): size of the embedding layer in the generator.
-                Defaults to 10.
-
-            fading (bool, optional): if True, fading between old and new blocks is used. Defaults to False.
-
-            alpha (float, optional): alpha parameter to weight the amount of the time domain loss. Defaults to 1.
-
-            beta (float, optional): beta parameter to weight the amount of the frequency domain loss. Defaults to .2.
-        
-        Methods:   
-            forward(x): forward pass through the model
-            training_step(batch, batch_idx): training step for the lightning module
-            configure_optimizers(): configure the optimizers for the lightning module
-            on_train_epoch_end(): method that is called at the end of each epoch
-            gradient_penalty(critic, real, fake): calculate the gradient penalty
-
-        For further methods LightningModule documentation.
-        """
         
         super().__init__(**kwargs)
 

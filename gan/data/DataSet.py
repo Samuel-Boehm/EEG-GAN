@@ -21,7 +21,8 @@ class EEGGAN_Dataset(Dataset):
         
         Methods:
             add_data: Add data and labels to dataset.
-            return_from_tag: Return a DataFrame containing indices for each tag to access data and labels.
+            select_from_tag: Select a subset of the dataset according to a tag and a selection from the tag.
+            tags: Show possible tags and selections.
             info: Get info about the dataset.
             save: Save dataset to file.
         
@@ -59,18 +60,46 @@ class EEGGAN_Dataset(Dataset):
         self.data = np.concatenate((self.data, data), axis=0) if self.data.size else data
         self.target = np.concatenate((self.target, target), axis=0) if self.target.size else target
         
-    def return_from_tag(self, tag:str) -> pd.DataFrame:
+    def select_from_tag(self, tag:str, selection) -> pd.DataFrame:
         '''
-        Return a DataFrame containing indices for each tag to access data and labels. 
-        '''
+        Return a subset of the dataset according to tag and a selection from the tag.
+        ATTENTION: This method changes the dataset in place.
 
-        groups = self.splits.groupby(tag)['idx'].apply(list)
-        groups.reset_index()
-        for index, items  in groups.items():
-                groups[index] = list(itertools.chain.from_iterable(items))
-        
-        return groups.to_frame().reset_index()
-    
+        Arguments:
+        ----------
+        tag (str): Tag to select subset from.
+        selection (str): Selection from tag. To show possible tags and selections use the tags() method.
+
+        Example:
+        ----------
+        Return a specific subject from the dataset:
+        >>> ds = torch.load('path/to/dataset')
+        >>> ds.tags()
+        out:
+            Possible tags:
+            ------------------
+            subject : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+            session : ['session_0']
+            split : ['test', 'train']
+        >>> ds.return_from_tag('subject', 4)
+
+        '''
+        train_idx, test_idx = self.splits['idx'][self.splits[tag] == selection].values
+        idx = np.concatenate((train_idx, test_idx))
+        self.data = self.data[idx]
+        self.target = self.target[idx]
+
+        return self.data, self.target
+
+    def tags(self):
+        print('Possible tags:'
+              '\n------------------')
+        for tag in self.splits.columns:
+            if tag != 'idx':
+                print(tag, ':', list(np.unique(self.splits[tag])))
+
+
+
     def info(self):
         return {'n_time': self.data.shape[-1],
                 'fs': self.fs,
