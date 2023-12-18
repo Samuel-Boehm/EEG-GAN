@@ -8,7 +8,7 @@ import os
 
 if __name__ == "__main__":
     
-    path = "EEGGAN/twlqedvh"
-    stage = 4
-    ds = generate_data(path, stage, 10000)
-    ds.save(os.path.join(data_path, 'generated_stage4'))
+    path = "x6hrdnur"
+    stage = 5
+    ds = generate_data(path, stage, 1000)
+    ds.save(os.path.join(data_path, 'subject1'))

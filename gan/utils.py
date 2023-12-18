@@ -48,14 +48,15 @@ def generate_data(model_token, stage, n_samples):
 
     model.generator.fading = False
     model.critic.fading = False
-    
-    print('model fs', model.hparams.fs)
-    print('model n_stages', model.hparams.n_stages)
-    print('model current stage', model.current_stage)
+
     fs_stage = int((model.hparams.fs/2**(model.hparams.n_stages - (stage))))
 
+        
+    print('model fs', fs_stage)
+    print(f'model current stage: {model.generator.cur_stage}/{model.hparams.n_stages}')
 
-    # generate noise and labels:
+    # We need to generate the data in batches, because the GPU memory is not
+    # big enough to generate all data at once.
     batch_size = 128
 
     for batch in range(n_samples // batch_size):
@@ -81,8 +82,12 @@ def generate_data(model_token, stage, n_samples):
         # generate fake batch:
         X_fake_batch = model.forward(z, y_fake_batch)
 
-        X_fake = torch.cat((X_fake, X_fake_batch), dim=0)
-        y_fake = torch.cat((y_fake, y_fake_batch), dim=0)
+        if batch_size >= n_samples:
+            X_fake = X_fake_batch
+            y_fake = y_fake_batch
+        else:
+            X_fake = torch.cat((X_fake, X_fake_batch), dim=0)
+            y_fake = torch.cat((y_fake, y_fake_batch), dim=0)
 
 
     X_fake = X_fake.detach().numpy()

@@ -2,14 +2,16 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from gan.model.gan import GAN
 from lightning import Trainer
 import numpy as np
 import os
+
+from gan.model.gan import GAN
 from gan.data.DataModule import HighGammaModule as HDG
 from gan.handler.ProgressionHandler import Scheduler
 from gan.handler.LoggingHandler import LoggingHandler
 from gan.paths import data_path, results_path
+
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 
@@ -31,16 +33,16 @@ mapping = {'right': 0, 'rest': 1}
 GAN_PARAMS = {
     'n_channels':len(channels),
     'n_classes':2,
-    'n_time':768,
+    'n_time':768, # care with this weird hardcoding, its fs(Hz ) * time(s)
     'n_stages':5,
     'n_filters':120,
     'fs':256,
     'latent_dim':210,
-    'epochs_per_stage': [200, 400, 800, 1600, 2000], 
-    'batch_size':128,
+    'epochs_per_stage': [3, 3, 3, 3, 3], 
+    'batch_size':32,
     'fading':True,
     'alpha':1,
-    'beta':.01,
+    'beta':.1,
     'freeze':True,
     }
 
@@ -48,7 +50,7 @@ GAN_PARAMS = {
 dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=GAN_PARAMS['batch_size'], num_workers=2)
 
 # Init Logger
-logger = WandbLogger(name='weight_norm', project='EEGGAN', save_dir=results_path,)
+logger = WandbLogger(name='debugging', project='EEGGAN', save_dir=results_path, mode="offline")
 
 # Init Checkpoint
 checkpoint_callback = ModelCheckpoint(every_n_epochs=500,
@@ -64,12 +66,13 @@ logging_handler.attach_metrics([Spectrum(100),
                                 ],)
 
 # Init Scheduler
-training_schedule = Scheduler(fading_period=100)
+training_schedule = Scheduler(fading_period=2)
 
 def main():
     model = GAN(**GAN_PARAMS)
 
     trainer = Trainer(
+            limit_train_batches=1, # batches are limited for debugging
             max_epochs=int(np.sum(GAN_PARAMS['epochs_per_stage'])),
             reload_dataloaders_every_n_epochs=1,
             callbacks=[training_schedule, logging_handler, checkpoint_callback],
@@ -78,7 +81,7 @@ def main():
             logger=logger,
     )
 
-    logger.watch(model)
+    # logger.watch(model)
 
     trainer.fit(model, dm)
 

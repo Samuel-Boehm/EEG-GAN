@@ -6,11 +6,10 @@ import os
 import torch
 from gan.paths import results_path, data_path
 import matplotlib.pyplot as plt
-from torchvision import utils
 import numpy as np
 from gan.data.DataModule import HighGammaModule as HDG
 from gan.visualization.stft_plots import plot_bin_stats, calc_bin_stats
-from gan.visualization.utils import plot_spectrum
+from gan.visualization.spectrum_plots import plot_spectrum
 
 fs = 128 
 channels = ['Fp1','Fp2','F7','F3','Fz','F4','F8',

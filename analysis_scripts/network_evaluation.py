@@ -6,6 +6,8 @@ from gan.classifier.IntermediateOutput import IntermediateOutputWrapper
 from gan.data.batch import batch_data
 from gan.metrics.correlation import calculate_correlation_for_condition
 from gan.visualization.time_domain_plot import plot_time_domain
+from gan.visualization.stft_plots import plot_bin_stats
+from gan.visualization.spectrum_plots import plot_spectrum
 from gan.paths import data_path, results_path
 from gan.utils import generate_data
 
@@ -54,22 +56,36 @@ fake = generate_data(args.model_path, args.stage, args.n_samples)
 # Metrics work best with batched data:
 batch = batch_data(real.data, fake.data, real.target, fake.target)
 
-print('Fake FS', fake.fs)
-print(fake.data.shape)
-
 # Create a PdfPages object
 pdf_pages = PdfPages('model_report.pdf')
 
 # Add a header to the page:
 header = f'This is the report to {args.report_name}'
 
+
 # Convert DataFrame to matplotlib figure and save to the PdfPages object
 correlations = calculate_correlation_for_condition(batch, mapping)
-add_pdf_page(pdf_pages, 2, 1, [header,correlations])
+
+add_pdf_page(pdf_pages, 2, 1, [header, correlations])
+
+# Plot spectrum:
+spectrum, _ = plot_spectrum(batch.real, batch.fake, fake.fs, 'all')
+pdf_pages.savefig(spectrum, bbox_inches='tight')
 
 # Plot time domain
-TD_plot, _  = plot_time_domain(batch, channels, fake.fs, None)
+TD_plot, _    = plot_time_domain(batch, channels, fake.fs, None)
 pdf_pages.savefig(TD_plot, bbox_inches='tight')
+
+for key in mapping.keys():
+    conditional_real = batch.real[batch.y_real == mapping[key]]
+    conditional_fake = batch.fake[batch.y_fake == mapping[key]]
+
+    # calculate frequency in current stage:   
+    fig_stats, fig_real, fig_fake = plot_bin_stats(conditional_real, conditional_fake,
+                    fake.fs, channels, None, str(key), False)
+    pdf_pages.savefig(fig_stats, bbox_inches='tight')
+    pdf_pages.savefig(fig_real, bbox_inches='tight')    
+    pdf_pages.savefig(fig_fake, bbox_inches='tight')
 
 # Close the PdfPages object
 pdf_pages.close()

@@ -33,35 +33,3 @@ def labeled_tube_plot(x, data_y, tube_y, labels,
 
 
 
-def plot_spectrum(batch_real: np.ndarray, batch_fake: np.ndarray = None, fs = 256, name = ''):
-    '''
-    Plot the spectrum of the real and fake data
-    Args:
-        batch_real: real data
-        batch_fake: fake data
-    '''
-
-    freqs = np.fft.rfftfreq(batch_real.shape[2], 1. / fs)
-
-    amplitudes_real = np.log(np.abs(np.fft.rfft(batch_real, axis=2)))
-    real_mean = amplitudes_real.mean(axis=(0, 1)).squeeze()
-    real_std = amplitudes_real.std(axis=(0, 1)).squeeze()
-        
-    aplitudes_fake = np.log(np.abs(np.fft.rfft(batch_fake, axis=2)))
-    fake_mean = aplitudes_fake.mean(axis=(0, 1)).squeeze()
-    fake_std = aplitudes_fake.std(axis=(0, 1)).squeeze()
-        
-
-
-    figure, ax = labeled_tube_plot(freqs,
-                      [real_mean, fake_mean],
-                      [real_std, fake_std],
-                      ["Real", "Fake"],
-                      f"Mean spectral log amplitude {name}", "Hz", "log(Amp)", None)
-    
-    
-    ax.text(.01, .99, f'n: {str(batch_real.shape[0])} - fs: {fs} - data shape: {batch_fake.shape}', fontsize=12, ha='left', va='top', transform=ax.transAxes,
-            bbox={'facecolor': 'white', 'alpha': 0.4, 'pad': 4})
-        
-    
-    return figure

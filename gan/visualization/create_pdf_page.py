@@ -7,7 +7,6 @@ from matplotlib.figure import Figure
 import pandas as pd
 
 def add_pdf_page(pdf_pages, n_rows, n_cols, contents):
-    assert len(contents) == n_rows * n_cols, "Mismatch in dimensions or content"
 
     # Create a new figure with A4 dimensions
     fig, axs = plt.subplots(n_rows, n_cols, figsize=(8.27, 11.69))

@@ -14,7 +14,7 @@ from gan.model.generator import Generator, build_generator
 from gan.model.spectral_Critic import spectralCritic, build_sp_critic
 
 class GAN(LightningModule):
-    r"""
+    """
     Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
     LightningModule class and ist trained using the PyTorch Lightning Trainer framework.
     
@@ -133,7 +133,6 @@ class GAN(LightningModule):
             for i in range(n_stages):
                 self.progression_epochs.append(epochs_per_stage*i)
         elif isinstance(epochs_per_stage, list): 
-            pass
 
             if len(epochs_per_stage) != n_stages:
                 raise ValueError (
@@ -143,7 +142,7 @@ class GAN(LightningModule):
             else:
                 self.progression_epochs = np.cumsum(epochs_per_stage)
                 self.progression_epochs = np.insert(self.progression_epochs, 0, 0)[:-1]
-                # We need to add a 0 to the beginning of the list, because we need to trigger the 
+                # We need to add a 0 to the beginning of the list, in order to trigger the 
                 # 'set_stage' method at the beginning of the training.
                 
         else:
@@ -209,9 +208,10 @@ class GAN(LightningModule):
 
         self.loss_generator.append(g_loss.item())
         self.loss_critic.append(c_loss.item())
+
         self.gp.append(gp.item())
 
-        self.fd_loss.append(loss_fd.item())
+        # self.fd_loss.append(fd_loss.item())
 
         torch.cuda.empty_cache()
 
@@ -270,16 +270,32 @@ class GAN(LightningModule):
         return gradient_penalty
     
     def train_critic(self, X_real, y_real, X_fake, y_fake, critic, optim):
+        """
+        Trains the critic (discriminator) part of the GAN.
+
+        Parameters
+        ----------
+        X_real (Tensor): Real samples.
+        y_real (Tensor): Labels for the real samples.
+        X_fake (Tensor): Generated (fake) samples.
+        y_fake (Tensor): Labels for the fake samples.
+        critic (nn.Module): The critic model.
+        optim (Optimizer): The optimizer for the critic.
+
+        Returns
+        ----------
+        c_loss (Tensor): The critic loss.
+        gp (Tensor): The gradient penalty.
+
+        The function calculates the critic's output for both real and fake samples, 
+        computes the gradient penalty and the critic loss, and performs a backward pass and an optimization step.
+        """
 
         fx_real = critic(X_real, y_real)
         fx_fake = critic(X_fake.detach(), y_fake.detach())
         gp = self.gradient_penalty(X_real, X_fake, y_fake, critic)
 
-        c_loss = (
-                -(torch.mean(fx_real) - torch.mean(fx_fake))
-                + self.hparams.lambda_gp * gp 
-                + (0.001 * torch.mean(fx_real ** 2))
-           )
+        c_loss = torch.mean(fx_fake) - torch.mean(fx_real) + self.hparams.lambda_gp * gp        
         
         optim.zero_grad()
         self.manual_backward(c_loss, retain_graph=True)

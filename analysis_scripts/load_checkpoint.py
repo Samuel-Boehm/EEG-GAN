@@ -30,7 +30,7 @@ print(model.current_epoch)
 from gan.data.DataModule import HighGammaModule as HDG
 from gan.visualization.stft_plots import plot_bin_stats, calc_bin_stats
 import numpy as np
-from gan.visualization.utils import plot_spectrum
+from gan.visualization.spectrum_plots import plot_spectrum
 import matplotlib.pyplot as plt
 
 dataset_path = os.path.join(data_path, 'clinical')

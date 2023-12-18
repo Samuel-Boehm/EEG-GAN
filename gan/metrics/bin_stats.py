@@ -23,10 +23,9 @@ class BinStats(Metric):
             conditional_fake = batch.fake[batch.y_fake == self.mapping[key]]
 
             # calculate frequency in current stage:   
-            fig_stats, fig_real, fig_fake = plot_bin_stats(conditional_real, conditional_fake,
+            stats, real, fake = plot_bin_stats(conditional_real, conditional_fake,
                             fs_stage, self.channel_names, None, str(key), False)
         
-        # The image function returns a PIL image, which can be logged to wandb.
-        return {f'{str(key)}_stats': Image(fig_stats),
-                f'{str(key)}_real': Image(fig_real),
-                f'{str(key)}_fake': Image(fig_fake)}
+        return {f'{str(key)}_stats': Image(stats),
+                f'{str(key)}_real': Image(real),
+                f'{str(key)}_fake': Image(fake)}

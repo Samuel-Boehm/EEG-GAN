@@ -46,6 +46,7 @@ class LoggingHandler(Callback):
         module.loss_generator.clear()
         module.loss_critic.clear()
         module.gp.clear()
+        module.fd_loss.clear()
 
         # close all figures
         close_figures('all')
@@ -78,6 +79,7 @@ class LoggingHandler(Callback):
                                        'loss critic': np.mean(module.loss_critic),
                                        'epoch': trainer.current_epoch,
                                        'gp': np.mean(module.gp),
+                                       'fd_loss': np.mean(module.fd_loss),
                                     })
         
         # Calculate end metrics:

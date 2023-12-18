@@ -52,6 +52,9 @@ class CriticStage(nn.Module):
         for module in [self.intermediate_sequence, self.in_sequence, self.resample]:
             for param in module.parameters():
                 param.requires_grad = requires_grad
+    
+    def __repr__(self):
+        return f'CriticStage kernel size: {self.intermediate_sequence[0].kernel_size}'
 
 
 class Critic(nn.Module):
@@ -83,9 +86,14 @@ class Critic(nn.Module):
 
 
     def set_stage(self, stage):
+        # Each time a new stage is set, some parameters need to be updated:
+        ## 1. The current stage:
         self.cur_stage = stage
-        self._stage = len(self.blocks) - self.cur_stage # Internal stage variable. Differs from GAN stage (cur_stage).
 
+        # Internal stage variable. Differs from GAN stage (cur_stage).
+        self._stage = len(self.blocks) - self.cur_stage 
+        
+        ## 2. Freeze or unfreeze parameters:
         if self.freeze:
             # Freeze all blocks
             for block in self.blocks:
@@ -97,6 +105,7 @@ class Critic(nn.Module):
             for block in self.blocks:
                 block.stage_requires_grad(True)
 
+        ## 3. Special case for fading in the first stage:
         # In the first stage we do not need fading and therefore set alpha to 1
         if self.cur_stage == 1:
             self.alpha = 1
@@ -112,7 +121,6 @@ class Critic(nn.Module):
 
         for i in range(self._stage, len(self.blocks)):
             first = (i == self._stage)
-
             if first and self.fading and self.alpha < 1:
                 # if this is the first stage, fading is used and alpha < 1
                 # we take the current input, downsample it for the next block

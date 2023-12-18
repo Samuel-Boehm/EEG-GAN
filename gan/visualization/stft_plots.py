@@ -1,3 +1,7 @@
+# Project: EEG-GAN
+# Author: Samuel Boehm
+# E-Mail: <samuel-boehm@web.de>
+
 import numpy as np
 import os
 import matplotlib.pyplot as plt
@@ -152,9 +156,9 @@ def plot_stft(stft_power: np.ndarray, t: np.ndarray, f: np.ndarray, title: str,
     plt.subplots_adjust(wspace=0.05, hspace=0.05)
     plt.rcParams['savefig.facecolor']='white'
     if path:
-        plt.savefig(path, format='pdf', bbox_inches='tight')
+        plt.savefig(path, format='png', bbox_inches='tight')
 
-    return fig
+    return fig, axs
     
 
 
@@ -225,52 +229,6 @@ def blc(stft_array: np.ndarray, t: np.ndarray, blc_win: tuple = None):
     return med_log
 
 
-def plot_time_domain(real, fake, channel_names, path):
-    
-    cm = 1/2.54  # centimeters in inches
-    _, axs = plt.subplots(3, 7,  figsize=(40*cm, 20*cm), facecolor='w')
-    x = np.linspace(-.5, 4, num = fake.shape[2])
-
-    for i, ax in enumerate(axs.flatten()):
-        if channel_names:
-            ax.text(.94, .94, channel_names[i], fontsize=12, ha='right', va='top', transform=ax.transAxes,
-            bbox={'facecolor': 'white', 'alpha': 0.4, 'pad': 4})
-        
-        real_mean = real.mean(axis = 0)
-        fake_mean = fake.mean(axis = 0)
-
-        stack = np.concatenate((real_mean, fake_mean))
-        ax.plot(x, real_mean[i], c='#c1002a', label ='real', lw = 1)
-        ax.plot(x, fake_mean[i], c='#004a99', label='fake', lw = 1)
-        
-        max_y = stack.max() + stack.max() * .1
-        min_y = stack.min() + stack.min() * .1
-
-        ax.set_ylim(bottom=min_y, top=max_y)
-        # ax.fill_between(x, fake.mean(axis = 0)[i] + fake.std(axis = 0)[i], fake.mean(axis = 0)[i] - fake.std(axis = 0)[i], color='#004a99', alpha=.4)
-        # ax.fill_between(x, real.mean(axis = 0)[i] + real.std(axis = 0)[i], real.mean(axis = 0)[i] - real.std(axis = 0)[i], color='#c1002a', alpha=.4)
-
-        if i % 7 > 0:
-            ax.set_yticks([])
-        
-        else:
-            if i ==7:
-                ax.set_ylabel('Amplitude', fontsize=12)
-
-        if i // 7 != 2:
-            ax.set_xticks([])
-        else:
-            if i == 17:
-                ax.set_xlabel('time [s]', fontsize=12)
-
-    plt.legend(loc=4)
-    plt.subplots_adjust(wspace=0.05, hspace=0.05)
-    if path:
-        plt.savefig(path, format='pdf', bbox_inches='tight')
-        plt.close()
-    return plt.gcf()
-
-
 def calc_bin_stats(real_X: np.ndarray, fake_X: np.ndarray, fs: int,):
     '''
     Calculates the p-values for each bin of the stft and corrects them for multiple comparisons.
@@ -326,8 +284,8 @@ def calc_bin_stats(real_X: np.ndarray, fake_X: np.ndarray, fs: int,):
 
     corr_pval = corr_pval.reshape(real_stft.shape[1:])
         
-    real_stft = np.median(real_stft, axis=0)
-    fake_stft = np.median(fake_stft, axis=0)
+    real_stft = np.mean(real_stft, axis=0)
+    fake_stft = np.mean(fake_stft, axis=0)
   
     return real_stft, fake_stft, corr_pval, f, t
 
@@ -378,11 +336,34 @@ def calc_bin_stats_for_mapping(real_X, real_y, fake_X, fake_y, fs: int,
     
     return resuts_dict
    
-def plot_bin_stats(real_X: np.ndarray, fake_X, fs,
-                    channels:list, path:str=None, title:str='plot', show_plots=True):
-    
- 
+def plot_bin_stats(real_X: np.ndarray, fake_X, fs, channels:list, path:str=None,
+                   title:str='plot', show_fig:bool=False):
+    '''
+    Plots the bin statistics of the real and fake data.
 
+    Arguments:
+    ----------
+    real_X: np.ndarray
+        The real data.
+    fake_X: np.ndarray
+        The fake data.
+    fs: float
+        Sampling frequency of the data.
+    channels: list
+        The names of the channels.
+    path: str
+        The path where the plot should be saved.
+    title: str
+        The title of the plot.
+    show_fig: bool
+        If True the plot is shown.
+
+    Returns:
+    ----------
+        Tuple of figures (fig_stats, fig_real, fig_fake)
+
+    '''
+    
     real_stft, fake_stft, pvals, f, t = calc_bin_stats(real_X, fake_X, fs)
 
     color_grid = np.zeros_like(pvals)
@@ -395,9 +376,9 @@ def plot_bin_stats(real_X: np.ndarray, fake_X, fs,
     color_grid = np.ma.masked_invalid(color_grid)
 
     if path:
-        path_stats=os.path.join(path, f'{title}_stats_{fs}.pdf')
-        path_real=os.path.join(path, f'{title}_real_{fs}.pdf')
-        path_fake=os.path.join(path, f'{title}_fake_{fs}.pdf')
+        path_stats=os.path.join(path, f'{title}_stats_{fs}.png')
+        path_real=os.path.join(path, f'{title}_real_{fs}.png')
+        path_fake=os.path.join(path, f'{title}_fake_{fs}.png')
     else:
         path_stats = None
         path_real = None
@@ -406,19 +387,19 @@ def plot_bin_stats(real_X: np.ndarray, fake_X, fs,
 
 
 
-    fig_stats = plot_stft(
-            color_grid, t, f, f'{title} {fs} Hz - p value > 0.3', 'log10 rel. power median', channel_names=channels,
+    fig_stats, _ = plot_stft(
+            color_grid, t, f, f'{title} {fs} Hz - p value > 0.3', 'log10 rel. power mean', channel_names=channels,
             upper=5, lower = -5, path=path_stats,
             )
     
 
-    fig_real = plot_stft(
-            real_stft, t, f, f'{title} real {fs} Hz ', 'log10 rel. power median',
+    fig_real, _ = plot_stft(
+            real_stft, t, f, f'{title} real {fs} Hz ', 'log10 rel. power mean',
             channel_names=channels, upper=5, lower = -5, path=path_real,
             )
 
-    fig_fake = plot_stft(
-            fake_stft, t, f, f'{title} fake {fs} Hz ', 'log10 rel. power median',
+    fig_fake, _ = plot_stft(
+            fake_stft, t, f, f'{title} fake {fs} Hz ', 'log10 rel. power mean',
             channel_names=channels, upper=5, lower = -5, path=path_fake,
             )
     

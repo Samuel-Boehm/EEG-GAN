@@ -118,15 +118,15 @@ class ConvBlockStage(nn.Module):
     '''
     def __init__(self, n_filters,  stage, generator=False):
         super(ConvBlockStage, self).__init__()
-        kernel_size =  int(3 + (stage*4)) # stage0: 3, stage1: 7, stage2: 11 ....
+        self.kernel_size =  int(3 + (stage*4)) # stage0: 3, stage1: 7, stage2: 11 ....
         padding = int(stage*2 + 1) # stage0: 1, stage1: 3, stage2, 4 ...
         stride = 1 # fixed to 1 for now
         groups = int(n_filters / ((stage + 1)* 2)) # for n_filters = 120: 60, 30, 20, 15, 12, 10
 
         self.generator = generator
 
-        self.conv1 = WS(nn.Conv1d(n_filters, n_filters, groups=groups, kernel_size=kernel_size, stride=stride, padding=padding)) #WS() 
-        self.conv2 = WS(nn.Conv1d(n_filters, n_filters, groups=groups, kernel_size=kernel_size + 2, stride=stride, padding=padding + 1)) #WS()
+        self.conv1 = WS(nn.Conv1d(n_filters, n_filters, groups=groups, kernel_size=self.kernel_size, stride=stride, padding=padding)) #WS() 
+        self.conv2 = WS(nn.Conv1d(n_filters, n_filters, groups=groups, kernel_size=self.kernel_size + 2, stride=stride, padding=padding + 1)) #WS()
         self.conv3 = WS(nn.Conv1d(n_filters, n_filters, groups=n_filters, kernel_size=1, stride=stride, padding=0)) #WS()
         self.leaky = nn.LeakyReLU(0.2)
         self.pn = PixelNorm()

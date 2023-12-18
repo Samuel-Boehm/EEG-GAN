@@ -54,6 +54,9 @@ class GeneratorStage(nn.Module):
         for module in [self.intermediate_sequence, self.out_sequence, self.resample]:
             for param in module.parameters():
                 param.requires_grad = requires_grad
+    
+    def __repr__(self):
+        return f'GeneratorStage kernel size: {self.intermediate_sequence[-1].kernel_size}'
 
 
 class Generator(nn.Module):
@@ -122,7 +125,6 @@ class Generator(nn.Module):
 
                 # interpolate
                 x = self.alpha * x + (1 - self.alpha) * x_
-
             else:
                 x = self.blocks[i](x, last=last, **kwargs)
         return x
@@ -175,9 +177,6 @@ def build_generator(n_filters, n_time, n_stages, n_channels, n_classes,
         )
     
     generator_out = WS(nn.Conv1d(n_filters, n_channels, kernel_size=1,)) #WS()
-
-
-
 
     blocks.append(GeneratorStage(first_conv, generator_out, upsample))
 
