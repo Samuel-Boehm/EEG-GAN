@@ -53,6 +53,10 @@ model = Deep4Net(
 if cuda:
     model.cuda()
 
+print(model)
+
+sys.exit()
+
 
 
 clf = EEGClassifier(

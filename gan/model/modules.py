@@ -130,6 +130,7 @@ class ConvBlockStage(nn.Module):
         self.conv3 = WS(nn.Conv1d(n_filters, n_filters, groups=n_filters, kernel_size=1, stride=stride, padding=0)) #WS()
         self.leaky = nn.LeakyReLU(0.2)
         self.pn = PixelNorm()
+        self.bn = nn.BatchNorm1d(n_filters)
 
     
     def forward(self, x):
@@ -140,6 +141,7 @@ class ConvBlockStage(nn.Module):
         x = self.conv3(x)
         x = self.leaky(x)
         x = self.pn(x) if self.generator else x
+        x = self.bn(x)
         return x
     
 

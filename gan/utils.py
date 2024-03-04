@@ -35,6 +35,7 @@ def generate_data(model_token, stage, n_samples):
             The generated data.
     """
     model_token = os.path.join(results_path, 'EEGGAN', model_token, "checkpoints/last.ckpt")
+    print(model_token)
     model = GAN.load_from_checkpoint(
                 checkpoint_path=model_token,
                 map_location=torch.device('cpu'),

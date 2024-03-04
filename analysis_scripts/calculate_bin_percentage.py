@@ -80,13 +80,13 @@ def single_stft(real_X, fake_X, title, channels, fs, path=None):
         path_fake = None
                           
     plot_stft(
-            real_stft, t, f, f'{title} {fs} Hz - p value > 0.3', 'log10 rel. power mean', channel_names=channels,
-            upper=5, lower = -5, path=path_real,
+            real_stft, t, f, f'{title} {fs} Hz - p value > 0.3', 'log10 rel. power mean', 
+            channel_names=channels, upper=5, lower = -5, path=path_real,
             )
     
     plot_stft(
-            fake_stft, t, f, f'{title} {fs} Hz - p value > 0.3', 'log10 rel. power mean', channel_names=channels,
-            upper=5, lower = -5, path=path_fake,
+            fake_stft, t, f, f'{title} {fs} Hz - p value > 0.3', 'log10 rel. power mean',
+            channel_names=channels, upper=5, lower = -5, path=path_fake,
             )
 
 def plot_single_trials(real_X, real_y, fake_X, fake_y, mapping, fs, channels, n_trials, path):
@@ -105,7 +105,8 @@ def plot_single_trials(real_X, real_y, fake_X, fake_y, mapping, fs, channels, n_
             single_stft(real_X[[real_idx[i]]], fake_X[[fake_idx[i]]], f'stft_{key}_{i}', 
                        channels, fs, path=path)
             
-            spectrum, _ = plot_spectrum(real_X[[real_idx[i]]], fake_X[[fake_idx[i]]], fs, f'{key}_{i}')
+            spectrum, _ = plot_spectrum(real_X[[real_idx[i]]], fake_X[[fake_idx[i]]],
+                                        fs, f'{key}_{i}')
 
             spectrum.savefig(os.path.join(path,  f'spectrum_{key}_{i}'), dpi=300)
             plt.close('all')

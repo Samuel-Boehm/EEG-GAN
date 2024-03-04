@@ -46,11 +46,14 @@ class GAN(LightningModule):
         lambda_gp (int, optional)
             lambda hyperparameter for the gradient penalty. Defaults to 10.
         
-        lr_gen (float, optional)
+        lr_generator (float, optional)
             generator learning rate. Defaults to 0.001.
         
         lr_critic (float, optional)
             critic learning rate. Defaults to 0.005.
+        
+        n_critic (int, optional)
+            number of critic updates per generator update. Defaults to 5.
         
         b1 (float, optional)
             first decay rate for the Adam optimizer. Defaults to 0.0.
@@ -63,9 +66,9 @@ class GAN(LightningModule):
         
         epochs_per_stage (int or list, optional)
             number of epochs per stage. Total number of training stages is calculated by
-            epochs_per:stage * n_stages. Defaults to 200 epochs per stage. If a list is passed,
-            the length of the list must be equal to n_stages. With a list, the number of epochs
-            per stage is determined by the values in the list.
+            epochs_per:stage * n_stages. Defaults to 200 epochs per stage. In order to train stages
+            with variable number of epochs, epochs_per_stage can be a list of integers. The length
+            of the list must be equal to n_stages. 
         
         embedding_dim (int, optional)
             size of the embedding layer in the generator. Defaults to 10.
@@ -100,7 +103,7 @@ class GAN(LightningModule):
     """
     def __init__(self, n_channels, n_classes, n_time, n_stages, n_filters,
         fs, latent_dim:int = 100, lambda_gp:float = 10., lr_gen:float = 0.001,
-        lr_critic:float = 0.005, b1:float = 0.0, b2:float = 0.999,
+        lr_critic:float = 0.005, n_critic:int = 1, b1:float = 0.0, b2:float = 0.999,
         batch_size:int = 32, epochs_per_stage:int = 200, 
         embedding_dim:int = 10, fading:bool = False, alpha:float = 1, beta:float = .2, freeze:bool=False, **kwargs,
     ):  
@@ -156,14 +159,27 @@ class GAN(LightningModule):
         self.y_fake = []
         self.loss_generator = []
         self.loss_critic = []
+        self.loss_sp_critic = []
         self.gp = []
-        self.fd_loss = []
+
 
         
     def forward(self, z, y):
         return self.generator(z, y)
         
     def training_step(self, batch_real, batch_idx):
+        """
+        The training step for the GAN. This is called by the Lightning Trainer framework.
+        Here we define a single training step for the GAN. This includes the forward pass,
+        the calculation of the loss and the backward pass.
+
+        Steps
+        ----------
+        1: Generate a batch of fake data
+        2: In each epoch train critic
+        3: In each n_critic epochs train generator
+
+        """
         
         X_real, y_real = batch_real
 
@@ -173,7 +189,7 @@ class GAN(LightningModule):
         z = torch.randn(X_real.shape[0], self.hparams.latent_dim)
         z = z.type_as(X_real)
 
-        # generate fake batch:
+        # 1: Generate fake batch:
         y_fake = torch.randint(low=0, high=self.hparams.n_classes,
                                size=(X_real.shape[0],), dtype=torch.int32)
         
@@ -181,24 +197,29 @@ class GAN(LightningModule):
 
         X_fake = self.forward(z, y_fake)
 
-        # optimize critic in time domain
+        # 2: Train critic:
+        ## optimize critic in time domain
         c_loss, gp = self.train_critic(X_real, y_real, X_fake, y_fake, self.critic, optimizer_c)
 
-        # optimize critic in frequency domain
-        self.train_critic(X_real, y_real, X_fake, y_fake, self.sp_critic, optimizer_spc)
+        ## optimize critic in frequency domain
+        spc_loss, _ =self.train_critic(X_real, y_real, X_fake, y_fake, self.sp_critic, optimizer_spc)
 
-        ## optimize generator   
-        fx_fake = self.critic(X_fake, y_fake)
-        fx_spc = self.sp_critic(X_fake, y_fake)
+        # 3: Train generator:
+        
+        if batch_idx % self.hparams.n_critic == 0:
+            ## optimize generator   
+            fx_fake = self.critic(X_fake, y_fake)
+            fx_spc = self.sp_critic(X_fake, y_fake)
 
-        loss_td = softplus(-fx_fake).mean()
-        loss_fd = softplus(-fx_spc).mean()
+            loss_td = softplus(-fx_fake).mean()
+            loss_fd = softplus(-fx_spc).mean()
 
-        g_loss = (self.hparams.alpha * loss_td + self.hparams.beta * loss_fd) / (self.hparams.alpha + self.hparams.beta)
+            g_loss = (self.hparams.alpha * loss_td + self.hparams.beta * loss_fd) / (self.hparams.alpha + self.hparams.beta)
 
-        optimizer_g.zero_grad()
-        self.manual_backward(g_loss)
-        optimizer_g.step()
+            optimizer_g.zero_grad()
+            self.manual_backward(g_loss)
+            optimizer_g.step()
+            self.loss_generator.append(g_loss.item())
 
         # Collect data during training for metrics:
         self.generated_data.append(X_fake.detach().cpu().numpy())
@@ -206,23 +227,22 @@ class GAN(LightningModule):
         self.y_real.append(y_real.detach().cpu().numpy())
         self.y_fake.append(y_fake.detach().cpu().numpy())
 
-        self.loss_generator.append(g_loss.item())
+        
         self.loss_critic.append(c_loss.item())
+        self.loss_sp_critic.append(spc_loss.item())
 
         self.gp.append(gp.item())
-
-        # self.fd_loss.append(fd_loss.item())
 
         torch.cuda.empty_cache()
 
 
     def configure_optimizers(self):
-        lr_gene = self.hparams.lr_gen
+        lr_generator = self.hparams.lr_gen
         lr_critic = self.hparams.lr_critic
         b1 = self.hparams.b1
         b2 = self.hparams.b2
 
-        opt_g = torch.optim.Adam(self.generator.parameters(), lr=lr_gene, betas=(b1, b2))
+        opt_g = torch.optim.Adam(self.generator.parameters(), lr=lr_generator, betas=(b1, b2))
         opt_c = torch.optim.Adam(self.critic.parameters(), lr=lr_critic, betas=(b1, b2))
         opt_spc = torch.optim.Adam(self.sp_critic.parameters(), lr=lr_critic, betas=(b1, b2))
         return [opt_g, opt_c, opt_spc], []
@@ -230,7 +250,13 @@ class GAN(LightningModule):
 
     def gradient_penalty(self, batch_real, batch_fake, y_fake, critic):
         """
-		Improved WGAN gradient penalty
+		Improved WGAN gradient penalty from Hartmann et al. (2018)
+        https://arxiv.org/abs/1806.01875
+
+        Gradient pentaly is calculated by interpolating between real and fake data. The interpolated
+        data is then passed to the critic and the gradient of the critic's output with respect to 
+        the interpolated data is calculated. The gradient penalty is then the squared norm of the
+        gradient minus one. 
 
 		Parameters
 		----------
@@ -255,17 +281,17 @@ class GAN(LightningModule):
 
         interpolates = alpha * batch_real + ((1 - alpha) * batch_fake)
 
-        critic_interpolates = critic(interpolates, y_fake)
+        output_interpolates = critic(interpolates, y_fake)
 
-        ones = torch.ones(critic_interpolates.size(), device=self.device)
+        ones = torch.ones(output_interpolates.size(), device=self.device)
 
-        gradients = autograd.grad(outputs=critic_interpolates, inputs=interpolates,
+        gradients = autograd.grad(outputs=output_interpolates, inputs=interpolates,
                                     grad_outputs=ones,
                                     create_graph=True, retain_graph=True, only_inputs=True)[0]
+        
         gradients = gradients.view(gradients.size(0), -1)
-        tmp = (gradients.norm(2, dim=1) - 1)
 
-        gradient_penalty = ((tmp) ** 2).mean()
+        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
 
         return gradient_penalty
     
@@ -293,14 +319,21 @@ class GAN(LightningModule):
 
         fx_real = critic(X_real, y_real)
         fx_fake = critic(X_fake.detach(), y_fake.detach())
-        gp = self.gradient_penalty(X_real, X_fake, y_fake, critic)
+       
 
-        c_loss = torch.mean(fx_fake) - torch.mean(fx_real) + self.hparams.lambda_gp * gp        
+        distance = torch.mean(fx_fake) - torch.mean(fx_real)
+
+        # Relaxed gradient penalty following Hartmann et al. (2018)
+        # https://arxiv.org/abs/1806.01875
+        # gradient pentalty is scaled with the distance between the distrubutions and a lambda hyperparameter
+        # Note: Hartmann et al suggest to scale the gradient penalty with the distance between the distributions
+        # this does not work well so far... (?)
+        gp = self.hparams.lambda_gp * self.gradient_penalty(X_real, X_fake, y_fake, critic)
+
+        c_loss = distance + gp        
         
         optim.zero_grad()
         self.manual_backward(c_loss, retain_graph=True)
         optim.step()
 
         return c_loss, gp
-    
-    
