@@ -7,7 +7,7 @@ import torch
 from gan.paths import results_path, data_path
 import matplotlib.pyplot as plt
 import numpy as np
-from gan.data.DataModule import HighGammaModule as HDG
+from gan.data.datamodule import HighGammaModule as HDG
 from gan.visualization.stft_plots import plot_bin_stats, calc_bin_stats
 from gan.visualization.spectrum_plots import plot_spectrum
 

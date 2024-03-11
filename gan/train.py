@@ -7,9 +7,9 @@ import numpy as np
 import os
 
 from gan.model.gan import GAN
-from gan.data.DataModule import HighGammaModule as HDG
-from gan.handler.ProgressionHandler import Scheduler
-from gan.handler.LoggingHandler import LoggingHandler
+from gan.data.datamodule import HighGammaModule as HDG
+from gan.handler.progressionhandler import Scheduler
+from gan.handler.logginghandler import LoggingHandler
 from gan.paths import data_path, results_path
 
 from lightning.pytorch.loggers import WandbLogger

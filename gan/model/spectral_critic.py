@@ -28,10 +28,10 @@ class spectralCriticStage(nn.Module):
         return x
 
 
-class spectralCritic(nn.Module):
+class SpectralCritic(nn.Module):
         
     def __init__(self, blocks, stage=1, fading=False):
-        super(spectralCritic, self).__init__()
+        super(SpectralCritic, self).__init__()
         self.blocks  = nn.ModuleList(blocks)
         self.set_stage(stage)
         self.fading = fading
@@ -77,5 +77,5 @@ def build_sp_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading):
     for stage in  range(n_stages):
         blocks.append(spectralCriticStage(int(((n_time / 2 ** stage) / 2 ) + 1), 1))
 
-    return spectralCritic(blocks, fading=fading)
+    return SpectralCritic(blocks, fading=fading)
 

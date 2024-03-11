@@ -11,7 +11,7 @@ from torch.nn.functional import softplus
 from torch import autograd
 from gan.model.critic import Critic, build_critic
 from gan.model.generator import Generator, build_generator
-from gan.model.spectral_Critic import spectralCritic, build_sp_critic
+from gan.model.spectral_critic import SpectralCritic, build_sp_critic
 
 class GAN(LightningModule):
     """
@@ -123,9 +123,8 @@ class GAN(LightningModule):
         self.critic: Critic = build_critic(n_filters, n_time, n_stages, n_channels, n_classes, fading, freeze)
 
         # Build the spectral critic model
-        self.sp_critic: spectralCritic = build_sp_critic(n_filters, n_time, n_stages, n_channels,
-                                                         n_classes, fading,
-                                                        )
+        self.sp_critic: SpectralCritic = build_sp_critic(n_filters, n_time, n_stages, n_channels,
+                                                         n_classes, fading)
         
         
         # Determine fading epochs
@@ -205,7 +204,7 @@ class GAN(LightningModule):
         spc_loss, _ =self.train_critic(X_real, y_real, X_fake, y_fake, self.sp_critic, optimizer_spc)
 
         # 3: Train generator:
-        
+        # If n_critic =! 1 we train the generator only every n_th step
         if batch_idx % self.hparams.n_critic == 0:
             ## optimize generator   
             fx_fake = self.critic(X_fake, y_fake)

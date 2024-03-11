@@ -27,7 +27,7 @@ model.critic.fading = False
 print(model.current_epoch)
 
 ### test ###
-from gan.data.DataModule import HighGammaModule as HDG
+from gan.data.datamodule import HighGammaModule as HDG
 from gan.visualization.stft_plots import plot_bin_stats, calc_bin_stats
 import numpy as np
 from gan.visualization.spectrum_plots import plot_spectrum

@@ -8,7 +8,7 @@ from gan.model.gan import GAN
 import os 
 import torch
 from gan.paths import results_path, data_path
-from gan.data.DataSet import EEGGAN_Dataset
+from gan.data.dataset import EEGGAN_Dataset
 
 
 

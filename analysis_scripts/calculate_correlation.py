@@ -9,7 +9,7 @@ import os
 from tqdm import tqdm
 import joblib
 
-from gan.data.DataSet import EEGGAN_Dataset
+from gan.data.dataset import EEGGAN_Dataset
 from gan.data.utils import downsample_step
 
 CHANNELS = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P7', 'P3', 'Pz', 'P4', 'P8', 'O1', 'O2', 'M1', 'M2']

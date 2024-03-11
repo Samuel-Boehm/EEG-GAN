@@ -10,14 +10,19 @@ from torch.utils.data import Dataset
 from torch import from_numpy
 
 
-class EEGGAN_Dataset(Dataset):
+class eegganDataset(Dataset):
     """
     Dataset class for storing data and labels.
     
         Args:
             tags (list): List of tags for the dataset. Tags are used to split the dataset into different splits.
                          Note that len(tags) must be equal to the number of splits.
+            interval_times: Tuple with start and stop seconds relative to the trigger in seconds.
+                            For example (-.5, 2.) will cout out 0.5 seconds before the trigger until 2 seconds after
+                            the trigger. 
             fs (int): Sampling frequency.
+            mapping (dict): label mapping from strings to integers. Needed to later trace what lable ment what. 
+            channels (list): Channel names, we safe them here to make plotting more easy later on
         
         Methods:
             add_data: Add data and labels to dataset.
@@ -33,12 +38,15 @@ class EEGGAN_Dataset(Dataset):
             fs (int): Sampling frequency.
 
     """
-    def __init__(self, tags:list, fs):
+    def __init__(self, tags:list, interval_times:tuple, fs:float, mapping:dict, channels:list):
         self.data = np.array([])
         self.target = np.array([])
         self.splits = pd.DataFrame(columns = tags)
         self.splits['idx'] = []
+        self.interval_times = interval_times
         self.fs = fs
+        self.mapping = mapping
+        self.channels = channels
     
     def __len__(self):
         return self.data.shape[0]

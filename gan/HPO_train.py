@@ -7,9 +7,9 @@ from lightning import Trainer
 import numpy as np
 import os
 import wandb
-from gan.data.DataModule import HighGammaModule as HDG
-from gan.handler.ProgressionHandler import Scheduler
-from gan.handler.LoggingHandler import LoggingHandler
+from gan.data.datamodule import HighGammaModule as HDG
+from gan.handler.progressionhandler import Scheduler
+from gan.handler.logginghandler import LoggingHandler
 from gan.paths import data_path, results_path
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
@@ -17,11 +17,13 @@ import argparse
 import torch
 
 
-
 # Import metrics:
 from gan.metrics.SWD import SWD
 from gan.metrics.spectrum import Spectrum
 from gan.metrics.bin_stats import BinStats
+
+# Import metadata:
+from constants import CHANNELS, MAPPING
 
 # Define dataset to use
 dataset_path = os.path.join(data_path, 'clinical')

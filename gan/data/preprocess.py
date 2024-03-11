@@ -6,12 +6,10 @@ import numpy as np
 import numpy.linalg as linalg
 import mne
 
-from moabb.datasets import Schirrmeister2017, BNCI2015001
+from moabb.datasets import Schirrmeister2017
 from braindecode.preprocessing.preprocess import exponential_moving_standardize
 from tqdm import tqdm
-from gan.data.DataSet import EEGGAN_Dataset
-from gan.paths import data_path
-import os
+from gan.data.dataset import eegganDataset
 
 def ZCA_whitening(X:np.ndarray):
     '''
@@ -102,7 +100,7 @@ def fetch_and_unpack_schirrmeister2017_moabb_data(channels: list,
 
     """
     # Get raw data from MOABB
-    ds = EEGGAN_Dataset(['subject', 'session', 'split'], fs)
+    ds = eegganDataset(['subject', 'session', 'split'], interval_times, fs, mapping, channels)
     mne.set_log_level('WARNING')
     data = Schirrmeister2017().get_data()
     for subj_id, subj_data in tqdm(data.items()):
@@ -113,52 +111,8 @@ def fetch_and_unpack_schirrmeister2017_moabb_data(channels: list,
                 
     return ds
 
-def fetch_and_unpack_bnci2015_001(channels: list,
-                                            interval_times: tuple,
-                                            fs: float,
-                                            mapping: dict):
-    """
-    Load and preprocess the BNCI2015_001 MOABB dataset.
-    
-    Args:
-        channels (list): List of channels to use.
-        interval_times (tuple): Tuple of start and stop time of the interval to use.
-        fs (float): Sampling frequency.
-        mapping (dict): Dictionary mapping classes to integers.
-    
-    Returns:
-
-    """
-    # Get raw data from MOABB
-    ds = EEGGAN_Dataset(['subject', 'session', 'split'], fs)
-    mne.set_log_level('WARNING')
-    data = BNCI2015001().get_data()
-
-    for subj_id, subj_data in tqdm(data.items()):
-        for sess_id, sess_data in subj_data.items():
-            for run_id, raw in sess_data.items():
-                X, y = _preprocess_and_stack(raw, channels, interval_times, fs, mapping)
-                ds.add_data(X, y, [subj_id, sess_id, run_id])
-                
-    return ds
 
 
-if __name__ == '__main__':
 
-    schirr_channels = ['Fp1','Fp2','F7','F3','Fz','F4','F8',
-            'T7','C3','Cz','C4','T8','P7','P3',
-            'Pz','P4','P8','O1','O2','M1','M2']
-    
-    BNCI2015_001_channels = ['FC3', 'FCz', 'FC4', 'C5', 'C3', 'C1',
-                             'Cz', 'C2', 'C4', 'C6', 'CP3', 'CPz', 'CP4']
-    
-    interval_times = (-0.5, 2.5)
-    
-    fs = 256
-
-    mapping = {"feet": 0}
-
-    ds = fetch_and_unpack_schirrmeister2017_moabb_data(schirr_channels, interval_times, fs, mapping)
-    ds.save(os.path.join(data_path, 'feet'))
 
 

@@ -5,7 +5,7 @@
 import numpy as np
 from gan.metrics.metric import Metric
 from lightning.pytorch import Trainer, LightningModule
-from gan.handler.LoggingHandler import batch_data
+from gan.handler.logginghandler import batch_data
 
 
 def create_wasserstein_transform_matrix(n_features, n_projections:int=100):
