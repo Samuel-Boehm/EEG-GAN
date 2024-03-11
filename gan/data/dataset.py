@@ -10,7 +10,7 @@ from torch.utils.data import Dataset
 from torch import from_numpy
 
 
-class eegganDataset(Dataset):
+class EegGanDataset(Dataset):
     """
     Dataset class for storing data and labels.
     

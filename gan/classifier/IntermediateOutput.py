@@ -1,7 +1,7 @@
 
 import torch
 
-# This function is not a part of braindecode version 0.6 and later and was therefor taken from:
+# This function is not a part of braindecode version >= 0.6 anymore and was therefor taken from:
 # https://github.com/robintibor/braindecode/blob/master/braindecode/torch_ext/modules.py#L109-L146
 
 class IntermediateOutputWrapper(torch.nn.Module):

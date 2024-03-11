@@ -9,7 +9,7 @@ import mne
 from moabb.datasets import Schirrmeister2017
 from braindecode.preprocessing.preprocess import exponential_moving_standardize
 from tqdm import tqdm
-from gan.data.dataset import eegganDataset
+from gan.data.dataset import EegGanDataset
 
 def ZCA_whitening(X:np.ndarray):
     '''
@@ -100,7 +100,7 @@ def fetch_and_unpack_schirrmeister2017_moabb_data(channels: list,
 
     """
     # Get raw data from MOABB
-    ds = eegganDataset(['subject', 'session', 'split'], interval_times, fs, mapping, channels)
+    ds = EegGanDataset(['subject', 'session', 'split'], interval_times, fs, mapping, channels)
     mne.set_log_level('WARNING')
     data = Schirrmeister2017().get_data()
     for subj_id, subj_data in tqdm(data.items()):

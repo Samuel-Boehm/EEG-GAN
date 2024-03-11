@@ -1,37 +1,13 @@
-import sys
-sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
-
 from braindecode.models.deep4 import Deep4Net
 from braindecode import EEGClassifier
 from gan.paths import data_path
 from skorch.callbacks import LRScheduler
 from skorch.helper import predefined_split
-from skorch.dataset import Dataset as skDataset
+from skorch.dataset import Dataset
 import torch
-import sys
 import os
 
-dataset_path = os.path.join(data_path, 'generated_stage4')
-
-
-lr = 1 * 0.01
-weight_decay = 0.5 * 0.001
-batch_size = 64
-n_epochs = 128
-
-
-
-_dataset = torch.load(dataset_path)
-
-# Optional: zero pad the dataset: 
-pad = torch.nn.ConstantPad1d((50, 50), 0)
-X = pad(_dataset[:][0])
-
-
-
-train_set = skDataset(X[:4000], _dataset[:4000][1])
-valid_set = skDataset(X[4000:], _dataset[4000:][1])
-
+from constants import BASEDIR
 
 cuda = torch.cuda.is_available()
 device = 'cuda' if cuda else 'cpu'
@@ -76,3 +52,19 @@ model.cpu()
 path = f'/home/boehms/eeg-gan/EEG-GAN/temp_plots/deep4_s4.model'
 
 torch.save(model.state_dict(), path)
+
+if __name__ == '__main__':
+
+    DATA_PATH = os.path.join(BASEDIR, 'clinical')
+
+    LR = 1 * 0.01
+    WEIGHT_DECAY = 0.5 * 0.001
+    BATCH_SIZE = 64
+    N_EPOCHS = 128
+
+    data = torch.load(DATA_PATH)
+
+    # Optional: zero pad the dataset: 
+    # We might need this if we work with low resoultuons
+    # pad = torch.nn.ConstantPad1d((50, 50), 0)
+    #X = pad(_dataset[:][0])

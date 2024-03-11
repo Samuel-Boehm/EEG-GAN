@@ -8,7 +8,7 @@ from gan.model.gan import GAN
 import os 
 import torch
 from gan.paths import results_path, data_path
-from gan.data.dataset import EEGGAN_Dataset
+from gan.data.dataset import EegGanDataset
 
 
 
@@ -94,7 +94,7 @@ def generate_data(model_token, stage, n_samples):
     X_fake = X_fake.detach().numpy()
     y_fake = y_fake.detach().numpy()
 
-    ds = EEGGAN_Dataset(['session',], fs_stage)
+    ds = EegGanDataset(['session',], fs_stage)
 
     ds.add_data(X_fake, y_fake, [1,])
 
