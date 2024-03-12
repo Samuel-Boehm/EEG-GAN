@@ -55,7 +55,7 @@ def _preprocess_and_stack(raw: mne.io.Raw, channels:list, interval_times:tuple,
     raw.set_eeg_reference('average', projection=False)
     raw.apply_function(np.clip, channel_wise=False, a_min=-800., a_max=800.)
     raw.resample(fs)
-    raw.apply_function(exponential_moving_standardize, channel_wise=False,
+    raw.apply_function(exponential_moving_standardize, channel_wise=True,
                        init_block_size=1000, factor_new=0.001, eps=1e-4)
     
     # Extract events (trials):

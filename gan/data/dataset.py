@@ -89,7 +89,7 @@ class EegGanDataset(Dataset):
             subject : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
             session : ['session_0']
             split : ['test', 'train']
-        >>> ds.return_from_tag('subject', 4)
+        >>> ds.select_from_tag('subject', 4)
 
         '''
         train_idx, test_idx = self.splits['idx'][self.splits[tag] == selection].values
