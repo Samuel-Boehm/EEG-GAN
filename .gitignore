@@ -1,1 +1,3 @@
 data/
+analysis_scripts/outputs
+__pycache__/
