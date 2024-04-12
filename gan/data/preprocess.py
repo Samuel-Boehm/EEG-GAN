@@ -3,26 +3,33 @@
 # E-Mail: <samuel-boehm@web.de>
 
 import numpy as np
+from numpy import multiply, clip
 import numpy.linalg as linalg
-import mne
 
-from moabb.datasets import Schirrmeister2017
-from braindecode.preprocessing.preprocess import exponential_moving_standardize
-from tqdm import tqdm
-from gan.data.dataset import EegGanDataset
+import hydra
+from omegaconf import DictConfig
 
-def ZCA_whitening(X:np.ndarray):
-    '''
-    Applies zero component analysis whitening to the input X
+from braindecode.datasets import MOABBDataset
+from braindecode.preprocessing import preprocess, Preprocessor, create_windows_from_events
+from braindecode.datautil.preprocess import exponential_moving_standardize
+
+
+
+def ZCA_whitening(data:np.ndarray) -> np.ndarray:
+    r"""
+    Perform zero component analysis whitening.
    
-    Args:
-        X (np.ndarray): input data (trials, channels, datapoints)
+    Parameters:
+    ----------
+    data (np.ndarray): input data (trials, channels, datapoints)
     
-    Returns: whitened X
-    '''
+    Returns
+    -------
+    whitened data
+    """
     
     # Zero center data
-    xc = X - np.mean(X, axis=0)
+    xc = data - np.mean(data, axis=0)
     xcov = np.cov(xc, rowvar=True, bias=True)
 
     # Calculate Eigenvalues and Eigenvectors
@@ -35,84 +42,60 @@ def ZCA_whitening(X:np.ndarray):
     # Whitening transform using ZCA (Zero Component Analysis)
     return np.dot(np.dot(np.dot(v, diagw), v.T), xc)
 
-def _preprocess_and_stack(raw: mne.io.Raw, channels:list, interval_times:tuple,
-                          fs:int, mapping:dict):
-    """
-    Preprocess and stack raw data from MOABB dataset.
-    Args:
-        raw (mne.io.Raw): Raw data from MOABB dataset.
-        channels (list): List of channels to use.
-        interval_times (tuple): Interval times to use.
-        fs (int): Sampling frequency to use.
-        mapping (dict): Event mapping to use.
-    Returns:
-        X (np.ndarray): Preprocessed and stacked data.
-        y (np.ndarray): Labels.
-    """
-    # Preprocess:
-    raw = raw.pick(picks=channels)
-    raw.load_data()
-    raw.set_eeg_reference('average', projection=False)
-    raw.apply_function(np.clip, channel_wise=False, a_min=-800., a_max=800.)
-    raw.resample(fs)
-    raw.apply_function(exponential_moving_standardize, channel_wise=True,
-                       init_block_size=1000, factor_new=0.001, eps=1e-4)
+
+@hydra.main(config_path="configs", config_name="data_config")
+def preprocess(cfg: DictConfig) -> None:
+
+    dataset = MOABBDataset(dataset_name=cfg.dataset_name, subject_ids=cfg.subject_ids, preload=True)
+
+    low_cut_hz = cfg.low_cut  # low cut frequency for filtering
+    high_cut_hz = cfg.high_cut  # high cut frequency for filtering
     
-    # Extract events (trials):
-    events, events_id = mne.events_from_annotations(raw, mapping)
-    start_in_seconds = interval_times[0]
-    # Remove one timepoint from stop: 
-    stop_in_seconds = interval_times[1] - (1/fs)
-    mne_epochs = mne.Epochs(raw, events, event_id=events_id, tmin=start_in_seconds,
-                            tmax=stop_in_seconds, baseline=None)
-    mne_epochs.drop_bad()
+    # Parameters for exponential moving standardization
+    factor_new = 1e-3
+    init_block_size = 1000
     
-    # Get labels as integers:
-    annots = mne_epochs.get_annotations_per_epoch()
-    labels = [x[0][-1] for x in annots]
-    y = [mapping[k] for k in labels]
+    # Factor to convert from V to uV
+    factor = 1e6
+
+    preprocessors = []
+
+    preprocessors.append(Preprocessor('pick', picks=cfg.channels))
+    preprocessors.append(Preprocessor('pick_types', eeg=True, meg=False, stim=False))
+    preprocessors.append(Preprocessor('set_eeg_reference', ref_channels='average'))
+    if hasattr(cfg, 'ZCA_whitening'):
+        preprocessors.append(Preprocessor(ZCA_whitening))
+    preprocessors.append(Preprocessor(lambda data: multiply(data, factor)))
+    preprocessors.append(Preprocessor(lambda data: clip(data, a_min=-800., a_max=800.), channel_wise=True))
+    preprocessors.append(Preprocessor('filter', l_freq=low_cut_hz, h_freq=high_cut_hz))
+    if hasattr(cfg, 'sfreq'):
+        preprocessors.append(Preprocessor('resample', sfreq=cfg.sfreq))
+    preprocessors.append(Preprocessor(exponential_moving_standardize, factor_new=factor_new, init_block_size=init_block_size))
     
-    X = mne_epochs.get_data()
-    X = X.astype(dtype=np.float32)
-    X = np.multiply(X, 1e6)
-    # X = ZCA_whitening(X)
-    # Normalize:
-    X = X - X.mean()
-    X = X / X.std()
-
-    return X, np.array(y)
+    # Transform the data
+    preprocess(dataset, preprocessors, n_jobs=-1)
 
 
-def fetch_and_unpack_schirrmeister2017_moabb_data(channels: list,
-                                                  interval_times: tuple,
-                                                  fs: float,
-                                                  mapping: dict):
-    """
-    Load and preprocess the Schirrmeister2017 MOABB dataset.
-    
-    Args:
-        channels (list): List of channels to use.
-        interval_times (tuple): Tuple of start and stop time of the interval to use.
-        fs (float): Sampling frequency.
-        mapping (dict): Dictionary mapping classes to integers.
-    
-    Returns:
+    total_samples = 3.5 * cfg.sfreq # This is hardcoded here for Schirrmeister2017 dataset... how to draw this from the dataset?
 
-    """
-    # Get raw data from MOABB
-    ds = EegGanDataset(['subject', 'session', 'split'], interval_times, fs, mapping, channels)
-    mne.set_log_level('WARNING')
-    data = Schirrmeister2017().get_data()
-    for subj_id, subj_data in tqdm(data.items()):
-        for sess_id, sess_data in subj_data.items():
-            for run_id, raw in sess_data.items():
-                X, y = _preprocess_and_stack(raw, channels, interval_times, fs, mapping)
-                ds.add_data(X, y, [subj_id, sess_id, run_id])
-                
-    return ds
+    out_length = 2.5
+    duration_before_trial_start = 0.5
 
+    trial_length_samples = int(out_length * sfreq)
 
+    trial_start_offset_samples = -int(duration_before_trial_start * sfreq)
+    trial_stop_offset_samples = -int(total_samples - trial_start_offset_samples - trial_length_samples)
 
+    print(trial_start_offset_samples, trial_stop_offset_samples)
+
+    trial_start_offset_samples = int(-0.5 * sfreq)
+
+    windows_dataset = create_windows_from_events(
+        dataset,
+        trial_start_offset_samples=trial_start_offset_samples,
+        trial_stop_offset_samples=trial_stop_offset_samples,
+        preload=True,
+)
 
 
 

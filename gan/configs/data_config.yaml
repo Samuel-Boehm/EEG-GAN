@@ -1,0 +1,9 @@
+dataset: 'Schirrmeister2017'
+subject_id: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+low_cut: 1  # low cut frequency for filtering
+high_cut: 256  # high cut frequency for filtering
+channels: ['Fp1','Fp2','F7','F3','Fz','F4','F8', 'T7','C3','Cz','C4','T8','P7','P3', 'Pz','P4','P8','O1','O2','M1','M2']
+ZCA_whitening: true
+sfreq: 256  # resampling frequency
+length_in_seconds: 2.5
+trial_start_offset_seconds: 0.5 

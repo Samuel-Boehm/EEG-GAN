@@ -15,6 +15,9 @@ from gan.paths import data_path, results_path
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 
+import hydra
+from omegaconf import DictConfig
+
 # Import metrics:
 from gan.metrics.SWD import SWD
 from gan.metrics.spectrum import Spectrum
@@ -71,7 +74,8 @@ logging_handler.attach_metrics([Spectrum(50),
 # Init Scheduler
 training_schedule = Scheduler(fading_period=2)
 
-def main():
+@hydra.main(config_path="configs", config_name="config")
+def main(cfg: DictConfig) -> None:
     model = GAN(**GAN_PARAMS)
 
     trainer = Trainer(
