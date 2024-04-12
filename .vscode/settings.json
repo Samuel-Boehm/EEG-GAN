@@ -17,5 +17,6 @@
         "Upsampled",
         "upwnsampled",
         "WGAN"
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "off"
 }
