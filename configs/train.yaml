@@ -1,0 +1,12 @@
+defaults:
+  - _self_
+  - data: clinical
+  - model: standard
+  - training: quick
+  - optimizer: adam
+ 
+  - _self_
+hydra:
+  run:
+    dir: 'trained_models/${now:%Y-%m-%d-%H-%M-%S}'
+  output_subdir: '.'

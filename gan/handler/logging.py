@@ -5,39 +5,44 @@
 import numpy as np
 from lightning.pytorch.callbacks import Callback
 from lightning.pytorch import Trainer, LightningModule
-from wandb import Image
 from matplotlib.pyplot import close as close_figures
+
 from gan.data.batch import batch_data
 from gan.metrics.metric import Metric
-import torch
+
+from typing import List
 
 
 class LoggingHandler(Callback):
 
     def __init__(self):
         self.running_metrics = []
-        self.end_metrics = []
+        self.after_training_metric = []
 
-    def attach_metrics(self, metrics:list,):
-        """
+    def attach_metrics(self, metrics:List[Metric],):
+        r'''
         Attach metrics to the callback.
-        Args:
+
+        Parameters:
+        ----------
             metrics: list of metrics to attach to the callback.
             every_epoch: if True the metrics are calculated at the end of each epoch.
-        """
+        '''
         for metric in metrics:
             if not isinstance(metric, Metric):
                 raise TypeError(f'Expected metric to be of type Metric, but got {type(metric)}')
-            if metric.interval == 0:
-                self.end_metrics.append(metric)
+            
+            if metric.call_every_n_epochs == 0:
+                self.after_training_metric.append(metric)
+            
             else:
                 self.running_metrics.append(metric)
     
 
     def clear(self, module:LightningModule):
-        """ 
+        r''' 
         After each epoch, the lists in the module are cleared.
-        """
+        '''
         # Clear all variables
         module.real_data.clear()
         module.generated_data.clear()
@@ -53,12 +58,14 @@ class LoggingHandler(Callback):
 
 
     def on_train_epoch_end(self, trainer:Trainer, module:LightningModule):
-        """
+        r'''
         Called when the train epoch ends.
-        Args:
+
+        Parameters:
+        ----------
             trainer: the trainer object. Used to access the trainer class.
             model: the model object. Used to access the model class.
-        """
+        '''
 
         # Metrics are calculated using np arrays, so we need to convert the tensors to np arrays.
         X_real = np.concatenate(module.real_data)
@@ -84,7 +91,7 @@ class LoggingHandler(Callback):
         
         # Calculate end metrics:
         if trainer.current_epoch == trainer.max_epochs - 1:
-            for metric in self.end_metrics:
+            for metric in self.after_training_metric:
                 trainer.logger.experiment.log(metric(trainer, module, batch))
 
             for metric in self.running_metrics:

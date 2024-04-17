@@ -7,8 +7,8 @@ import os
 import torch
 from gan.paths import results_path, data_path
 from gan.data.datamodule import HighGammaModule as HDG
-from gan.handler.progressionhandler import Scheduler
-from gan.handler.logginghandler import LoggingHandler
+from gan.handler.progression import Scheduler
+from gan.handler.logging import LoggingHandler
 from gan.paths import data_path, results_path
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint

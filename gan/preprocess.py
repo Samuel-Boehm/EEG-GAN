@@ -11,7 +11,6 @@ import omegaconf
 from omegaconf import DictConfig
 from pathlib import Path
 from joblib import Parallel, delayed
-import tempfile
 
 import torch
 
@@ -59,7 +58,7 @@ def ZCA_whitening(data:np.ndarray, trial_start_offset_samples:int) -> np.ndarray
     
     return np.stack(data_whitened, dtype=np.float32)
 
-@hydra.main(config_path="configs", config_name="data_config")
+@hydra.main(config_path="configs/dataset", config_name="clinical")
 def preprocess_moabb(cfg: DictConfig) -> None:
 
     base_dir = Path(__file__).parent.parent
@@ -112,15 +111,14 @@ def preprocess_moabb(cfg: DictConfig) -> None:
             drop_bad_windows=True)
         
         # Now sample wise preprocessing
-
         preprocessors = []
-
         if hasattr(cfg, 'ZCA_whitening') and cfg.ZCA_whitening:
             preprocessors.append(Preprocessor(ZCA_whitening, trial_start_offset_samples=trial_start_offset_samples))
-
         if len(preprocessors) > 0:
             preprocess(windows_dataset, preprocessors, n_jobs=-1)
 
+        # Not the most elegant way to add the sampling frequency to the description  but it works
+        windows_dataset.set_description({'fs': [256] * len(windows_dataset.datasets)})    
 
         dataset_path = Path(dataset_dir, f"S{subject}.pt")
         with open(dataset_path, 'wb') as f:

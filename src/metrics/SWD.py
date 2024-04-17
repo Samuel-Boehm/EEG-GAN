@@ -3,10 +3,9 @@
 # E-Mail: <samuel-boehm@web.de>
 
 import numpy as np
-from gan.metrics.metric import Metric
 from lightning.pytorch import Trainer, LightningModule
-from gan.handler.logginghandler import batch_data
-
+from torchmetrics import Metric
+from torch import Tensor
 
 def create_wasserstein_transform_matrix(n_features, n_projections:int=100):
     """
@@ -53,10 +52,19 @@ class SWD(Metric):
     Returns mean of 10 repetitions using different random projections.
     """
 
-    def __call__(self, trainer: Trainer, pl_module: LightningModule, batch: batch_data):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.add_state("real", default=[], dist_reduce_fx="cat")
+        self.add_state("fake", default=[], dist_reduce_fx="cat")
+    
+    def update(self, real: Tensor, fake: Tensor) -> None:
+        self.real.append(real)
+        self.fake.append(fake)
+
+    def compute(self) -> Tensor:
         distances = []
         for repeat in range(10):
-            self.w_transform = create_wasserstein_transform_matrix(np.prod(batch.real.shape[1:]).item())
-            distances.append(calculate_sliced_wasserstein_distance(batch.real, batch.fake, self.w_transform))
+            self.w_transform = create_wasserstein_transform_matrix(np.prod(self.real.shape[1:]).item())
+            distances.append(calculate_sliced_wasserstein_distance(self.real, self.fake, self.w_transform))
 
-        return {'SWD' : np.mean(distances)}
+        return np.mean(distances)

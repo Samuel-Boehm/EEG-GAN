@@ -36,7 +36,7 @@ def generate_data(model_path, stage, n_samples, batch_size=128,):
     model.critic.fading = False
 
     # Calculate fs in current stage:
-    fs_stage = int(model.hparams.fs/2**(model.hparams.n_stages-(model.current_stage-1)))
+    fs_stage = int(model.hparams.fs/2**(model.hparams.n_stages-(model.cur_stage-1)))
     
     # generate data in batches to avoid memory issues:
     for batch in range(n_samples // batch_size):

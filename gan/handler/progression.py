@@ -4,19 +4,26 @@
 
 
 from lightning.pytorch.callbacks import Callback
-
-
+from gan.model.gan import GAN
+from lightning.pytorch import Trainer
 
 class Scheduler(Callback):
 
-    def __init__(self, fading_period, **kwargs):
+    def __init__(self, fading_period:int, **kwargs):
+        '''
+        Scheduler for the progression of the GAN.
+        Parameters:
+        -----------
+            fading_period: int, number of epochs for fading between stages.
+        '''
+
         super().__init__()
         self.fading_period = fading_period
 
     
-    def on_train_epoch_start(self, trainer, model):
+    def on_train_epoch_start(self, trainer: Trainer, model: GAN):
         '''
-        Each epoch start, check if we need to increase stage. If so, increase stage.
+        Each epoch start, check and inizialize the next stage if necessary.
         '''
         
         # increase alpha after each epoch
@@ -24,7 +31,6 @@ class Scheduler(Callback):
         model.critic.alpha += 1/self.fading_period
         
         if trainer.current_epoch in model.progression_epochs:
-            # set stage in data, critic and generator
             trainer.datamodule.set_stage(model.current_stage)
             model.generator.set_stage(model.current_stage)
             model.critic.set_stage(model.current_stage)

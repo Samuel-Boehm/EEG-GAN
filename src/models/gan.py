@@ -4,9 +4,10 @@
 
 from typing import Tuple
 import numpy as np
-import os
+
 from lightning import LightningModule
 from typing import Tuple
+from torchmetrics import MeanMetric
 
 import torch
 from torch.nn.functional import softplus
@@ -14,30 +15,10 @@ from torch import autograd
 import torch.nn as nn
 from torch import Tensor
 
+from omegaconf import DictConfig
+
 from src.metrics import SWD
-
-from gan.model.critic import Critic
-from gan.model.generator import Generator
-from gan.model.spectral_critic import SpectralCritic
-
-from dataclasses import dataclass, field, asdict
-
-@dataclass
-class OutputContainer:
-    generated_data: list = field(init=False)
-    real_data: list = field(init=False)
-    y_real: list = field(init=False)
-    y_fake: list = field(init=False)
-    loss_generator: list = field(init=False)
-    loss_critic: list = field(init=False)
-    loss_sp_critic: list = field(init=False)
-    gradient_penalty: list = field(init=False)
-
-    def clear(self):
-        for key, value in asdict(self).items():
-            if isinstance(value, list):
-                setattr(self, key, [])
-
+from src.models.components import Critic, Generator, SpectralCritic
 
 class GAN(LightningModule):
     """
@@ -131,12 +112,13 @@ class GAN(LightningModule):
                 generator:Generator,
                 critic:Critic,
                 spectral_critic:SpectralCritic,
-                optimizer: Tuple[torch.optim.Optimizer, torch.optim.Optimizer, torch.optim.Optimizer],
+                cfg:DictConfig,
                 epochs_per_stage:int,
                 n_stages:int,
                 n_epochs_critic:int,
                 alpha:float,
                 beta:float,
+                lambda_gp:float,
                 **kwargs
                  ):  
         
@@ -144,13 +126,19 @@ class GAN(LightningModule):
         self.generator = generator
         self.critic = critic
         self.sp_critic = spectral_critic
-        self.optim = optimizer
         # Save all hyperparameters
         self.save_hyperparameters()
         self.automatic_optimization = False
         self.cur_stage = 1
         
-        self.oc = OutputContainer()
+        self.sliced_wasserstein_distance = SWD()
+        self.generator_loss = MeanMetric()
+        self.critic_loss = MeanMetric()
+        self.sp_critic_loss = MeanMetric()
+        self.gp = MeanMetric()    
+        self.generator_alpha = MeanMetric()
+        self.critic_alpha = MeanMetric()
+
         
         
         # Determine transition epochs:
@@ -207,7 +195,7 @@ class GAN(LightningModule):
         c_loss, gp = self.train_critic(X_real, y_real, X_fake, y_fake, self.critic, optim_c)
 
         ## optimize frequency domain critic
-        spc_loss, _ =self.train_critic(X_real, y_real, X_fake, y_fake, self.sp_critic, optim_spc)
+        spc_loss, _ = self.train_critic(X_real, y_real, X_fake, y_fake, self.sp_critic, optim_spc)
 
         # 3: Train generator:
         # If n_critic =! 1 we train the generator only every n_th step
@@ -225,38 +213,41 @@ class GAN(LightningModule):
             self.manual_backward(g_loss)
             optim_g.step()
 
-            self.oc.loss_generator.append(g_loss.item())
+            self.generator_loss(g_loss)
 
         # Log
-        self.log()
+        self.critic_loss(c_loss)
+        self.sp_critic_loss(spc_loss)
+        self.gp(gp)
+        self.sliced_wasserstein_distance.update(X_real, X_fake)
+        self.generator_alpha(self.generator.alpha)
+        self.critic_alpha(self.critic.alpha)
 
-        # Collect data during training for metrics:
-        self.oc.generated_data.append(X_fake.detach().cpu().numpy())
-        self.oc.real_data.append(X_real.detach().cpu().numpy())
-        self.oc.y_real.append(y_real.detach().cpu().numpy())
-        self.oc.y_fake.append(y_fake.detach().cpu().numpy())
-        self.oc.gradient_penalty.append(gp.detach().cpu().numpy())
-        self.oc.loss_critic.append(c_loss.detach().cpu().numpy())
-        self.oc.loss_sp_critic.append(spc_loss.detach().cpu().numpy())
+        self.log('generator loss', self.generator_loss, on_epoch=True, prog_bar=True)
+        self.log('critic loss', self.critic_loss, on_epoch=True, prog_bar=True)
+        self.log('spectral critic loss', self.sp_critic_loss, on_epoch=True, prog_bar=True)
+        self.log('gradient penalty', self.gp, on_epoch=True, prog_bar=False)
+        self.log('slice wasserstein distance', self.sliced_wasserstein_distance, on_epoch=True, prog_bar=True)
+        self.log('generator alpha', self.generator_alpha, on_epoch=True, prog_bar=False)
+        self.log('critic alpha', self.critic_alpha, on_epoch=True, prog_bar=False)
 
 
     def configure_optimizers(self):
         lr_generator = self.hparams.lr_gen
         lr_critic = self.hparams.lr_critic
-        b1 = self.hparams.b1
-        b2 = self.hparams.b2
+        betas = self.hparams.betas
 
-        if self.hparams.optimizer == 'adam':
-            opt_g = torch.optim.Adam(self.generator.parameters(), lr=lr_generator, betas=(b1, b2))
-            opt_c = torch.optim.Adam(self.critic.parameters(), lr=lr_critic, betas=(b1, b2))
-            opt_spc = torch.optim.Adam(self.sp_critic.parameters(), lr=lr_critic, betas=(b1, b2))
+        if self.hparams.optimizer.name == 'adam':
+            opt_g = torch.optim.Adam(self.generator.parameters(), lr=lr_generator, betas=(betas))
+            opt_c = torch.optim.Adam(self.critic.parameters(), lr=lr_critic, betas=(betas))
+            opt_spc = torch.optim.Adam(self.sp_critic.parameters(), lr=lr_critic, betas=(betas))
         else:
-            raise ValueError(f"Optimizer {self.hparams.optimizer} not supported")
+            raise ValueError(f"Optimizer {self.hparams.optimizer.name} not supported")
+        
         return [opt_g, opt_c, opt_spc], []
     
 
-    def gradient_penalty(self, batch_real:Tuple[Tensor, Tensor],
-                         batch_fake:Tuple[Tensor, Tensor], y_fake, critic) -> Tensor:
+    def gradient_penalty(self, real: Tensor, fake: Tensor, y_fake, critic:Critic) -> Tensor:
         """
 		Improved WGAN gradient penalty from Hartmann et al. (2018)
         https://arxiv.org/abs/1806.01875
@@ -268,9 +259,9 @@ class GAN(LightningModule):
 
 		Parameters
 		----------
-		batch_real : tensor
+		real : tensor
 			Batch of real data
-		batch_fake : tensor
+		fake : tensor
 			Batch of fake data
         y_fake : tensor
             Labels for the fake data - just to pass along to the critic
@@ -284,10 +275,10 @@ class GAN(LightningModule):
 			Gradient penalties
 		"""
 
-        alpha = torch.rand(batch_real.size(0),*((len(batch_real.size())-1)*[1]), device=self.device)
-        alpha = alpha.expand(batch_real.size())
+        alpha = torch.rand(real.size(0),*((len(real.size())-1)*[1]), device=self.device)
+        alpha = alpha.expand(real.size())
 
-        interpolates = alpha * batch_real + ((1 - alpha) * batch_fake)
+        interpolates = alpha * real + ((1 - alpha) * fake)
 
         output_interpolates = critic(interpolates, y_fake)
 
@@ -346,3 +337,14 @@ class GAN(LightningModule):
         optim.step()
 
         return c_loss, gp
+    
+    def on_train_start(self)-> None:
+        self.generator_loss.reset()
+        self.critic_loss.reset()
+        self.sp_critic_loss.reset()
+        self.gp.reset()
+        self.sliced_wasserstein_distance.reset()
+        self.generator_alpha.reset()
+        self.critic_alpha.reset()
+
+    

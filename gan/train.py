@@ -4,27 +4,23 @@
 
 from lightning import Trainer
 import numpy as np
-import os
+from pathlib import Path
 
 from gan.model.gan import GAN
-from gan.data.datamodule import HighGammaModule as HDG
-from gan.handler.progressionhandler import Scheduler
-from gan.handler.logginghandler import LoggingHandler
-from gan.paths import data_path, results_path
+from gan.data.datamodule import ProgressiveGrowingDataset
+from gan.handler.progression import Scheduler
+from gan.handler.logging import LoggingHandler
 
 from lightning.pytorch.loggers import WandbLogger
-from lightning.pytorch.callbacks import ModelCheckpoint
 
 import hydra
 from omegaconf import DictConfig
 
 # Import metrics:
-from gan.metrics.SWD import SWD
+from metrics.SWD import SWD
 from gan.metrics.spectrum import Spectrum
 from gan.metrics.bin_stats import BinStats
 
-# Define dataset to use
-dataset_path = os.path.join(data_path, 'clinical')
 
 channels = ['Fp1','Fp2','F7','F3','Fz','F4','F8',
             'T7','C3','Cz','C4','T8','P7','P3',
@@ -52,33 +48,28 @@ GAN_PARAMS = {
     'n_critic':1,
     }
 
-# Init DataModule
-dm = HDG(dataset_path, GAN_PARAMS['n_stages'], batch_size=GAN_PARAMS['batch_size'], num_workers=2)
 
-# Init Logger
-logger = WandbLogger(name='batch norm', project='EEGGAN', save_dir=results_path, mode="offline")
+def train(cfg: DictConfig) -> None:
 
-# Init Checkpoint
-checkpoint_callback = ModelCheckpoint(every_n_epochs=250,
-                                    filename='checkpoint_{epoch}',
-                                    save_last=True,
-                                    )
+    base_dir = Path.cwd().parent
+    data_path = Path(base_dir, 'datasets', cfg.dataset.dataset_name)
+    dm = ProgressiveGrowingDataset(data_path, cfg.model.n_stages, cfg.training.batch_size)
 
-# Init logging handler
-logging_handler = LoggingHandler()
-logging_handler.attach_metrics([Spectrum(50),
-                                SWD(1),
-                                BinStats(channels, mapping, every_n_epochs=0),
-                                ],)
+    # Init Logger
+    logger = WandbLogger(name='GAN', project='EEGGAN', save_dir=cfg.run.dir)
 
-# Init Scheduler
-training_schedule = Scheduler(fading_period=2)
+    # Init logging handler
+    logging_handler = LoggingHandler()
+    logging_handler.attach_metrics([SWD(1)])
 
-@hydra.main(config_path="configs", config_name="config")
-def main(cfg: DictConfig) -> None:
-    model = GAN(**GAN_PARAMS)
+    # Init Scheduler
+    training_schedule = Scheduler(fading_period=50)
 
-    trainer = Trainer(
+
+
+    model = GAN(**cfg.model)
+
+    trainer = Trainer(**cfg.trainer,
             # limit_train_batches=1, # batches are limited for debugging
             max_epochs=int(np.sum(GAN_PARAMS['epochs_per_stage'])),
             reload_dataloaders_every_n_epochs=1,
@@ -91,6 +82,11 @@ def main(cfg: DictConfig) -> None:
     logger.watch(model)
 
     trainer.fit(model, dm)
+
+@hydra.main(config_path="configs", config_name="config")
+def main(cfg: DictConfig):
+
+    train()
 
 if __name__ == '__main__':
     main()

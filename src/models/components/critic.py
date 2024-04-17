@@ -5,8 +5,10 @@
 import torch.nn as nn
 import torch
 import  numpy as np
-from gan.model.modules import ConvBlock, PrintLayer, WS
 from typing import List
+
+
+from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
 
 class CriticBlock(nn.Module):
     r"""
