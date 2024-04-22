@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch
 import  numpy as np
 from typing import List
-
+from mne.filter import resample
 
 from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
 
@@ -39,10 +39,10 @@ class CriticBlock(nn.Module):
         self.intermediate_sequence = intermediate_sequence
         self.in_sequence = in_sequence    
 
-    def forward(self, x, first=False, **kwargs) -> torch.Tensor:
+    def forward(self, X, first=False, **kwargs) -> torch.Tensor:
         if first:
-            x = self.in_sequence(x, **kwargs)
-        out = self.intermediate_sequence(x, **kwargs)
+            X = self.in_sequence(X, **kwargs)
+        out = self.intermediate_sequence(X, **kwargs)
         return out
     
     def stage_requires_grad(self, requires_grad:bool) -> None:
@@ -68,7 +68,7 @@ class Critic(nn.Module):
         Number of channels in the input data
     n_classes : int
         Number of classes
-    cur_stage : int
+    current_stage : int
         Current stage of the critic
     fading : bool
         If fading is used
@@ -83,9 +83,10 @@ class Critic(nn.Module):
                  n_stages:int,
                  n_channels:int,
                  n_classes:int,
-                 cur_stage:int=1,
+                 current_stage:int=1,
                  fading:bool=False,
-                 freeze:bool=False
+                 freeze:bool=False,
+                 **kwargs
                  ) -> None:   
          
         super(Critic, self).__init__()
@@ -95,7 +96,7 @@ class Critic(nn.Module):
         self.freeze = freeze
         self.label_embedding = nn.Embedding(n_classes, n_time)
         self.alpha = 0
-        self.set_stage(cur_stage)
+        self.set_stage(current_stage)
 
 
     def set_stage(self, cur_stage:int) -> None:
@@ -127,7 +128,7 @@ class Critic(nn.Module):
     def forward(self, X:torch.Tensor, y:torch.Tensor, **kwargs):
         
         embedding:torch.Tensor = self.label_embedding(y).view(y.shape[0], 1, self.n_time)
-        embedding = self.downsample(embedding, self._stage)
+        embedding = self.resample(embedding, X.shape[-1])
         
         X = torch.cat([X, embedding], 1) # batch_size x (n_channels + 1) x n_time 
 
@@ -138,7 +139,7 @@ class Critic(nn.Module):
                 # we take the current input, downsample it for the next block
                 # match dimensions by using in_sequence and interpolate with
                 # the current bock output with the downsampled input. 
-                x_ = self.downsample(X, 1)
+                x_ = self.resample(X, X.shape[-1] // 2)
                 x_ = self.blocks[i-1].in_sequence(x_, **kwargs)
 
                 # pass x through new (current) block
@@ -149,30 +150,29 @@ class Critic(nn.Module):
                 X = self.blocks[i](X,  first=first, **kwargs)
         return X
     
-    def downsample(self, X:torch.Tensor, steps:int):
+    def resample(self, X:torch.Tensor, out_size:int):
         """
-        Downscale input. Using bicubic interpolation.
-    
+        rescale input. Using bicubic interpolation.
+
         Parameters
         ----------
         X : tensor
             Input data
-        steps : int
-            for each step we downsample by a factor of 0.5 -> half the size of the input
+        
+        out_size : tuple
 
         Returns
         -------
         X : tensor
-            Downsampled data
+            resampled data
         """
+        size = (X.shape[-2], out_size)
+        X = torch.unsqueeze(X, 1)
+        X = nn.functional.interpolate(X, size=size, mode='bicubic')
+        X = torch.squeeze(X, 1)
 
-        X = torch.unsqueeze(X, 0)
-        for i in range(steps):
-           X = nn.functional.interpolate(X, scale_factor=(1, 0.5), mode='bicubic')
-        X = torch.squeeze(X, 0)
         return X
     
-
     def build(self, n_filter:int, n_time:int, n_stages:int, n_channels:int) -> List[CriticBlock]:
         
         n_channels += 1 # Add one channel for embedding

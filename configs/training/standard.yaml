@@ -1,2 +1,0 @@
-batch_size: 32
-epochs_per_stage: [200, 200, 200, 200, 200]

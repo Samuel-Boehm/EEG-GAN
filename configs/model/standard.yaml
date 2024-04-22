@@ -1,41 +1,37 @@
-common:
+name: 'standard'
+
+params: &params
   n_filter: 120
   n_time: 256
   n_stages: 5
-  n_channels: ${len(data.channels)}
-  n_classes: ${len(data.classes)}
+  n_channels: 21
+  n_classes: 2
   current_stage: 1
   fading: True
   freeze: True
 
+generator:
+  _target_: src.models.components.Generator
+  <<: *params
+  latent_dim: 210
+  embedding_dim: 100
 
-_target_: src.models.gan.GAN
-  epochs_per_stage: [200, 200, 200, 200, 200]
-  n_stages: ${common.n_stages}
+critic:
+  target_: src.models.components.Critic
+  <<: *params
+
+spectral_critic:
+  _target_: src.models.components.SpectralCritic
+  <<: *params
+
+gan:
   n_epochs_critic: 5
   alpha: 1
   beta: 0.2
   lambda_gp: 10
-
-generator:
-  _target_: src.models.components.Generator
-  <<: *common
-  latent_dim: 210
-  embedding_dim: 100
-
-
-critic:
-  _target_: src.models.components.Critic
-  <<: *common
-  
-
-spectral_critic:
-  _target_: src.models.components.SpectralCritic
-  <<: *common
 
 optimizer:
   name: 'adam'
   lr_generator: 0.001
   lr_critic: 0.001
   betas: [0.5, 0.999]
-

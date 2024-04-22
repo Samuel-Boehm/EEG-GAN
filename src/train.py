@@ -2,10 +2,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import hydra
 import lightning as L
-import torch
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
+import numpy as np 
 
 from src.utils import (
     RankedLogger,
@@ -15,18 +15,15 @@ from src.utils import (
     instantiate_loggers,
     log_hyperparameters,
     task_wrapper,
+    instantiate_model,
 )
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
 
-@task_wrapper
 def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Trains the model. Can additionally evaluate on a testset, using best weights obtained during
     training.
-
-    This method is wrapped in optional @task_wrapper decorator, that controls the behavior during
-    failure. Useful for multiruns, saving info about the crash, etc.
 
     :param cfg: A DictConfig configuration composed by Hydra.
     :return: A tuple with metrics and dict with all instantiated objects.
@@ -36,19 +33,22 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         L.seed_everything(cfg.seed, workers=True)
 
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.get("data"), n_stages=cfg.training.scheduler.n_stages)
 
-    log.info(f"Instantiating model <{cfg.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.model)
+    log.info(f"Instantiating model <{cfg.model.name}>")
+    model: LightningModule = instantiate_model(cfg.get("model"))
 
-    log.info("Instantiating callbacks...")
-    callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
+    log.info("Instantiating training scheduler...")
+    callbacks: List[Callback] = instantiate_callbacks(cfg.get("training"))
 
     log.info("Instantiating loggers...")
-    logger: List[Logger] = instantiate_loggers(cfg.get("logger"))
+    logger: List[Logger] = instantiate_loggers(cfg)
 
+    cfg.trainer['max_epochs'] = int(np.sum(cfg.training.scheduler.epochs_per_stage))
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
+    trainer: Trainer = hydra.utils.instantiate(cfg.get("trainer"), callbacks=callbacks, logger=logger,
+                                              reload_dataloaders_every_n_epochs=1
+                                            )
 
     object_dict = {
         "cfg": cfg,
@@ -93,6 +93,9 @@ def main(cfg: DictConfig) -> Optional[float]:
     :param cfg: DictConfig configuration composed by Hydra.
     :return: Optional[float] with optimized metric value.
     """
+    assert cfg.model.params.n_classes == len(cfg.data.classes), "Number of classes must match!"
+    assert cfg.model.params.n_channels == len(cfg.data.channels), "Number of channels must match!"
+
     # apply extra utilities
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     extras(cfg)

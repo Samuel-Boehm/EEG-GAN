@@ -3,3 +3,4 @@ analysis_scripts/outputs
 __pycache__/
 outputs/
 datasets/
+trained_models/

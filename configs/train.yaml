@@ -2,11 +2,13 @@ defaults:
   - _self_
   - data: clinical
   - model: standard
-  - training: quick
-  - optimizer: adam
- 
-  - _self_
+  - training: default
+  - trainer: SLURM
+  - logger: wandb
+
 hydra:
   run:
     dir: 'trained_models/${now:%Y-%m-%d-%H-%M-%S}'
   output_subdir: '.'
+
+train: True
