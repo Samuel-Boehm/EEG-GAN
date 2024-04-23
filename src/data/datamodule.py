@@ -16,10 +16,7 @@ from pathlib import Path
 from braindecode.datasets.base import BaseConcatDataset
 from braindecode.preprocessing import preprocess, Preprocessor
 
-
-def resample(X: np.ndarray, sfreq: int) -> np.ndarray:
-    # Resamples the input data to a new sampling frequency
-    return
+from scipy.signal import resample
 
 def change_type(X: np.ndarray, out_type: str) -> np.ndarray:
     # MNE expects the data to be of type float64. This helper function changes the type of the input data to float64.
@@ -89,11 +86,20 @@ class ProgressiveGrowingDataset(LightningDataModule):
         self.data = BaseConcatDataset(ds_list)
 
         base_sfreq = self.data.description['fs'][0]
-        sfreq = int(base_sfreq // 2**stage)
+        current_sfreq = int(base_sfreq // 2**stage)
+        time_in_seconds = self.data.datasets[0][0][0].shape[-1] / base_sfreq
+        n_samples_curent_stage = int(current_sfreq * time_in_seconds)
 
-        #preprocessors = [Preprocessor(change_type, out_type='float64')]
-        preprocessors = [Preprocessor(resample, sfreq=sfreq)]
-        #preprocessors.append(Preprocessor(change_type, out_type= 'float32'))
+        # If the data is already at the correct frequency, we don't need to resample it.
+        if current_sfreq == base_sfreq:
+            return
         
+        #preprocessors = [Preprocessor(change_type, out_type='float64')]
+        preprocessors = [Preprocessor(resample, num=n_samples_curent_stage, axis=-1)]
+        # preprocessors.append(Preprocessor(change_type, out_type='float32'))
+        
+        # TODO: What the fuck? 
         self.data = preprocess(self.data, preprocessors, n_jobs=-1)
+
+        print(self.data.datasets[0][0][0].shape)
 

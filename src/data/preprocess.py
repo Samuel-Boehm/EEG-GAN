@@ -58,10 +58,10 @@ def ZCA_whitening(data:np.ndarray, trial_start_offset_samples:int) -> np.ndarray
     
     return np.stack(data_whitened, dtype=np.float32)
 
-@hydra.main(config_path="configs/dataset", config_name="clinical")
+@hydra.main(config_path="../../configs/data", config_name="clinical")
 def preprocess_moabb(cfg: DictConfig) -> None:
 
-    base_dir = Path(__file__).parent.parent
+    base_dir = Path(__file__).parent.parent.parent
     dataset_dir = Path(base_dir, "datasets", cfg.dataset_name)
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
@@ -92,12 +92,11 @@ def preprocess_moabb(cfg: DictConfig) -> None:
         preprocess(dataset, preprocessors, n_jobs=-1)
 
         # Create windows from events
-        total_samples = dataset.datasets[0].raw.annotations[0]['duration']
+        total_samples = dataset.datasets[0].raw.annotations[0]['duration'] * cfg.sfreq
         out_length = cfg.length_in_seconds
         trial_length_samples = int(out_length * cfg.sfreq)
         trial_start_offset_samples = -int(cfg.trial_start_offset_seconds * cfg.sfreq)
-        trial_stop_offset_samples = int(total_samples - trial_start_offset_samples - trial_length_samples)
-        trial_start_offset_samples = int(-0.5 * cfg.sfreq)
+        trial_stop_offset_samples = -int(total_samples - trial_length_samples - trial_start_offset_samples)
 
         numerical_label = np.arange(len(cfg.classes))
         mapping = dict(zip(cfg.classes, numerical_label))
@@ -108,7 +107,8 @@ def preprocess_moabb(cfg: DictConfig) -> None:
             trial_stop_offset_samples=trial_stop_offset_samples,
             mapping=mapping,
             preload=True,
-            drop_bad_windows=True)
+            drop_bad_windows=True,
+            verbose=False)
         
         # Now sample wise preprocessing
         preprocessors = []
