@@ -98,7 +98,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
         preprocessors = [Preprocessor(resample, num=n_samples_curent_stage, axis=-1)]
         # preprocessors.append(Preprocessor(change_type, out_type='float32'))
         
-        # TODO: What the fuck? 
+        # TODO: What the fuck? I need more traceback? 
         self.data = preprocess(self.data, preprocessors, n_jobs=-1)
 
         print(self.data.datasets[0][0][0].shape)
