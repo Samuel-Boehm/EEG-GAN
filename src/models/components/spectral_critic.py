@@ -30,14 +30,14 @@ class SpectralCriticBlock(nn.Module):
 class SpectralCritic(nn.Module):
         
     def __init__(self,
-                 n_time:int,
+                 n_samples:int,
                  n_stages:int,
                  current_stage=1,
                  **kwargs
                  ) -> None:
         
         super(SpectralCritic, self).__init__()
-        self.blocks  = self.build(n_time, n_stages)
+        self.blocks  = self.build(n_samples, n_stages)
         self.set_stage(current_stage)
 
         self.alpha = 0

@@ -13,7 +13,7 @@ from src.models import GAN, Generator, Critic, SpectralCritic
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
 
-def instantiate_model(models_cfg: DictConfig) -> List[Callback]:
+def instantiate_model(models_cfg: DictConfig, n_samples:int) -> List[Callback]:
     """
     Function to instantiate the GAN model from the configuration file
 
@@ -29,14 +29,14 @@ def instantiate_model(models_cfg: DictConfig) -> List[Callback]:
     """
     models = dict()
 
-    generator = Generator(**models_cfg.generator)
+    generator = Generator(**models_cfg.generator, n_samples=n_samples)
     models['generator'] = generator
     
-    critic = Critic(**models_cfg.critic)
+    critic = Critic(**models_cfg.critic, n_samples=n_samples)
     models['critic'] = critic
 
     if hasattr(models_cfg, 'spectral_critic'):
-        spectral_critic = SpectralCritic(**models_cfg.spectral_critic)
+        spectral_critic = SpectralCritic(**models_cfg.spectral_critic, n_samples=n_samples)
         models['spectral_critic'] = spectral_critic
     
     return GAN(**models, **models_cfg.gan, optimizer=models_cfg.optimizer)

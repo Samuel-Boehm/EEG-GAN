@@ -64,7 +64,7 @@ class Generator(nn.Module):
     ----------
     n_filter : int
         Number of filters in the convolutional layers
-    n_time : int
+    n_samples : int
         Number of timepoints in the input data
     n_stages : int
         Number of stages in the generator
@@ -86,7 +86,7 @@ class Generator(nn.Module):
 
     def __init__(self,
                  n_filter:int,
-                 n_time:int,
+                 n_samples:int,
                  n_stages:int,
                  n_channels:int,
                  n_classes:int,
@@ -101,7 +101,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         
         self.blocks:List[GeneratorBlock] = self.build(
-            n_filter, n_time, n_stages, n_channels, latent_dim, embedding_dim
+            n_filter, n_samples, n_stages, n_channels, latent_dim, embedding_dim
             )
         self.label_embedding = nn.Embedding(n_classes, embedding_dim)
         self.fading = fading
@@ -183,12 +183,12 @@ class Generator(nn.Module):
         return X
     
 
-    def build(self, n_filter, n_time, n_stages, n_channels,
+    def build(self, n_filter, n_samples, n_stages, n_channels,
                         latent_dim, embedding_dim) -> List[GeneratorBlock]:
         
         
         # Generator:
-        n_time_first_layer = int(np.floor(n_time / 2 ** (n_stages-1)))
+        n_time_first_layer = int(np.floor(n_samples / 2 ** (n_stages-1)))
         blocks = nn.ModuleList()
 
         # Note that the first conv stage in the generator differs from the others

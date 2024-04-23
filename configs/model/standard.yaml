@@ -2,7 +2,6 @@ name: 'standard'
 
 params: &params
   n_filter: 120
-  n_time: 256
   n_stages: 5
   n_channels: 21
   n_classes: 2

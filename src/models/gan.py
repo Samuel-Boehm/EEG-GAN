@@ -38,9 +38,6 @@ class GAN(LightningModule):
         spectral_critic (SpectralCritic) (optional)
             Spectral critic model for the GAN
         
-        cfg (DictConfig)
-            configuration for the GAN
-        
         n_epochs_critic (int)
             number of epochs to train the critic
             
@@ -89,6 +86,10 @@ class GAN(LightningModule):
         self.optimizer_dict = optimizer
         self.automatic_optimization = False
         self.cur_stage = 1
+        self.lamda_gp = lambda_gp
+        self.n_epochs_critics = n_epochs_critic
+        self.alpha = alpha
+        self.beta = beta
         
         self.sliced_wasserstein_distance = SWD()
         self.generator_loss = MeanMetric()
@@ -136,7 +137,7 @@ class GAN(LightningModule):
 
         # 3: Train generator:
         # If n_critic =! 1 we train the generator only every n_th step
-        if batch_idx % self.hparams.n_epochs_critic == 0:
+        if batch_idx % self.n_epochs_critic == 0:
             ## optimize generator   
             fx_fake = self.critic(X_fake, y_fake)
 
@@ -145,12 +146,12 @@ class GAN(LightningModule):
                 loss_fd = softplus(-fx_spc).mean()
             else:
                 loss_fd = 0
-                self.hparams.beta
+                self.beta
 
             loss_td = softplus(-fx_fake).mean()
             
 
-            g_loss = (self.hparams.alpha * loss_td + self.hparams.beta * loss_fd) / (self.hparams.alpha + self.hparams.beta)
+            g_loss = (self.alpha * loss_td + self.beta * loss_fd) / (self.alpha + self.beta)
 
             optim_g.zero_grad()
             self.manual_backward(g_loss)
@@ -190,7 +191,7 @@ class GAN(LightningModule):
             else:
                 opt_spc = None
         else:
-            raise ValueError(f"Optimizer {self.hparams.optimizer.name} not supported")
+            raise ValueError(f"Optimizer {self.optimizer_dict.name} not supported")
 
         return [opt_g, opt_c, opt_spc], []
     
@@ -276,7 +277,7 @@ class GAN(LightningModule):
         # gradient pentalty is scaled with the distance between the distrubutions and a lambda hyperparameter
         # Note: Hartmann et al suggest to scale the gradient penalty with the distance between the distributions
         # this does not work well so far... (?)
-        gp = self.hparams.lambda_gp * self.gradient_penalty(X_real, X_fake, y_fake, critic)
+        gp = self.lamda_gp * self.gradient_penalty(X_real, X_fake, y_fake, critic)
 
         c_loss = distance + gp        
         

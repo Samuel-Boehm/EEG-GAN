@@ -35,8 +35,9 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.get("data"), n_stages=cfg.training.scheduler.n_stages)
 
+    n_samples = int(cfg.data.sfreq * cfg.data.length_in_seconds)
     log.info(f"Instantiating model <{cfg.model.name}>")
-    model: LightningModule = instantiate_model(cfg.get("model"))
+    model: LightningModule = instantiate_model(cfg.get("model"), n_samples=n_samples)
 
     log.info("Instantiating training scheduler...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("training"))

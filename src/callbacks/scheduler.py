@@ -52,12 +52,10 @@ class Scheduler(Callback):
 
     def on_train_start(self, trainer: Trainer, model):
         '''
-        Set the current stage to 0 at the beginning of the training.
+        Set the current stage to 1 at the beginning of the training.
         '''
         model.current_stage = 1
-        # internal stage:
-        stage = self.n_stages - model.current_stage
-        trainer.datamodule.set_stage(stage)
+        trainer.datamodule.set_stage(model.current_stage)
         
     def on_train_epoch_start(self, trainer: Trainer, model):
         '''

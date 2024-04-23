@@ -60,7 +60,7 @@ class Critic(nn.Module):
     ----------
     n_filter : int
         Number of filters in the convolutional layers
-    n_time : int
+    n_samples : int
         Number of timepoints in the input data
     n_stages : int
         Number of stages in the critic
@@ -79,7 +79,7 @@ class Critic(nn.Module):
 
     def __init__(self,
                  n_filter:int,
-                 n_time:int,
+                 n_samples:int,
                  n_stages:int,
                  n_channels:int,
                  n_classes:int,
@@ -90,11 +90,11 @@ class Critic(nn.Module):
                  ) -> None:   
          
         super(Critic, self).__init__()
-        self.blocks:List[CriticBlock] = self.build(n_filter, n_time, n_stages, n_channels)
-        self.n_time = n_time
+        self.blocks:List[CriticBlock] = self.build(n_filter, n_samples, n_stages, n_channels)
+        self.n_samples = n_samples
         self.fading = fading
         self.freeze = freeze
-        self.label_embedding = nn.Embedding(n_classes, n_time)
+        self.label_embedding = nn.Embedding(n_classes, n_samples)
         self.alpha = 0
         self.set_stage(current_stage)
 
@@ -127,7 +127,7 @@ class Critic(nn.Module):
 
     def forward(self, X:torch.Tensor, y:torch.Tensor, **kwargs):
         
-        embedding:torch.Tensor = self.label_embedding(y).view(y.shape[0], 1, self.n_time)
+        embedding:torch.Tensor = self.label_embedding(y).view(y.shape[0], 1, self.n_samples)
         embedding = self.resample(embedding, X.shape[-1])
         
         X = torch.cat([X, embedding], 1) # batch_size x (n_channels + 1) x n_time 
@@ -173,13 +173,13 @@ class Critic(nn.Module):
 
         return X
     
-    def build(self, n_filter:int, n_time:int, n_stages:int, n_channels:int) -> List[CriticBlock]:
+    def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int) -> List[CriticBlock]:
         
         n_channels += 1 # Add one channel for embedding
 
         # Calculate the number of timepoints in the last layer
         # n_stages - 1 since we dont downsample after the last convolution
-        n_time_last_stage = int(np.floor(n_time / 2 ** (n_stages - 1)))
+        n_time_last_stage = int(np.floor(n_samples / 2 ** (n_stages - 1)))
         
         # Critic:
         blocks = nn.ModuleList()

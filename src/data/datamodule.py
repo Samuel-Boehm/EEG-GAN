@@ -16,7 +16,7 @@ from pathlib import Path
 from braindecode.datasets.base import BaseConcatDataset
 from braindecode.preprocessing import preprocess, Preprocessor
 
-from scipy.signal import resample
+from scipy.signal import resample as scipy_resample
 
 def change_type(X: np.ndarray, out_type: str) -> np.ndarray:
     # MNE expects the data to be of type float64. This helper function changes the type of the input data to float64.
@@ -70,7 +70,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
         super().__init__()
 
     def setup(self, stage:str) -> None:
-        self.set_stage(0)
+        self.set_stage(1)
         
     def train_dataloader(self) -> DataLoader:
         return ThrowAwayIndexLoader(self.data, batch_size=self.batch_size, shuffle=True)
@@ -94,12 +94,9 @@ class ProgressiveGrowingDataset(LightningDataModule):
         if current_sfreq == base_sfreq:
             return
         
-        #preprocessors = [Preprocessor(change_type, out_type='float64')]
-        preprocessors = [Preprocessor(resample, num=n_samples_curent_stage, axis=-1)]
-        # preprocessors.append(Preprocessor(change_type, out_type='float32'))
-        
-        # TODO: What the fuck? I need more traceback? 
+        preprocessors = [Preprocessor(change_type, out_type='float64')]
+        preprocessors.append(Preprocessor('resample', sfreq=current_sfreq, npad=0))
+        #preprocessors = [Preprocessor(scipy_resample, num=n_samples_curent_stage, axis=-1)]
+        preprocessors.append(Preprocessor(change_type, out_type='float32'))
         self.data = preprocess(self.data, preprocessors, n_jobs=-1)
-
-        print(self.data.datasets[0][0][0].shape)
 
