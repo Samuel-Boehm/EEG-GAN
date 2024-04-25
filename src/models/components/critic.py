@@ -139,13 +139,13 @@ class Critic(nn.Module):
                 # we take the current input, downsample it for the next block
                 # match dimensions by using in_sequence and interpolate with
                 # the current bock output with the downsampled input. 
-                x_ = self.resample(X, X.shape[-1] // 2)
-                x_ = self.blocks[i-1].in_sequence(x_, **kwargs)
+                X_ = self.resample(X, X.shape[-1] // 2)
+                X_ = self.blocks[i-1].in_sequence(X_, **kwargs)
 
                 # pass x through new (current) block
                 X = self.blocks[i](X, first=first,  **kwargs)
-                # interpolate x_ and x
-                X = self.alpha * X + (1 - self.alpha) * x_  
+                # interpolate X_ and X
+                X = self.alpha * X + (1 - self.alpha) * X_  
             else:
                 X = self.blocks[i](X,  first=first, **kwargs)
         return X

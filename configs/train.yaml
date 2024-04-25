@@ -1,8 +1,8 @@
 defaults:
   - _self_
-  - data: clinical
+  - data: debug
   - model: standard
-  - training: default
+  - callbacks: default
   - trainer: SLURM
   - logger: wandb
 

@@ -29,17 +29,17 @@ def instantiate_model(models_cfg: DictConfig, n_samples:int) -> List[Callback]:
     """
     models = dict()
 
-    generator = Generator(**models_cfg.generator, n_samples=n_samples)
+    generator:Generator = hydra.utils.instantiate(models_cfg.generator, n_samples=n_samples)
     models['generator'] = generator
     
-    critic = Critic(**models_cfg.critic, n_samples=n_samples)
+    critic:Critic = hydra.utils.instantiate(models_cfg.critic, n_samples=n_samples)
     models['critic'] = critic
 
     if hasattr(models_cfg, 'spectral_critic'):
-        spectral_critic = SpectralCritic(**models_cfg.spectral_critic, n_samples=n_samples)
+        spectral_critic:SpectralCritic = hydra.utils.instantiate(models_cfg.spectral_critic, n_samples=n_samples)
         models['spectral_critic'] = spectral_critic
     
-    return GAN(**models, **models_cfg.gan, optimizer=models_cfg.optimizer)
+    return hydra.utils.instantiate(models_cfg.gan, **models , optimizer=models_cfg.optimizer)
 
 def instantiate_callbacks(callbacks_cfg: DictConfig) -> List[Callback]:
     """Instantiates callbacks from config.
@@ -72,12 +72,11 @@ def instantiate_loggers(cfg: DictConfig) -> List[Logger]:
         print("No logger configuration found!")
         return
     
-    run_name = '/'.join(HydraConfig.get()['run']['dir'].split('/')[-2:])
-
+    save_dir = '/'.join(HydraConfig.get()['run']['dir'].split('/')[-2:])
     for _, cb_conf in cfg.logger.items():
-        cb_conf['name'] = run_name
+        cb_conf['name'] = save_dir
         if isinstance(cb_conf, DictConfig) and "_target_" in cb_conf:
             print(f"Instantiating logger <{cb_conf._target_}>")
-            logger.append(hydra.utils.instantiate(cb_conf))
+            logger.append(hydra.utils.instantiate(cb_conf, save_dir=save_dir))
 
     return logger

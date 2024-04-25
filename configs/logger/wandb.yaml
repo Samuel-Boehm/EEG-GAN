@@ -1,7 +1,6 @@
 wandb:
   _target_: lightning.pytorch.loggers.wandb.WandbLogger
   name: 'placeholder' 
-  save_dir: hydra.run.dir 
   offline: False
   id: null # pass correct id to resume experiment!
   project: "EEGGAN"

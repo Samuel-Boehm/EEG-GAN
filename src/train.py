@@ -31,25 +31,24 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
-
+    
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.get("data"), n_stages=cfg.training.scheduler.n_stages)
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.get("data"), n_stages=cfg.callbacks.scheduler.n_stages)
 
     n_samples = int(cfg.data.sfreq * cfg.data.length_in_seconds)
-    log.info(f"Instantiating model <{cfg.model.name}>")
+    log.info(f"Instantiating model <{cfg.model.gan._target_}>")
     model: LightningModule = instantiate_model(cfg.get("model"), n_samples=n_samples)
 
     log.info("Instantiating training scheduler...")
-    callbacks: List[Callback] = instantiate_callbacks(cfg.get("training"))
+    callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
     log.info("Instantiating loggers...")
     logger: List[Logger] = instantiate_loggers(cfg)
 
-    cfg.trainer['max_epochs'] = int(np.sum(cfg.training.scheduler.epochs_per_stage))
+    cfg.trainer['max_epochs'] = int(np.sum(cfg.callbacks.scheduler.epochs_per_stage))
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(cfg.get("trainer"), callbacks=callbacks, logger=logger,
-                                              reload_dataloaders_every_n_epochs=1
-                                            )
+                                              reload_dataloaders_every_n_epochs=1)
 
     object_dict = {
         "cfg": cfg,

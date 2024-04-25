@@ -3,11 +3,14 @@
 # E-Mail: <samuel-boehm@web.de>
 
 import numpy as np
+import torch
 from lightning.pytorch import Trainer, LightningModule
 from torchmetrics import Metric
+from torchmetrics.utilities import dim_zero_cat
+
 from torch import Tensor
 
-def create_wasserstein_transform_matrix(n_features, n_projections:int=100):
+def create_wasserstein_transform_matrix(n_features:int, n_projections:int, device) -> Tensor:
     """
     creates the transformation matrix for the sliced wasserstein distance
     Args:
@@ -17,12 +20,12 @@ def create_wasserstein_transform_matrix(n_features, n_projections:int=100):
     """
 
 
-    wtm = np.random.randn(n_features, n_projections)
-    wtm /= np.sqrt(np.sum(np.square(wtm), axis=0, keepdims=True))
-    return wtm
+    wtm = torch.randn(n_features, n_projections)
+    wtm /= torch.sqrt(torch.sum(torch.square(wtm), axis=0, keepdims=True))
+    return wtm.to(device)
 
 
-def calculate_sliced_wasserstein_distance(input1, input2, w_transform):
+def calculate_sliced_wasserstein_distance(input1:Tensor, input2:Tensor, w_transform:Tensor) -> float:
     """
     calculates the sliced wasserstein distance between two distributions input1 and input2. 
     Requires the transformation matrix w_transform.
@@ -30,20 +33,20 @@ def calculate_sliced_wasserstein_distance(input1, input2, w_transform):
     """
     if input1.shape[0] != input2.shape[0]:
         n_inputs = input1.shape[0] if input1.shape[0] < input2.shape[0] else input2.shape[0]
-        input1 = np.random.permutation(input1)[:n_inputs]
-        input2 = np.random.permutation(input2)[:n_inputs]
+        input1 = torch.randperm(input1)[:n_inputs]
+        input2 = torch.randperm(input2)[:n_inputs]
 
     input1 = input1.reshape(input1.shape[0], -1)
     input2 = input2.reshape(input2.shape[0], -1)
 
-    transformed1 = np.matmul(input1, w_transform)
-    transformed2 = np.matmul(input2, w_transform)
+    transformed1 = torch.matmul(input1, w_transform)
+    transformed2 = torch.matmul(input2, w_transform)
 
-    transformed1 = np.sort(transformed1, axis=0)                                  
-    transformed2 = np.sort(transformed2, axis=0)
+    transformed1, _ = torch.sort(transformed1, axis=0)                                  
+    transformed2, _ = torch.sort(transformed2, axis=0)
 
-    dists = np.abs(transformed1 - transformed2)
-    return np.mean(dists)
+    dists = torch.abs(transformed1 - transformed2)
+    return torch.mean(dists)
 
 
 class SWD(Metric):
@@ -62,9 +65,12 @@ class SWD(Metric):
         self.fake.append(fake)
 
     def compute(self) -> Tensor:
+        # parse inputs
         distances = []
+        real = dim_zero_cat(self.real)
+        fake = dim_zero_cat(self.fake)
         for repeat in range(10):
-            self.w_transform = create_wasserstein_transform_matrix(np.prod(self.real.shape[1:]).item())
-            distances.append(calculate_sliced_wasserstein_distance(self.real, self.fake, self.w_transform))
+            w_transform = create_wasserstein_transform_matrix(np.prod(real.shape[1:]), n_projections=1_000, device=real.device)
+            distances.append(calculate_sliced_wasserstein_distance(real, fake, w_transform))
 
-        return np.mean(distances)
+        return torch.mean(torch.stack(distances))

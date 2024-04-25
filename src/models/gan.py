@@ -137,7 +137,7 @@ class GAN(LightningModule):
 
         # 3: Train generator:
         # If n_critic =! 1 we train the generator only every n_th step
-        if batch_idx % self.n_epochs_critic == 0:
+        if batch_idx % self.n_epochs_critics == 0:
             ## optimize generator   
             fx_fake = self.critic(X_fake, y_fake)
 
@@ -168,14 +168,14 @@ class GAN(LightningModule):
         self.generator_alpha(self.generator.alpha)
         self.critic_alpha(self.critic.alpha)
 
-        self.log('generator loss', self.generator_loss, on_epoch=True, prog_bar=True)
-        self.log('critic loss', self.critic_loss, on_epoch=True, prog_bar=True)
+        self.log('generator loss', self.generator_loss, on_epoch=True, on_step=False, prog_bar=True)
+        self.log('critic loss', self.critic_loss, on_epoch=True, on_step=False, prog_bar=True)
         if self.sp_critic:
-            self.log('spectral critic loss', self.sp_critic_loss, on_epoch=True, prog_bar=True)
-        self.log('gradient penalty', self.gp, on_epoch=True, prog_bar=False)
-        self.log('slice wasserstein distance', self.sliced_wasserstein_distance, on_epoch=True, prog_bar=True)
-        self.log('generator alpha', self.generator_alpha, on_epoch=True, prog_bar=False)
-        self.log('critic alpha', self.critic_alpha, on_epoch=True, prog_bar=False)
+            self.log('spectral critic loss', self.sp_critic_loss, on_epoch=True, on_step=False, prog_bar=True)
+        self.log('gradient penalty', self.gp, on_epoch=True, on_step=False, prog_bar=False)
+        self.log('slice wasserstein distance', self.sliced_wasserstein_distance, on_epoch=True, on_step=False, prog_bar=True)
+        self.log('generator alpha', self.generator_alpha, on_epoch=True,on_step=False, prog_bar=False)
+        self.log('critic alpha', self.critic_alpha, on_epoch=True,on_step=False, prog_bar=False)
 
 
     def configure_optimizers(self):

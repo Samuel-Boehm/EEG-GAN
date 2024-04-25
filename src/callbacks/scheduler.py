@@ -7,6 +7,13 @@ from lightning.pytorch.callbacks import Callback
 from lightning.pytorch import Trainer
 import numpy as np
 
+from src.models import GAN
+
+from src.utils import RankedLogger 
+
+log = RankedLogger(__name__, rank_zero_only=True)
+
+
 class Scheduler(Callback):
 
     def __init__(self, n_fading_epochs:int, epochs_per_stage, n_stages:int, **kwargs):
@@ -30,8 +37,8 @@ class Scheduler(Callback):
             for i in range(n_stages):
                 self.progression_epochs.append(epochs_per_stage*i)
         
-        elif isinstance(epochs_per_stage, list): 
-            # try casting to list
+        else:
+            # try to convert to list
             try:
                 epochs_per_stage = list(epochs_per_stage)
             except:
@@ -46,20 +53,22 @@ class Scheduler(Callback):
                 """)
             else:
                 self.progression_epochs = np.cumsum(epochs_per_stage)
-                # self.progression_epochs = np.insert(self.progression_epochs, 0, 0)[:-1]
                 # We need to add a 0 to the beginning of the list, in order to trigger the 
                 # 'set_stage' method at the beginning of the training. 
 
-    def on_train_start(self, trainer: Trainer, model):
+    def on_train_start(self, trainer: Trainer, model:GAN):
         '''
         Set the current stage to 1 at the beginning of the training.
         '''
         model.current_stage = 1
         trainer.datamodule.set_stage(model.current_stage)
+        model.generator.set_stage(model.current_stage)
+        model.critic.set_stage(model.current_stage)
+        model.sp_critic.set_stage(model.current_stage)
         
-    def on_train_epoch_start(self, trainer: Trainer, model):
+    def on_train_epoch_end(self, trainer: Trainer, model:GAN):
         '''
-        Each epoch start, check and inizialize the next stage if necessary.
+        Each epoch end, check and inizialize the next stage if necessary.
         '''
         
         # increase alpha after each epoch
@@ -67,11 +76,9 @@ class Scheduler(Callback):
         model.critic.alpha += 1/self.n_fading_epochs
         
         if trainer.current_epoch in self.progression_epochs:
+            model.current_stage += 1
+            log.info(f"Epoch {trainer.current_epoch} reached - transitioning from stage {model.current_stage -1} to stage {model.current_stage}")
             trainer.datamodule.set_stage(model.current_stage)
             model.generator.set_stage(model.current_stage)
             model.critic.set_stage(model.current_stage)
             model.sp_critic.set_stage(model.current_stage)
-
-            # increase stage
-            model.current_stage += 1 
-

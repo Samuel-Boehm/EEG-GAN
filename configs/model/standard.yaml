@@ -16,7 +16,7 @@ generator:
   embedding_dim: 100
 
 critic:
-  target_: src.models.components.Critic
+  _target_: src.models.components.Critic
   <<: *params
 
 spectral_critic:
@@ -24,6 +24,7 @@ spectral_critic:
   <<: *params
 
 gan:
+  _target_: src.models.GAN
   n_epochs_critic: 5
   alpha: 1
   beta: 0.2

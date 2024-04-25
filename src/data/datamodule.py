@@ -13,10 +13,11 @@ import numpy as np
 
 from pathlib import Path
 
-from braindecode.datasets.base import BaseConcatDataset
-from braindecode.preprocessing import preprocess, Preprocessor
+import yaml
 
-from scipy.signal import resample as scipy_resample
+from braindecode.datasets.base import BaseConcatDataset
+from braindecode.datasets import create_from_X_y
+from braindecode.preprocessing import preprocess, Preprocessor
 
 def change_type(X: np.ndarray, out_type: str) -> np.ndarray:
     # MNE expects the data to be of type float64. This helper function changes the type of the input data to float64.
@@ -63,40 +64,67 @@ class ProgressiveGrowingDataset(LightningDataModule):
     '''
 
     def __init__(self, dataset_name:str, batch_size:int, n_stages:int, **kwargs) -> None:
+
+        self.debug = False
+        if dataset_name == 'debug':
+            print('Dataloader entering debug mode, only using dummy data.')
+            self.debug = True
+            
+            path = Path.cwd() / 'configs' / 'data' / 'debug.yaml'
+            
+            if not path.exists():
+                raise FileNotFoundError(f'''Could not find the file {path}. The dataloader is in debug mode and requires a
+                                        debug.yaml file in the configs/data directory to generate dummy data.''')
+
+            with open(path, 'r') as file:
+                self.data_dict = yaml.safe_load(file)
+
         self.data_dir = Path.cwd() / 'datasets' / dataset_name
         self.batch_size = batch_size
         self.n_stages = n_stages
-        self.set_stage(1)
         super().__init__()
 
     def setup(self, stage:str) -> None:
         self.set_stage(1)
         
     def train_dataloader(self) -> DataLoader:
-        return ThrowAwayIndexLoader(self.data, batch_size=self.batch_size, shuffle=True)
+        dl = ThrowAwayIndexLoader(self.data, batch_size=self.batch_size, shuffle=True)
+        return dl
      
     def test_dataloader(self):
-        return super().test_dataloader()
+        dl = ThrowAwayIndexLoader(self.data, batch_size=self.batch_size, shuffle=True)
+        return dl
     
     def set_stage(self, stage: int):
-        stage = self.n_stages - stage
-        ds_list = []
-        for ds in Path(self.data_dir).rglob('S*.pt'):
-            ds_list.append(torch.load(ds))  
-        self.data = BaseConcatDataset(ds_list)
+        stage = self.n_stages - stage # override external with internal stage vatiable 
+        if not self.debug:
+            ds_list = []
+            for ds in Path(self.data_dir).rglob('S*.pt'):
+                ds_list.append(torch.load(ds))  
+            self.data = BaseConcatDataset(ds_list)
+            
+            base_sfreq = self.data.description['fs'][0]
+            current_sfreq = int(base_sfreq // 2**stage)
+            
+            # If the data is already at the correct frequency, we don't need to resample it.
+            if current_sfreq == base_sfreq:
+                return
+            
+            preprocessors = [Preprocessor(change_type, out_type='float64')]
+            preprocessors.append(Preprocessor('resample', sfreq=current_sfreq, npad=0))
+            #preprocessors = [Preprocessor(scipy_resample, num=n_samples_curent_stage, axis=-1)]
+            preprocessors.append(Preprocessor(change_type, out_type='float32'))
+            self.data = preprocess(self.data, preprocessors, n_jobs=-1)
 
-        base_sfreq = self.data.description['fs'][0]
-        current_sfreq = int(base_sfreq // 2**stage)
-        time_in_seconds = self.data.datasets[0][0][0].shape[-1] / base_sfreq
-        n_samples_curent_stage = int(current_sfreq * time_in_seconds)
+        else:
+            time_in_seconds = self.data_dict['length_in_seconds']
+            sfreq = self.data_dict['sfreq']
+            n_samples_curent_stage = int(time_in_seconds * (sfreq // 2**stage))
+            n_channels = len(self.data_dict['channels'])
+            n_classes = len(self.data_dict['classes'])
+            X = np.random.randn(4*self.batch_size, n_channels, n_samples_curent_stage)
+            y = np.random.randint(0, n_classes, 4*self.batch_size)
 
-        # If the data is already at the correct frequency, we don't need to resample it.
-        if current_sfreq == base_sfreq:
-            return
-        
-        preprocessors = [Preprocessor(change_type, out_type='float64')]
-        preprocessors.append(Preprocessor('resample', sfreq=current_sfreq, npad=0))
-        #preprocessors = [Preprocessor(scipy_resample, num=n_samples_curent_stage, axis=-1)]
-        preprocessors.append(Preprocessor(change_type, out_type='float32'))
-        self.data = preprocess(self.data, preprocessors, n_jobs=-1)
-
+            windows_dataset = create_from_X_y(X, y, drop_last_window=False, sfreq=sfreq, ch_names=self.data_dict['channels'])
+            self.data = BaseConcatDataset([windows_dataset])
+            # TODO: scheduler needs to be called at end of epoch
