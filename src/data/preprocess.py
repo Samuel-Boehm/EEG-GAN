@@ -85,7 +85,7 @@ def preprocess_moabb(cfg: DictConfig) -> None:
         preprocessors.append(Preprocessor(lambda data: multiply(data, factor)))
         preprocessors.append(Preprocessor(lambda data: clip(data, a_min=-800., a_max=800.), channel_wise=True))
         if hasattr(cfg, 'sfreq'):
-            preprocessors.append(Preprocessor('resample', sfreq=cfg.sfreq))
+            preprocessors.append(Preprocessor('resample', sfreq=cfg.sfreq, npad=0))
         preprocessors.append(Preprocessor(exponential_moving_standardize, factor_new=factor_new, init_block_size=init_block_size))
         
         # Transform the data

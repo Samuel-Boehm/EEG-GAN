@@ -1,11 +1,7 @@
 # Project: EEG-GAN
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
 from lightning import LightningDataModule
-
 import torch
 from torch.utils.data import DataLoader
 
@@ -112,9 +108,9 @@ class ProgressiveGrowingDataset(LightningDataModule):
             
             preprocessors = [Preprocessor(change_type, out_type='float64')]
             preprocessors.append(Preprocessor('resample', sfreq=current_sfreq, npad=0))
-            #preprocessors = [Preprocessor(scipy_resample, num=n_samples_curent_stage, axis=-1)]
             preprocessors.append(Preprocessor(change_type, out_type='float32'))
             self.data = preprocess(self.data, preprocessors, n_jobs=-1)
+            return
 
         else:
             time_in_seconds = self.data_dict['length_in_seconds']
@@ -127,4 +123,3 @@ class ProgressiveGrowingDataset(LightningDataModule):
 
             windows_dataset = create_from_X_y(X, y, drop_last_window=False, sfreq=sfreq, ch_names=self.data_dict['channels'])
             self.data = BaseConcatDataset([windows_dataset])
-            # TODO: scheduler needs to be called at end of epoch

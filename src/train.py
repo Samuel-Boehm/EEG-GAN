@@ -45,10 +45,10 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info("Instantiating loggers...")
     logger: List[Logger] = instantiate_loggers(cfg)
 
-    cfg.trainer['max_epochs'] = int(np.sum(cfg.callbacks.scheduler.epochs_per_stage))
+    max_epochs = int(np.sum(cfg.callbacks.scheduler.epochs_per_stage))
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(cfg.get("trainer"), callbacks=callbacks, logger=logger,
-                                              reload_dataloaders_every_n_epochs=1)
+                                              reload_dataloaders_every_n_epochs=1, max_epochs=max_epochs)
 
     object_dict = {
         "cfg": cfg,

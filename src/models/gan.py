@@ -21,6 +21,7 @@ from src.metrics import SWD
 from src.models.components import Critic, Generator, SpectralCritic
 
 
+
 class GAN(LightningModule):
     """
     Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
@@ -116,9 +117,10 @@ class GAN(LightningModule):
         2: In each epoch train critic
         3: In each n_critic epochs train generator
 
-        """
-        
+        """        
         X_real, y_real = batch_real
+
+        print(torch.cuda.memory_allocated() / torch.cuda.max_memory_allocated())
 
         optim_g, optim_c, optim_spc = self.optimizers()
         
@@ -130,24 +132,21 @@ class GAN(LightningModule):
         # 2: Train critic:
         ## optimize time domain critic
         c_loss, gp = self.train_critic(X_real, y_real, X_fake, y_fake, self.critic, optim_c)
-
         ## optional: optimize frequency domain critic
         if self.sp_critic:
             spc_loss, _ = self.train_critic(X_real, y_real, X_fake, y_fake, self.sp_critic, optim_spc)
-
+        
         # 3: Train generator:
         # If n_critic =! 1 we train the generator only every n_th step
         if batch_idx % self.n_epochs_critics == 0:
             ## optimize generator   
             fx_fake = self.critic(X_fake, y_fake)
-
             if self.sp_critic:
                 fx_spc = self.sp_critic(X_fake, y_fake)
                 loss_fd = softplus(-fx_spc).mean()
             else:
                 loss_fd = 0
                 self.beta
-
             loss_td = softplus(-fx_fake).mean()
             
 
@@ -168,15 +167,9 @@ class GAN(LightningModule):
         self.generator_alpha(self.generator.alpha)
         self.critic_alpha(self.critic.alpha)
 
-        self.log('generator loss', self.generator_loss, on_epoch=True, on_step=False, prog_bar=True)
-        self.log('critic loss', self.critic_loss, on_epoch=True, on_step=False, prog_bar=True)
-        if self.sp_critic:
-            self.log('spectral critic loss', self.sp_critic_loss, on_epoch=True, on_step=False, prog_bar=True)
-        self.log('gradient penalty', self.gp, on_epoch=True, on_step=False, prog_bar=False)
-        self.log('slice wasserstein distance', self.sliced_wasserstein_distance, on_epoch=True, on_step=False, prog_bar=True)
-        self.log('generator alpha', self.generator_alpha, on_epoch=True,on_step=False, prog_bar=False)
-        self.log('critic alpha', self.critic_alpha, on_epoch=True,on_step=False, prog_bar=False)
+        self.log_metrics()
 
+        
 
     def configure_optimizers(self):
         lr_generator = self.optimizer_dict.lr_generator
@@ -224,6 +217,9 @@ class GAN(LightningModule):
 			Gradient penalties
 		"""
 
+        real = real
+        fake = fake
+
         alpha = torch.rand(real.size(0),*((len(real.size())-1)*[1]), device=self.device)
         alpha = alpha.expand(real.size())
 
@@ -267,7 +263,7 @@ class GAN(LightningModule):
         """
 
         fx_real = critic(X_real, y_real)
-        fx_fake = critic(X_fake.detach(), y_fake.detach())
+        fx_fake = critic(X_fake, y_fake) # (X_fake.detach(), y_fake.detach())
        
 
         distance = torch.mean(fx_fake) - torch.mean(fx_real)
@@ -288,6 +284,19 @@ class GAN(LightningModule):
         return c_loss, gp
     
     def on_train_start(self)-> None:
+        self.reset_metrics()
+    
+    def log_metrics(self) -> None:
+        self.log('generator loss', self.generator_loss, prog_bar=False, on_step=False, on_epoch=True)
+        self.log('critic loss', self.critic_loss, prog_bar=False, on_step=False, on_epoch=True)
+        if self.sp_critic:
+            self.log('spectral critic loss', self.sp_critic_loss, prog_bar=False, on_step=False, on_epoch=True)
+        self.log('gradient penalty', self.gp, prog_bar=False,  on_step=False, on_epoch=True)
+        self.log('slice wasserstein distance', self.sliced_wasserstein_distance, prog_bar=True, on_step=False, on_epoch=True)
+        self.log('generator alpha', self.generator_alpha, prog_bar=False, on_step=False, on_epoch=True)
+        self.log('critic alpha', self.critic_alpha, prog_bar=False, on_step=False, on_epoch=True)
+
+    def reset_metrics(self) -> None:
         self.generator_loss.reset()
         self.critic_loss.reset()
         self.sp_critic_loss.reset()
@@ -295,5 +304,6 @@ class GAN(LightningModule):
         self.sliced_wasserstein_distance.reset()
         self.generator_alpha.reset()
         self.critic_alpha.reset()
+
 
     
