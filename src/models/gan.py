@@ -117,10 +117,8 @@ class GAN(LightningModule):
         2: In each epoch train critic
         3: In each n_critic epochs train generator
 
-        """        
+        """
         X_real, y_real = batch_real
-
-        print(torch.cuda.memory_allocated() / torch.cuda.max_memory_allocated())
 
         optim_g, optim_c, optim_spc = self.optimizers()
         
@@ -139,8 +137,9 @@ class GAN(LightningModule):
         # 3: Train generator:
         # If n_critic =! 1 we train the generator only every n_th step
         if batch_idx % self.n_epochs_critics == 0:
-            ## optimize generator   
-            fx_fake = self.critic(X_fake, y_fake)
+            ## optimize generator
+            with torch.no_grad():
+                fx_fake = self.critic(X_fake, y_fake)
             if self.sp_critic:
                 fx_spc = self.sp_critic(X_fake, y_fake)
                 loss_fd = softplus(-fx_spc).mean()
@@ -168,8 +167,6 @@ class GAN(LightningModule):
         self.critic_alpha(self.critic.alpha)
 
         self.log_metrics()
-
-        
 
     def configure_optimizers(self):
         lr_generator = self.optimizer_dict.lr_generator
@@ -237,6 +234,9 @@ class GAN(LightningModule):
 
         gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
 
+        # just in case:
+        del gradients, interpolates, output_interpolates, alpha, ones
+
         return gradient_penalty
     
     def train_critic(self, X_real:Tensor, y_real:Tensor,
@@ -263,9 +263,8 @@ class GAN(LightningModule):
         """
 
         fx_real = critic(X_real, y_real)
-        fx_fake = critic(X_fake, y_fake) # (X_fake.detach(), y_fake.detach())
+        fx_fake = critic(X_fake, y_fake)
        
-
         distance = torch.mean(fx_fake) - torch.mean(fx_real)
 
         # Relaxed gradient penalty following Hartmann et al. (2018)
