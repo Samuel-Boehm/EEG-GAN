@@ -3,3 +3,4 @@ __pycache__/
 outputs/
 datasets/
 trained_models/
+train.sh
