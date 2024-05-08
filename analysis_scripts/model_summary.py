@@ -4,7 +4,7 @@
 
 from pandas.core.frame import DataFrame
 import wandb
-from gan.model.gan import GAN
+from legacy_code.model.gan import GAN
 import numpy as np
 
 path = "EEGGAN/hgong7rh" #eeggan/

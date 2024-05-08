@@ -2,13 +2,13 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from gan.model.gan import GAN
+from legacy_code.model.gan import GAN
 import os 
 import torch
-from gan.paths import results_path, data_path
-from gan.data.dataset import EEGGAN_Dataset
-from gan.data.batch import batch_data
-from gan.data.utils import downsample_step
+from legacy_code.paths import results_path, data_path
+from legacy_code.data.dataset import EEGGAN_Dataset
+from legacy_code.data.batch import batch_data
+from legacy_code.data.utils import downsample_step
 import numpy as np
 
 

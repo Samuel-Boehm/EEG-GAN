@@ -2,15 +2,15 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from gan.visualization.stft_plots import calc_bin_stats_for_mapping, blc, compute_stft
+from legacy_code.visualization.stft_plots import calc_bin_stats_for_mapping, blc, compute_stft
 from scipy.stats import kstest
 from statsmodels.stats.multitest import fdrcorrection
-from gan.visualization.spectrum_plots import plot_spectrum
-from gan.data.batch import batch_data
-from gan.paths import data_path
+from legacy_code.visualization.spectrum_plots import plot_spectrum
+from legacy_code.data.batch import batch_data
+from legacy_code.paths import data_path
 import numpy as np
-from gan.utils import generate_data
-from gan.data.utils import downsample_step
+from legacy_code.utils import generate_data
+from legacy_code.data.utils import downsample_step
 import matplotlib.pyplot as plt
 
 import torch

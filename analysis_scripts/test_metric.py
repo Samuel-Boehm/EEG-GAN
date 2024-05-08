@@ -5,12 +5,12 @@
 # This file is used to test  metrics.
 
 from braindecode.models.deep4 import Deep4Net
-from gan.classifier.IntermediateOutput import IntermediateOutputWrapper
-from gan.data.batch import batch_data
+from legacy_code.metrics.IntermediateOutput import IntermediateOutputWrapper
+from legacy_code.data.batch import batch_data
 
-from gan.metrics.correlation import calculate_correlation_for_condition
-from gan.visualization.time_domain_plot import plot_time_domain
-from gan.paths import data_path
+from legacy_code.metrics.correlation import calculate_correlation_for_condition
+from legacy_code.visualization.time_domain_plot import plot_time_domain
+from legacy_code.paths import data_path
 
 import torch
 

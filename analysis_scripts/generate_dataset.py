@@ -2,8 +2,8 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from gan.utils import generate_data
-from gan.paths import data_path
+from legacy_code.utils import generate_data
+from legacy_code.paths import data_path
 import os
 
 if __name__ == "__main__":

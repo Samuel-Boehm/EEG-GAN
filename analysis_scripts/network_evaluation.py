@@ -2,14 +2,14 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from gan.classifier.IntermediateOutput import IntermediateOutputWrapper
-from gan.data.batch import batch_data
-from gan.metrics.correlation import calculate_correlation_for_condition
-from gan.visualization.time_domain_plot import plot_time_domain
-from gan.visualization.stft_plots import plot_bin_stats
-from gan.visualization.spectrum_plots import plot_spectrum
-from gan.paths import data_path, results_path
-from gan.utils import generate_data
+from legacy_code.metrics.IntermediateOutput import IntermediateOutputWrapper
+from legacy_code.data.batch import batch_data
+from legacy_code.metrics.correlation import calculate_correlation_for_condition
+from legacy_code.visualization.time_domain_plot import plot_time_domain
+from legacy_code.visualization.stft_plots import plot_bin_stats
+from legacy_code.visualization.spectrum_plots import plot_spectrum
+from legacy_code.paths import data_path, results_path
+from legacy_code.utils import generate_data
 
 from braindecode.models.deep4 import Deep4Net
 import argparse
@@ -19,7 +19,7 @@ import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 import torch
 import os
-from gan.visualization.create_pdf_page import add_pdf_page
+from legacy_code.visualization.create_pdf_page import add_pdf_page
 
 parser = argparse.ArgumentParser()
 

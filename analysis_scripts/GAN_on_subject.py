@@ -2,23 +2,23 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from gan.model.gan import GAN
+from legacy_code.model.gan import GAN
 import os 
 import torch
-from gan.paths import results_path, data_path
-from gan.data.datamodule import HighGammaModule as HDG
-from gan.handler.progression import Scheduler
-from gan.handler.logging import LoggingHandler
-from gan.paths import data_path, results_path
+from legacy_code.paths import results_path, data_path
+from legacy_code.data.datamodule import HighGammaModule as HDG
+from legacy_code.handler.progression import Scheduler
+from legacy_code.handler.logging import LoggingHandler
+from legacy_code.paths import data_path, results_path
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning import Trainer
 import numpy as np
 
 # Import metrics:
-from gan.metrics.SWD import SWD
-from gan.metrics.spectrum import Spectrum
-from gan.metrics.bin_stats import BinStats
+from legacy_code.metrics.SWD import SWD
+from legacy_code.metrics.spectrum import Spectrum
+from legacy_code.metrics.bin_stats import BinStats
 
 
 path = "EEGGAN/twlqedvh"

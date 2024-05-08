@@ -6,9 +6,9 @@ import torch
 import os
 import numpy as np
 from braindecode.models.deep4 import Deep4Net
-from gan.paths import data_path
+from legacy_code.paths import data_path
 from torch import nn
-from gan.data.utils import downsample_step
+from legacy_code.data.utils import downsample_step
 
 dataset_path = os.path.join(data_path, 'clinical')
 dataset = torch.load(dataset_path)

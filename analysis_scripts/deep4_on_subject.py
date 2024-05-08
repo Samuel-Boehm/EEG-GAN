@@ -7,7 +7,7 @@ sys.path.append('/home/boehms/eeg-gan/EEG-GAN/EEG-GAN')
 
 from braindecode.models.deep4 import Deep4Net
 from braindecode import EEGClassifier
-from gan.paths import data_path
+from legacy_code.paths import data_path
 from skorch.callbacks import LRScheduler
 from skorch.helper import predefined_split
 from skorch.dataset import Dataset as skDataset
