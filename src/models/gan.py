@@ -303,6 +303,10 @@ class GAN(LightningModule):
         self.sliced_wasserstein_distance.reset()
         self.generator_alpha.reset()
         self.critic_alpha.reset()
+    
+    def on_fit_end(self) -> None: 
+        # Do a final evaluation
+        return None
 
 
     
