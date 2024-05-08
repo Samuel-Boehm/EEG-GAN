@@ -2,10 +2,10 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
-from gan.visualization.stft_plots import plot_bin_stats
-from gan.metrics.metric import Metric
+from legacy_code.visualization.stft_plots import plot_bin_stats
+from legacy_code.metrics.metric import Metric
 from lightning.pytorch import Trainer, LightningModule
-from gan.data.batch import batch_data
+from legacy_code.data.batch import batch_data
 from wandb import Image
 
 class BinStats(Metric):

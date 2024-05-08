@@ -3,7 +3,7 @@
 # E-Mail: <samuel-boehm@web.de>
 
 import numpy as np
-from gan.visualization.utils import labeled_tube_plot
+from legacy_code.visualization.utils import labeled_tube_plot
 
 def plot_spectrum(real: np.ndarray, fake: np.ndarray = None, fs = 256, name = ''):
     '''

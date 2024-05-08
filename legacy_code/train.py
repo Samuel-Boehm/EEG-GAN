@@ -6,10 +6,10 @@ from lightning import Trainer
 import numpy as np
 from pathlib import Path
 
-from gan.model.gan import GAN
-from gan.data.datamodule import ProgressiveGrowingDataset
-from gan.handler.progression import Scheduler
-from gan.handler.logging import LoggingHandler
+from legacy_code.model.gan import GAN
+from legacy_code.data.datamodule import ProgressiveGrowingDataset
+from legacy_code.handler.progression import Scheduler
+from legacy_code.handler.logging import LoggingHandler
 
 from lightning.pytorch.loggers import WandbLogger
 
@@ -18,8 +18,8 @@ from omegaconf import DictConfig
 
 # Import metrics:
 from metrics.SWD import SWD
-from gan.metrics.spectrum import Spectrum
-from gan.metrics.bin_stats import BinStats
+from legacy_code.metrics.spectrum import Spectrum
+from legacy_code.metrics.bin_stats import BinStats
 
 
 channels = ['Fp1','Fp2','F7','F3','Fz','F4','F8',

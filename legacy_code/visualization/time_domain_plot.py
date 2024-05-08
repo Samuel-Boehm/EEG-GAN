@@ -4,7 +4,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from gan.data.batch import batch_data
+from legacy_code.data.batch import batch_data
 
 
 def plot_time_domain(batch:batch_data, channel_names:list, fs:float, path:str):

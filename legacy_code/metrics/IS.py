@@ -6,7 +6,7 @@ from typing import Tuple
 import numpy as np
 import torch
 from torch import Tensor
-from gan.metrics.metric import Metric
+from legacy_code.metrics.metric import Metric
 
 
 

@@ -1,7 +1,8 @@
 wandb:
   _target_: lightning.pytorch.loggers.wandb.WandbLogger
-  name: 'placeholder' 
+  name: ${now:%Y-%m-%d-%H-%M-%S}
   offline: False
   id: null # pass correct id to resume experiment!
   project: "EEGGAN"
   log_model: False # upload lightning ckpts
+  save_dir: ${hydra:run.dir}

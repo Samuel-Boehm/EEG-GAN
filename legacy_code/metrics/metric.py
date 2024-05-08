@@ -3,7 +3,7 @@
 # E-Mail: <samuel-boehm@web.de>
 
 from lightning.pytorch import Trainer, LightningModule
-from gan.data.batch import batch_data
+from legacy_code.data.batch import batch_data
 from typing import Any
 
 class Metric:

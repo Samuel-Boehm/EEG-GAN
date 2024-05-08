@@ -1,14 +1,14 @@
-defaults:
-  - _self_
-  - data: clinical
-  - model: standard
-  - callbacks: default
-  - trainer: SLURM
-  - logger: wandb
-
 hydra:
   run:
     dir: 'trained_models/${now:%Y-%m-%d-%H-%M-%S}'
   output_subdir: '.'
+
+defaults:
+  - _self_
+  - data: debug
+  - model: standard
+  - callbacks: default
+  - trainer: SLURM
+  - logger: wandb
 
 train: True

@@ -4,11 +4,11 @@
 
 import torch
 
-from gan.model.gan import GAN
+from legacy_code.model.gan import GAN
 import os 
 import torch
-from gan.paths import results_path, data_path
-from gan.data.dataset import EegGanDataset
+from legacy_code.paths import results_path, data_path
+from legacy_code.data.dataset import EegGanDataset
 
 
 

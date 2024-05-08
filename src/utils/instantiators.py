@@ -56,18 +56,20 @@ def instantiate_callbacks(callbacks_cfg: DictConfig) -> List[Callback]:
     if not isinstance(callbacks_cfg, DictConfig):
         raise TypeError("Callbacks config must be a DictConfig!")
 
-    for _, cb_conf in callbacks_cfg.items():
-        if isinstance(cb_conf, DictConfig) and "_target_" in cb_conf:
-            log.info(f"Instantiating callback <{cb_conf._target_}>")
-            callbacks.append(hydra.utils.instantiate(cb_conf))
+    for _, conf in callbacks_cfg.items():
+        if isinstance(conf, DictConfig) and "_target_" in conf:
+            log.info(f"Instantiating callback <{conf._target_}>")
+            callbacks.append(hydra.utils.instantiate(conf))
 
     return callbacks
 
 
-def instantiate_loggers(logger_cfg: DictConfig, save_dir:str) -> List[Logger]:
-    logger: List[Logger] = []
-    logger_cfg['name'] = save_dir
-    if isinstance(logger_cfg, DictConfig) and "_target_" in logger_cfg:
-        print(f"Instantiating logger <{logger_cfg._target_}>")
-        logger.append(hydra.utils.instantiate(logger_cfg, save_dir=save_dir))
+def instantiate_loggers(logger_cfg: DictConfig) -> Logger:
+
+    for _, conf in logger_cfg.items():
+        if isinstance(conf, DictConfig) and "_target_" in conf:
+            print(f"Instantiating logger <{conf._target_}>")
+            logger = hydra.utils.instantiate(conf)
+        else:
+            raise TypeError(f"Logger config must be a DictConfig, got {type(conf)}!")
     return logger

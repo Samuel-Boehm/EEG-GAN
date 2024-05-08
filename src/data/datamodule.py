@@ -87,9 +87,8 @@ class ProgressiveGrowingDataset(LightningDataModule):
         dl = ThrowAwayIndexLoader(self.data, batch_size=self.batch_size, shuffle=True)
         return dl
      
-    def test_dataloader(self):
-        dl = ThrowAwayIndexLoader(self.data, batch_size=self.batch_size, shuffle=True)
-        return dl
+    def test_dataloader(self) -> None:
+        return None
     
     def set_stage(self, stage: int):
         stage = self.n_stages - stage # override external with internal stage vatiable 

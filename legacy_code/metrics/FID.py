@@ -14,9 +14,9 @@ from torch import Tensor
 from torch.nn.modules.module import Module
 from torch.utils.data import DataLoader
 
-from gan.data.batch import batch_data
-from gan.metrics.metric import Metric
-from gan.utils import to_device
+from legacy_code.data.batch import batch_data
+from legacy_code.metrics.metric import Metric
+from legacy_code.utils import to_device
 
 
 def calculate_activation_statistics(act: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:

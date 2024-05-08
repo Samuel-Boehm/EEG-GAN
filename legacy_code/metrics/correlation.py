@@ -3,7 +3,7 @@
 # E-Mail: <samuel-boehm@web.de>
 
 import numpy as np
-from gan.data.batch import batch_data
+from legacy_code.data.batch import batch_data
 import pandas as pd
 
 def calculate_correlation_for_condition(batch:batch_data, mapping:dict) -> pd.DataFrame:

@@ -3,11 +3,11 @@
 # E-Mail: <samuel-boehm@web.de>
 
 from typing import Any
-from gan.metrics.metric import Metric
+from legacy_code.metrics.metric import Metric
 from lightning.pytorch import Trainer, LightningModule
-from gan.data.batch import batch_data
+from legacy_code.data.batch import batch_data
 from wandb import Image
-from gan.visualization.spectrum_plots import plot_spectrum
+from legacy_code.visualization.spectrum_plots import plot_spectrum
 
 class Spectrum(Metric):
 
