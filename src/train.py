@@ -5,6 +5,7 @@ import lightning as L
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
+from hydra.core.hydra_config import HydraConfig
 import numpy as np 
 
 from src.utils import (
@@ -31,6 +32,9 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
+
+    # Return saving directory
+    save_dir = '/'.join(HydraConfig.get()['run']['dir'].split('/')[-2:])
     
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.get("data"), n_stages=cfg.callbacks.scheduler.n_stages)
@@ -43,9 +47,10 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
     log.info("Instantiating loggers...")
-    logger: List[Logger] = instantiate_loggers(cfg)
+    logger: List[Logger] = instantiate_loggers(cfg.get("logger"), save_dir=save_dir)
 
     max_epochs = int(np.sum(cfg.callbacks.scheduler.epochs_per_stage))
+    
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(cfg.get("trainer"), callbacks=callbacks, logger=logger,
                                               reload_dataloaders_every_n_epochs=1, max_epochs=max_epochs)

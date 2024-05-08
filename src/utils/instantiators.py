@@ -64,19 +64,10 @@ def instantiate_callbacks(callbacks_cfg: DictConfig) -> List[Callback]:
     return callbacks
 
 
-def instantiate_loggers(cfg: DictConfig) -> List[Logger]:
-
+def instantiate_loggers(logger_cfg: DictConfig, save_dir:str) -> List[Logger]:
     logger: List[Logger] = []
-
-    if not hasattr(cfg, 'logger'):
-        print("No logger configuration found!")
-        return
-    
-    save_dir = '/'.join(HydraConfig.get()['run']['dir'].split('/')[-2:])
-    for _, cb_conf in cfg.logger.items():
-        cb_conf['name'] = save_dir
-        if isinstance(cb_conf, DictConfig) and "_target_" in cb_conf:
-            print(f"Instantiating logger <{cb_conf._target_}>")
-            logger.append(hydra.utils.instantiate(cb_conf, save_dir=save_dir))
-
+    logger_cfg['name'] = save_dir
+    if isinstance(logger_cfg, DictConfig) and "_target_" in logger_cfg:
+        print(f"Instantiating logger <{logger_cfg._target_}>")
+        logger.append(hydra.utils.instantiate(logger_cfg, save_dir=save_dir))
     return logger

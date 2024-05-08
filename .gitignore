@@ -4,3 +4,4 @@ outputs/
 datasets/
 trained_models/
 train.sh
+/logs

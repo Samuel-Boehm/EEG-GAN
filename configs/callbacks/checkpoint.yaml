@@ -1,0 +1,3 @@
+checkpont:
+ _target_: lightning.pytorch.callbacks.ModelCheckpoint
+
