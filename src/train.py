@@ -116,9 +116,7 @@ def main(cfg: DictConfig) -> Optional[float]:
     model = object_dict["model"]
 
     fig_time_domain, fig_frequency_domain = evaluate_model(model, dataloader, cfg)
-
-    logger = object_dict["logger"]
-    
+        
     wandb.log({"time_domain": wandb.Image(fig_time_domain), "frequency_domain": wandb.Image(fig_frequency_domain)})
    
     # safely retrieve metric value for hydra-based hyperparameter optimization
