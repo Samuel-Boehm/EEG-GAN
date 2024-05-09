@@ -5,8 +5,11 @@ import lightning as L
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
-from hydra.core.hydra_config import HydraConfig
 import numpy as np 
+
+import wandb
+
+from src.utils.evaluation_utils import evaluate_model
 
 from src.utils import (
     RankedLogger,
@@ -67,7 +70,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     if cfg.get("train"):
         log.info("Starting training!")
-        trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
+        trainer.fit(model=model, datamodule=datamodule)
 
     train_metrics = trainer.callback_metrics
 
@@ -103,8 +106,21 @@ def main(cfg: DictConfig) -> Optional[float]:
     extras(cfg)
 
     # train the model
-    metric_dict, _ = train(cfg)
+    metric_dict, object_dict = train(cfg)
 
+    # evaluate the model
+    dm = object_dict["datamodule"]
+    dm.set_stage(cfg.callbacks.scheduler.n_stages)
+    dataloader = dm.train_dataloader()
+    
+    model = object_dict["model"]
+
+    fig_time_domain, fig_frequency_domain = evaluate_model(model, dataloader, cfg)
+
+    logger = object_dict["logger"]
+    
+    wandb.log({"time_domain": wandb.Image(fig_time_domain), "frequency_domain": wandb.Image(fig_frequency_domain)})
+   
     # safely retrieve metric value for hydra-based hyperparameter optimization
     metric_value = get_metric_value(
         metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")
@@ -116,3 +132,8 @@ def main(cfg: DictConfig) -> Optional[float]:
 
 if __name__ == "__main__":
     main()
+
+    
+    # dataloader = trainer.train_dataloader
+    # model = trainer.model
+    # Looger

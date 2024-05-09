@@ -5,6 +5,8 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from omegaconf import DictConfig
 
 from src.utils import pylogger, rich_utils
+import numpy as np
+from torch import Tensor
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
@@ -117,3 +119,20 @@ def get_metric_value(metric_dict: Dict[str, Any], metric_name: Optional[str]) ->
     log.info(f"Retrieved metric value! <{metric_name}={metric_value}>")
 
     return metric_value
+
+def to_numpy(x: Tensor) -> np.ndarray:
+    """
+    Converts a tensor, list or tuple of tensors to numpy.
+    """
+    # Detach if necessary
+    if hasattr(x, "detach"):
+        x = x.detach()
+
+    if isinstance(x, (list, tuple)):
+        return [to_numpy(i) for i in x]
+    elif isinstance(x, dict):
+        return {k: to_numpy(v) for k, v in x.items()}
+    elif hasattr(x, "cpu"):
+        return x.cpu().numpy()
+    else:
+        return x

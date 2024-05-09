@@ -100,6 +100,7 @@ class GAN(LightningModule):
         self.gp = MeanMetric()    
         self.generator_alpha = MeanMetric()
         self.critic_alpha = MeanMetric()
+        self.GPU_memory = MeanMetric()
 
         
     def forward(self, z, y):
@@ -165,6 +166,13 @@ class GAN(LightningModule):
         self.sliced_wasserstein_distance.update(X_real, X_fake)
         self.generator_alpha(self.generator.alpha)
         self.critic_alpha(self.critic.alpha)
+
+        # Log GPU memory usage
+        current_memory = torch.cuda.memory_allocated()
+        max_memory = torch.cuda.max_memory_allocated()
+        memory_usage_percentage = (current_memory / max_memory) * 100
+        self.GPU_memory(memory_usage_percentage)
+        #
 
         self.log_metrics()
 
@@ -294,6 +302,7 @@ class GAN(LightningModule):
         self.log('slice wasserstein distance', self.sliced_wasserstein_distance, prog_bar=True, on_step=False, on_epoch=True)
         self.log('generator alpha', self.generator_alpha, prog_bar=False, on_step=False, on_epoch=True)
         self.log('critic alpha', self.critic_alpha, prog_bar=False, on_step=False, on_epoch=True)
+        self.log('GPU memory usage', self.GPU_memory, prog_bar=False, on_step=False, on_epoch=True)
 
     def reset_metrics(self) -> None:
         self.generator_loss.reset()
@@ -304,9 +313,4 @@ class GAN(LightningModule):
         self.generator_alpha.reset()
         self.critic_alpha.reset()
     
-    def on_fit_end(self) -> None: 
-        # Do a final evaluation
-        return None
-
-
-    
+    from omegaconf import OmegaConf

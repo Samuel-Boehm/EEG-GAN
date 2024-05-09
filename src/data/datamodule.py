@@ -5,6 +5,7 @@ from lightning import LightningDataModule
 import torch
 from torch.utils.data import DataLoader
 
+import os
 import numpy as np
 
 from pathlib import Path
@@ -14,6 +15,13 @@ import yaml
 from braindecode.datasets.base import BaseConcatDataset
 from braindecode.datasets import create_from_X_y
 from braindecode.preprocessing import preprocess, Preprocessor
+
+# Mute braindecode and MNE
+import logging
+logging.getLogger('mne').setLevel(logging.ERROR)
+logging.getLogger('braindecode').setLevel(logging.ERROR)
+
+
 
 def change_type(X: np.ndarray, out_type: str) -> np.ndarray:
     # MNE expects the data to be of type float64. This helper function changes the type of the input data to float64.
@@ -84,7 +92,8 @@ class ProgressiveGrowingDataset(LightningDataModule):
         self.set_stage(1)
         
     def train_dataloader(self) -> DataLoader:
-        dl = ThrowAwayIndexLoader(self.data, batch_size=self.batch_size, shuffle=True)
+        dl = ThrowAwayIndexLoader(self.data, batch_size=self.batch_size,
+                                  shuffle=True, num_workers=os.cpu_count()//2)
         return dl
      
     def test_dataloader(self) -> None:
