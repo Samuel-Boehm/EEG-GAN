@@ -95,6 +95,7 @@ class Generator(nn.Module):
                  current_stage:int=1,
                  fading:bool=False,
                  freeze:bool=False,
+                 train_linear:bool=True,
                  **kwargs
                  ) -> None:
         
@@ -111,6 +112,9 @@ class Generator(nn.Module):
 
         # set stage
         self.set_stage(current_stage)
+
+        if not train_linear:
+            self.blocks[0].intermediate_sequence[0].requires_grad_(False)
 
 
     def set_stage(self, cur_stage:int):

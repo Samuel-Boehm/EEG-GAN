@@ -65,11 +65,11 @@ def instantiate_callbacks(callbacks_cfg: DictConfig) -> List[Callback]:
 
 
 def instantiate_loggers(logger_cfg: DictConfig) -> Logger:
-
+    logger = list()
     for _, conf in logger_cfg.items():
         if isinstance(conf, DictConfig) and "_target_" in conf:
             print(f"Instantiating logger <{conf._target_}>")
-            logger = hydra.utils.instantiate(conf)
+            logger.append(hydra.utils.instantiate(conf))
         else:
             raise TypeError(f"Logger config must be a DictConfig, got {type(conf)}!")
     return logger
