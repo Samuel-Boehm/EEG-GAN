@@ -5,3 +5,5 @@ datasets/
 trained_models/
 train.sh
 /logs
+HPO_sweep.sh
+sweep.yaml

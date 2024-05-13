@@ -1,6 +1,6 @@
 scheduler:
   _target_: src.callbacks.scheduler.Scheduler
   n_fading_epochs: 50
-  epochs_per_stage: [2, 2, 2, 2, 2]
+  epochs_per_stage: [100, 100, 100, 100, 100]
   n_stages: 5
   

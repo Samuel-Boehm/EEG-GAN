@@ -5,7 +5,7 @@ hydra:
 
 defaults:
   - _self_
-  - data: debug
+  - data: clinical
   - model: standard
   - callbacks: default
   - trainer: SLURM
