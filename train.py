@@ -116,7 +116,7 @@ def main(cfg: DictConfig) -> Optional[float]:
 
     # evaluate the model
     dm = object_dict["datamodule"]
-    dm.set_stage(cfg.callbacks.scheduler.n_stages)
+    dm.set_stage(cfg.trainer.scheduler.n_stages)
     dataloader = dm.train_dataloader()
     
     model = object_dict["model"]

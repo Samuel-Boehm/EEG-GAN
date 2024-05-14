@@ -93,7 +93,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
         
     def train_dataloader(self) -> DataLoader:
         dl = ThrowAwayIndexLoader(self.data, batch_size=self.batch_size,
-                                  shuffle=True, num_workers=os.cpu_count()//2)
+                                  shuffle=True, num_workers=2)
         return dl
      
     def test_dataloader(self) -> None:
