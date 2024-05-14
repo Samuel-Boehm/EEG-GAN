@@ -9,4 +9,5 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 checkpoint_callback = ModelCheckpoint(
     dirpath="my/path/",
     filename="sample-mnist-{epoch:02d}-{val_loss:.2f}",
+    every_n_epochs=100,
 )

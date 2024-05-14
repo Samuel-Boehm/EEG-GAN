@@ -61,6 +61,11 @@ class SWD(Metric):
         self.add_state("fake", default=[], dist_reduce_fx="cat")
     
     def update(self, real: Tensor, fake: Tensor) -> None:
+        # If real and fake are on the GPU, we need to move them to the CPU
+        if real.device.type == 'cuda':
+            real = real.cpu()
+            fake = fake.cpu()
+
         self.real.append(real)
         self.fake.append(fake)
 

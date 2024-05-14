@@ -98,8 +98,8 @@ class GAN(LightningModule):
         if self.sp_critic:
             self.sp_critic_loss = MeanMetric()
         self.gp = MeanMetric()    
-        self.generator_alpha = MeanMetric()
-        self.critic_alpha = MeanMetric()
+        # self.generator_alpha = MeanMetric()
+        # self.critic_alpha = MeanMetric()
         self.GPU_memory = MeanMetric()
 
         
@@ -159,14 +159,12 @@ class GAN(LightningModule):
             self.generator_loss(g_loss)
 
         # Log
-        self.critic_loss(c_loss)
+        self.critic_loss(c_loss.item())
         if self.sp_critic:
-            self.sp_critic_loss(spc_loss)
-        self.gp(gp)
-        self.sliced_wasserstein_distance.update(X_real, X_fake)
-        self.generator_alpha(self.generator.alpha)
-        self.critic_alpha(self.critic.alpha)
-
+            self.sp_critic_loss(spc_loss.item())
+        self.gp(gp.item())
+        # self.sliced_wasserstein_distance.update(X_real, X_fake)
+        
         # Log GPU memory usage
         current_memory = torch.cuda.memory_allocated()
         max_memory = torch.cuda.max_memory_allocated()
@@ -299,9 +297,7 @@ class GAN(LightningModule):
         if self.sp_critic:
             self.log('spectral critic loss', self.sp_critic_loss, prog_bar=False, on_step=False, on_epoch=True)
         self.log('gradient penalty', self.gp, prog_bar=False,  on_step=False, on_epoch=True)
-        self.log('slice wasserstein distance', self.sliced_wasserstein_distance, prog_bar=True, on_step=False, on_epoch=True)
-        self.log('generator alpha', self.generator_alpha, prog_bar=False, on_step=False, on_epoch=True)
-        self.log('critic alpha', self.critic_alpha, prog_bar=False, on_step=False, on_epoch=True)
+        # self.log('slice wasserstein distance', self.sliced_wasserstein_distance, prog_bar=True, on_step=False, on_epoch=True)
         self.log('GPU memory usage', self.GPU_memory, prog_bar=False, on_step=False, on_epoch=True)
 
     def reset_metrics(self) -> None:
@@ -310,7 +306,3 @@ class GAN(LightningModule):
         self.sp_critic_loss.reset()
         self.gp.reset()
         self.sliced_wasserstein_distance.reset()
-        self.generator_alpha.reset()
-        self.critic_alpha.reset()
-    
-    from omegaconf import OmegaConf
