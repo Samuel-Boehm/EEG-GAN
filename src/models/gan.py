@@ -77,6 +77,7 @@ class GAN(LightningModule):
                 lambda_gp:float,
                 optimizer:DictConfig,
                 spectral_critic:Optional[SpectralCritic] = False,
+                softplus:Optional[bool] = True,
                 **kwargs
                  ):  
         
@@ -91,7 +92,8 @@ class GAN(LightningModule):
         self.n_epochs_critics = n_epochs_critic
         self.alpha = alpha
         self.beta = beta
-        
+        self.softplus = softplus
+
         self.sliced_wasserstein_distance = SWD()
         self.generator_loss = MeanMetric()
         self.critic_loss = MeanMetric()
@@ -143,12 +145,18 @@ class GAN(LightningModule):
                 fx_fake = self.critic(X_fake, y_fake)
             if self.sp_critic:
                 fx_spc = self.sp_critic(X_fake, y_fake)
-                loss_fd = softplus(-fx_spc).mean()
+                if self.softplus:
+                    loss_fd = softplus(-fx_spc).mean()
+                else:
+                    loss_fd = -fx_spc.mean()
             else:
                 loss_fd = 0
                 self.beta
-            loss_td = softplus(-fx_fake).mean()
-            
+                
+            if self.softplus:
+                loss_td = softplus(-fx_fake).mean()
+            else:
+                loss_td = -fx_fake.mean()
 
             g_loss = (self.alpha * loss_td + self.beta * loss_fd) / (self.alpha + self.beta)
 

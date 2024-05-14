@@ -7,5 +7,5 @@ trainer:
   enable_progress_bar: False
 
 scheduler:
-  n_fading_epochs: 50
+  n_fading_epochs: 25
   epochs_per_stage: [100, 100, 200, 200, 200]
