@@ -1,4 +1,4 @@
-name: 'standard'
+name: 'baseline'
 
 params: &params
   n_filter: 120
@@ -10,13 +10,13 @@ params: &params
   freeze: True
 
 generator:
-  _target_: src.models.components.Generator
+  _target_: src.models.components.generators.baseline
   <<: *params
   latent_dim: 210
   embedding_dim: 100
 
 critic:
-  _target_: src.models.components.Critic
+  _target_: src.models.components.critics.baseline
   <<: *params
 
 spectral_critic:

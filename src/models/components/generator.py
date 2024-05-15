@@ -10,9 +10,6 @@ from typing import List
 
 from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
 
-
-
-
 class GeneratorBlock(nn.Module):
     """
     Description
@@ -58,7 +55,7 @@ class Generator(nn.Module):
     """
     Description
     ----------
-    Generator module for implementing progressive GANs
+    Abstract base class used to build new Generators for implementing GANs.
 
     Parameters:
     ----------
@@ -95,27 +92,18 @@ class Generator(nn.Module):
                  current_stage:int=1,
                  fading:bool=False,
                  freeze:bool=False,
-                 train_linear:bool=True,
                  **kwargs
                  ) -> None:
         
         super(Generator, self).__init__()
         
-        self.blocks:List[GeneratorBlock] = self.build(
-            n_filter, n_samples, n_stages, n_channels, latent_dim, embedding_dim
-            )
+        self.blocks:List[GeneratorBlock] = List()
+
         self.label_embedding = nn.Embedding(n_classes, embedding_dim)
         self.fading = fading
         self.freeze = freeze
         self.latent_dim = latent_dim  
         self.n_classes = n_classes
-
-        # set stage
-        self.set_stage(current_stage)
-
-        if not train_linear:
-            self.blocks[0].intermediate_sequence[0].requires_grad_(False)
-
 
     def set_stage(self, cur_stage:int):
         self.cur_stage = cur_stage
@@ -185,46 +173,7 @@ class Generator(nn.Module):
         X = torch.squeeze(X, 1)
         
         return X
-    
 
-    def build(self, n_filter, n_samples, n_stages, n_channels,
-                        latent_dim, embedding_dim) -> List[GeneratorBlock]:
-        
-        
-        # Generator:
-        n_time_first_layer = int(np.floor(n_samples / 2 ** (n_stages-1)))
-        blocks = nn.ModuleList()
-
-        # Note that the first conv stage in the generator differs from the others
-        # because it takes the latent vector as input
-        first_conv = nn.Sequential(
-            nn.Linear(latent_dim + embedding_dim, n_filter * n_time_first_layer),
-            nn.Unflatten(1, (n_filter, n_time_first_layer)),
-            nn.LeakyReLU(0.2),
-            PixelNorm(),
-            ConvBlock(n_filter, 0, is_generator=True),
-            )
-        
-        upsample = nn.Sequential(
-                    WS(nn.ConvTranspose1d(n_filter, n_filter, 4, stride=2, padding=1)), #WS()
-                    nn.LeakyReLU(0.2)
-            )
-        
-        generator_out = WS(nn.Conv1d(n_filter, n_channels, kernel_size=1,)) #WS()
-
-        blocks.append(GeneratorBlock(first_conv, generator_out))
-
-        for stage in range(1, n_stages):
-            stage_conv = nn.Sequential(
-                upsample,
-                ConvBlock(n_filter, stage, is_generator=True),
-            )
-
-            # Out sequence is independent of stage
-            blocks.append(GeneratorBlock(stage_conv, generator_out))
-            
-        return nn.ModuleList(blocks) 
-    
     def generate(self, shapes):
 
         z = torch.randn(shapes[0], self.latent_dim)
@@ -242,3 +191,38 @@ class Generator(nn.Module):
         device = self.parameters().__next__().device
         return [x.to(device) for x in inputs]
    
+    
+
+    def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int,
+                        latent_dim:int, embedding_dim:int, kernel_size=3) -> List[GeneratorBlock]:
+        r"""
+        This function builds the generator blocks for the progressive growing GAN.
+        
+        Arguments:
+        ----------
+        n_filter : int
+            Number of filters in the convolutional layers
+        n_samples : int
+            Number of timepoints in the input data
+        n_stages : int
+            Number of stages in the generator
+        n_channels : int
+            Number of channels in the input data
+        latent_dim : int
+            Dimension of the latent vector
+        embedding_dim : int
+            Dimension of the label embedding
+        kernel_size : int
+            Size of the convolutional kernel
+        """
+        raise NotImplementedError("This function has to be implemented by the subclass")
+
+    def description(self) -> None:
+        r"""
+        When implementing a new generator, this function can be overwritten to provide a description of the model.
+        """
+        print(
+        r"""
+        No Description Set    
+        """
+        )

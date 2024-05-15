@@ -87,17 +87,17 @@ class Critic(nn.Module):
                  fading:bool=False,
                  freeze:bool=False,
                  **kwargs
-                 ) -> None:   
+                 ) -> None:
          
         super(Critic, self).__init__()
-        self.blocks:List[CriticBlock] = self.build(n_filter, n_samples, n_stages, n_channels)
+
+        self.blocks:List[CriticBlock] = List()
+
         self.n_samples = n_samples
         self.fading = fading
         self.freeze = freeze
         self.label_embedding = nn.Embedding(n_classes, n_samples)
         self.alpha = 0
-        self.set_stage(current_stage)
-
 
     def set_stage(self, cur_stage:int) -> None:
         # Each time a new stage is set, some parameters need to be updated:
@@ -173,43 +173,33 @@ class Critic(nn.Module):
 
         return X
     
-    def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int) -> List[CriticBlock]:
+    def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int, kernel_size=3) -> List[CriticBlock]:
         
-        n_channels += 1 # Add one channel for embedding
-
-        # Calculate the number of timepoints in the last layer
-        # n_stages - 1 since we dont downsample after the last convolution
-        n_time_last_stage = int(np.floor(n_samples / 2 ** (n_stages - 1)))
+        r"""
+        This function builds the critic blocks for the progressive growing GAN.
         
-        # Critic:
-        blocks = nn.ModuleList()
+        Arguments:
+        ----------
+        n_filter : int
+            Number of filters in the convolutional layers
+        n_samples : int
+            Number of timepoints in the input data
+        n_stages : int
+            Number of stages in the critic
+        n_channels : int
+            Number of channels in the input data
+        kernel_size : int
+            Size of the convolutional kernel
+        """
 
-            
-        critic_in = nn.Sequential(
-            WS(nn.Conv1d(n_channels, n_filter, kernel_size=1, stride=1)), #WS()
-            nn.LeakyReLU(0.2),
+        raise NotImplementedError("This function needs to be implemented in the child class")
+
+    def description(self) -> None:
+        r"""
+        When implementing a new critic, this function can be overwritten to provide a description of the model.
+        """
+        print(
+        r"""
+        No Description Set    
+        """
         )
-
-        downsample = nn.Sequential(nn.ReflectionPad1d(1),
-                                    WS(nn.Conv1d(n_filter, n_filter, kernel_size=4, stride=2)), #WS()
-                                    nn.LeakyReLU(0.2))
-
-        for stage in range(1, n_stages):
-            stage_conv = nn.Sequential(
-                        ConvBlock(n_filter, n_stages - stage, is_generator=False),
-                        downsample)
-
-            # In sequence is independent of stage
-            blocks.append(CriticBlock(stage_conv, critic_in))
-
-
-        
-        final_conv = nn.Sequential(
-            ConvBlock(n_filter, 0, is_generator=False),
-            nn.Flatten(),
-            nn.Linear(n_filter * n_time_last_stage, 1),
-        )
-
-        blocks.append(CriticBlock(final_conv, critic_in))
-
-        return blocks

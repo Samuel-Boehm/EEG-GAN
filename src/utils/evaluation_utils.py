@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 
 import numpy as np
+from typing import Dict
 
 from omegaconf import DictConfig
 import hydra
@@ -16,7 +17,7 @@ from src.utils import instantiate_model
 
 from src.data.datamodule import ProgressiveGrowingDataset
 
-def evaluate_model(model:GAN, dataloader:DataLoader, cfg:DictConfig):
+def evaluate_model(model:GAN, dataloader:DataLoader, cfg:DictConfig) -> Dict[str, plt.Figure]:
     
     n_samples = 512
     batch_size = dataloader.batch_size
@@ -55,21 +56,30 @@ def evaluate_model(model:GAN, dataloader:DataLoader, cfg:DictConfig):
     else:
         ncols = nrows = int(np.ceil(np.sqrt(n_channels)))
 
-    fig_time_domain, axs = plt.subplots(nrows, ncols, figsize=(10 * ncols, 5 * nrows))
-    axs = axs.flat[:n_channels]
+    fig_td_real, axs_td_real = plt.subplots(nrows, ncols, figsize=(10 * ncols, 5 * nrows))
+    fig_td_fake, axs_td_fake = plt.subplots(nrows, ncols, figsize=(10 * ncols, 5 * nrows))
+
+    axs_td_real = axs_td_real.flat[:n_channels]
+    axs_td_fake = axs_td_fake.flat[:n_channels]
 
     mapping =dict(zip(range(len(cfg.data.classes)), cfg.data.classes))
 
-    for i, ax in enumerate(axs):
+    for i in range(n_channels):
         data_real = X_real[:, i, :]
         data_fake = X_fake[:, i, :]
-        labels = y_real
 
-        plot_time_domain_by_target(data_real, labels, show_std=True, ax=ax, mapping=mapping, title=channels[i])
+        plot_time_domain_by_target(data_real, y_real, show_std=True, ax=axs_td_real[i], mapping=mapping, title=channels[i])
+        plot_time_domain_by_target(data_fake, y_fake, show_std=True, ax=axs_td_fake[i], mapping=mapping, title=channels[i])
 
-    _, fig_frequency_domain = plot_spectrum_by_target(data_real, labels, cfg.data.sfreq, show_std=True, mapping=mapping)
+    
+    pooled_data = np.concatenate((X_real, X_fake), axis=0)
+    pooled_labels = np.concatenate((np.zeros(X_real.shape[0]), np.ones(X_fake.shape[0])))
 
-    return fig_time_domain, fig_frequency_domain
+    _, fig_frequency_domain = plot_spectrum_by_target(pooled_data, pooled_labels, cfg.data.sfreq, show_std=True, mapping={0: 'real', 1: 'fake'})
+
+    figures = {'time_domain_real': fig_td_real, 'time_domain_fake': fig_td_fake, 'frequency_domain': fig_frequency_domain}
+
+    return figures
     
     
 if __name__ == "__main__":
