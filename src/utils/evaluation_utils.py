@@ -18,18 +18,18 @@ from src.data.datamodule import ProgressiveGrowingDataset
 
 def evaluate_model(model:GAN, dataloader:DataLoader, cfg:DictConfig):
     
-    n_samples = 24
+    n_samples = 512
+    batch_size = dataloader.batch_size
     
     model.eval()
     with torch.no_grad():
-        
         X_real = []
         y_real = []
         
         data_iter = iter(dataloader)
         samples_collected = 0
 
-        while samples_collected < n_samples:
+        for _ in range(((n_samples // batch_size + 1) * batch_size)//batch_size):
             try:
                 X_, y_ = next(data_iter)
             except StopIteration:
@@ -38,8 +38,6 @@ def evaluate_model(model:GAN, dataloader:DataLoader, cfg:DictConfig):
 
             X_real.append(X_)
             y_real.append(y_)
-
-            samples_collected += len(X_real)
 
         X_real = torch.cat(X_real, dim=0)
         y_real = torch.cat(y_real, dim=0)
