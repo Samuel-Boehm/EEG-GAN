@@ -63,12 +63,13 @@ def evaluate_model(model:GAN, dataloader:DataLoader, cfg:DictConfig):
     mapping =dict(zip(range(len(cfg.data.classes)), cfg.data.classes))
 
     for i, ax in enumerate(axs):
-        data = X_real[:, i, :]
+        data_real = X_real[:, i, :]
+        data_fake = X_fake[:, i, :]
         labels = y_real
 
-        plot_time_domain_by_target(data, labels, show_std=True, ax=ax, mapping=mapping, title=channels[i])
+        plot_time_domain_by_target(data_real, labels, show_std=True, ax=ax, mapping=mapping, title=channels[i])
 
-    _, fig_frequency_domain = plot_spectrum_by_target(data, labels, cfg.data.sfreq, show_std=True, mapping=mapping)
+    _, fig_frequency_domain = plot_spectrum_by_target(data_real, labels, cfg.data.sfreq, show_std=True, mapping=mapping)
 
     return fig_time_domain, fig_frequency_domain
     
