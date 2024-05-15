@@ -18,7 +18,7 @@ from src.data.datamodule import ProgressiveGrowingDataset
 
 def evaluate_model(model:GAN, dataloader:DataLoader, cfg:DictConfig):
     
-    n_samples = 24
+    n_samples = 128
     
     model.eval()
     with torch.no_grad():
