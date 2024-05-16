@@ -203,6 +203,9 @@ class GAN(LightningModule):
 
     def gradient_penalty(self, real: Tensor, fake: Tensor, y_fake, critic:Critic) -> Tensor:
         """
+        
+        THIS FUNCTION IS NOT USED IN THE CURRENT IMPLEMENTATION
+
 		Improved WGAN gradient penalty from Hartmann et al. (2018)
         https://arxiv.org/abs/1806.01875
 
@@ -229,9 +232,6 @@ class GAN(LightningModule):
 			Gradient penalties
 		"""
 
-        real = real
-        fake = fake
-
         alpha = torch.rand(real.size(0),*((len(real.size())-1)*[1]), device=self.device)
         alpha = alpha.expand(real.size())
 
@@ -253,6 +253,7 @@ class GAN(LightningModule):
         del gradients, interpolates, output_interpolates, alpha, ones
 
         return gradient_penalty
+    
     
     def train_critic(self, X_real:Tensor, y_real:Tensor,
                      X_fake:Tensor, y_fake:Tensor, critic:nn.Module, optim:torch.optim.Optimizer) -> Tuple[Tensor, Tensor]:
@@ -278,7 +279,7 @@ class GAN(LightningModule):
         """
 
         fx_real = critic(X_real, y_real)
-        fx_fake = critic(X_fake, y_fake)
+        fx_fake = critic(X_fake.detach(), y_fake)
        
         distance = torch.mean(fx_fake) - torch.mean(fx_real)
 
@@ -289,11 +290,11 @@ class GAN(LightningModule):
         # this does not work well so far... (?)
         gp = self.lamda_gp * self.gradient_penalty(X_real, X_fake, y_fake, critic)
 
-        c_loss = distance + gp        
+        c_loss = (-distance + gp ) #+ (0.001 * torch.mean(fx_real ** 2))
         
-        optim.zero_grad()
         self.manual_backward(c_loss, retain_graph=True)
         optim.step()
+        optim.zero_grad()
 
         return c_loss, gp
     
