@@ -8,3 +8,5 @@ train.sh
 HPO_sweep.sh
 sweep.yaml
 playground.ipynb
+.vscode/
+.vscode/launch.json

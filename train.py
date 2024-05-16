@@ -59,8 +59,6 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer.trainer, callbacks=callbacks, logger=logger,
                                               reload_dataloaders_every_n_epochs=1, max_epochs=max_epochs)
     
-    
-
     object_dict = {
         "cfg": cfg,
         "datamodule": datamodule,
