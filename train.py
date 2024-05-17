@@ -41,7 +41,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     n_samples = int(cfg.data.sfreq * cfg.data.length_in_seconds)
     log.info(f"Instantiating model <{cfg.model.gan._target_}>")
-    model: LightningModule = instantiate_model(cfg.get("model"), n_samples=n_samples)
+    model: LightningModule = instantiate_model(models_cfg=cfg.get("model"), n_samples=n_samples)
 
     log.info("Instantiating training scheduler...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))

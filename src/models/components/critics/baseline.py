@@ -17,20 +17,15 @@ class Critic(Critic):
 
     def __init__(self,
                 n_filter:int,
-                n_samples:int,
                 n_stages:int,
                 n_channels:int,
-                n_classes:int,
                 current_stage:int=1,
-                fading:bool=False,
-                freeze:bool=False,
-                kernel_size=3,
                 **kwargs
                 ) -> None:
         
-        super(Critic, self).__init__()
+        super().__init__(**kwargs)
 
-        self.blocks = self.build(n_filter, n_samples, n_stages, n_channels, kernel_size)
+        self.blocks = self.build(n_filter, self.n_samples, n_stages, n_channels)
         self.set_stage(current_stage)
 
     def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int, kernel_size=3) -> List[CriticBlock]:
@@ -43,7 +38,6 @@ class Critic(Critic):
         
         # Critic:
         blocks = nn.ModuleList()
-
             
         critic_in = nn.Sequential(
             WS(nn.Conv1d(n_channels, n_filter, kernel_size=1, stride=1)), #WS()
@@ -64,8 +58,6 @@ class Critic(Critic):
             # In sequence is independent of stage
             blocks.append(CriticBlock(stage_conv, critic_in))
 
-
-        
         final_conv = nn.Sequential(
             ConvBlock(n_filter, 0, kernel_size=kernel_size, is_generator=False),
             nn.Flatten(),
@@ -75,3 +67,11 @@ class Critic(Critic):
         blocks.append(CriticBlock(final_conv, critic_in))
 
         return blocks
+    
+    def description(self) -> None:
+        print(
+            r"""
+            Baseline critic, this one follows the architecture of the master thesis of Samuel Boehm
+            and therefor should show similar results!
+            """
+        )

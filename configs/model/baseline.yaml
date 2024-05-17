@@ -10,13 +10,13 @@ params: &params
   freeze: True
 
 generator:
-  _target_: src.models.components.generators.baseline
+  _target_: src.models.components.generators.baseline.Generator
   <<: *params
   latent_dim: 210
   embedding_dim: 100
 
 critic:
-  _target_: src.models.components.critics.baseline
+  _target_: src.models.components.critics.baseline.Critic
   <<: *params
 
 spectral_critic:

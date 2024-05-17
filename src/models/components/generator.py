@@ -59,22 +59,12 @@ class Generator(nn.Module):
 
     Parameters:
     ----------
-    n_filter : int
-        Number of filters in the convolutional layers
-    n_samples : int
-        Number of timepoints in the input data
-    n_stages : int
-        Number of stages in the generator
-    n_channels : int
-        Number of channels in the input data
     n_classes : int
         Number of classes
     latent_dim : int
         Dimension of the latent vector
     embedding_dim : int
         Dimension of the label embedding
-    current_stage : int
-        Current stage of the generator
     fading : bool
         If fading is used
     freeze : bool
@@ -82,24 +72,20 @@ class Generator(nn.Module):
     """
 
     def __init__(self,
-                 n_filter:int,
-                 n_samples:int,
-                 n_stages:int,
-                 n_channels:int,
                  n_classes:int,
                  latent_dim:int,
                  embedding_dim:int,
-                 current_stage:int=1,
                  fading:bool=False,
                  freeze:bool=False,
                  **kwargs
                  ) -> None:
         
-        super(Generator, self).__init__()
+        super().__init__(**kwargs)
         
-        self.blocks:List[GeneratorBlock] = List()
+        self.blocks:List[GeneratorBlock] = list()
 
         self.label_embedding = nn.Embedding(n_classes, embedding_dim)
+        self.embedding_dim = embedding_dim
         self.fading = fading
         self.freeze = freeze
         self.latent_dim = latent_dim  
@@ -193,27 +179,9 @@ class Generator(nn.Module):
    
     
 
-    def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int,
-                        latent_dim:int, embedding_dim:int, kernel_size=3) -> List[GeneratorBlock]:
+    def build(self) -> List[GeneratorBlock]:
         r"""
         This function builds the generator blocks for the progressive growing GAN.
-        
-        Arguments:
-        ----------
-        n_filter : int
-            Number of filters in the convolutional layers
-        n_samples : int
-            Number of timepoints in the input data
-        n_stages : int
-            Number of stages in the generator
-        n_channels : int
-            Number of channels in the input data
-        latent_dim : int
-            Dimension of the latent vector
-        embedding_dim : int
-            Dimension of the label embedding
-        kernel_size : int
-            Size of the convolutional kernel
         """
         raise NotImplementedError("This function has to be implemented by the subclass")
 

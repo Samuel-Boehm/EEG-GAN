@@ -58,18 +58,10 @@ class Critic(nn.Module):
 
     Parameters:
     ----------
-    n_filter : int
-        Number of filters in the convolutional layers
     n_samples : int
         Number of timepoints in the input data
-    n_stages : int
-        Number of stages in the critic
-    n_channels : int
-        Number of channels in the input data
     n_classes : int
         Number of classes
-    current_stage : int
-        Current stage of the critic
     fading : bool
         If fading is used
     freeze : bool
@@ -78,20 +70,16 @@ class Critic(nn.Module):
     """
 
     def __init__(self,
-                 n_filter:int,
                  n_samples:int,
-                 n_stages:int,
-                 n_channels:int,
                  n_classes:int,
-                 current_stage:int=1,
                  fading:bool=False,
                  freeze:bool=False,
                  **kwargs
                  ) -> None:
          
-        super(Critic, self).__init__()
+        super().__init__(**kwargs)
 
-        self.blocks:List[CriticBlock] = List()
+        self.blocks:List[CriticBlock] = list()
 
         self.n_samples = n_samples
         self.fading = fading

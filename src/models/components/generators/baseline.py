@@ -11,28 +11,26 @@ from src.models.components.generator import GeneratorBlock, Generator
 
 
 class Generator(Generator):
+    
     def __init__(self,
-                 n_filter:int,
-                 n_samples:int,
-                 n_stages:int,
-                 n_channels:int,
-                 latent_dim:int,
-                 embedding_dim:int,
-                 current_stage:int=1,
-                 **kwargs
-                 ) -> None:
+                n_filter:int,
+                n_samples:int,
+                n_stages:int,
+                n_channels:int,
+                current_stage:int,
+                 **kwargs) -> None:
         
-        super(Generator, self).__init__()
+        super().__init__(**kwargs)
         
         self.blocks:List[GeneratorBlock] = self.build(
-            n_filter, n_samples, n_stages, n_channels, latent_dim, embedding_dim
+            n_filter, n_samples, n_stages, n_channels, self.latent_dim, self.embedding_dim
             )
-
+        
         # set stage
         self.set_stage(current_stage)
 
         # Dont train the linear layer in the generator: 
-        self.blocks[0].intermediate_sequence[0].requires_grad_(False)
+        # self.blocks[0].intermediate_sequence[0].requires_grad_(False)
 
 
     def build(self, n_filter, n_samples, n_stages, n_channels,
@@ -72,3 +70,11 @@ class Generator(Generator):
             blocks.append(GeneratorBlock(stage_conv, generator_out))
             
         return nn.ModuleList(blocks) 
+    
+    def description(self) -> None:
+        print(
+            r"""
+            Baseline generator, this one follows the architecture of the master thesis of Samuel Boehm
+            and therefor should show similar results!
+            """
+        )
