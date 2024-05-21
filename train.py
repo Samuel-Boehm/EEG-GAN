@@ -57,7 +57,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     
     log.info(f"Instantiating trainer <{cfg.trainer.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer.trainer, callbacks=callbacks, logger=logger,
-                                              reload_dataloaders_every_n_epochs=1, max_epochs=max_epochs)
+                                              reload_dataloaders_every_n_epochs=1, max_epochs=max_epochs,)
     
     object_dict = {
         "cfg": cfg,
@@ -129,6 +129,9 @@ def main(cfg: DictConfig) -> Optional[float]:
     metric_value = get_metric_value(
         metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")
     )
+
+    # End of training
+    wandb.finish()
 
     # return optimized metric
     return metric_value

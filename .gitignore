@@ -10,3 +10,4 @@ sweep.yaml
 playground.ipynb
 .vscode/
 .vscode/launch.json
+wandb/

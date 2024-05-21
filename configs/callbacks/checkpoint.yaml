@@ -1,3 +1,4 @@
 checkpont:
   _target_: lightning.pytorch.callbacks.ModelCheckpoint
   dirpath: ${hydra:run.dir}
+  every_n_epochs: 200
