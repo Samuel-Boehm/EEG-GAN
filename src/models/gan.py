@@ -139,31 +139,29 @@ class GAN(LightningModule):
         
         # 3: Train generator:
         # If n_critic =! 1 we train the generator only every n_th step
-        if batch_idx % self.n_epochs_critics == 0:
+        if (batch_idx + 1) % self.n_epochs_critics == 0:
+            self.toggle_optimizer(optim_g)
+
+            # Generate fake data
+            X_fake, y_fake = self.generator.generate(X_real.shape)
+
             ## optimize generator
-            with torch.no_grad():
-                fx_fake = self.critic(X_fake, y_fake)
+            fx_fake = self.critic(X_fake, y_fake)
             if self.sp_critic:
                 fx_spc = self.sp_critic(X_fake, y_fake)
-                if self.softplus:
-                    loss_fd = softplus(-fx_spc).mean()
-                else:
-                    loss_fd = -fx_spc.mean()
+                loss_fd = torch.mean(softplus(-fx_spc))
             else:
                 loss_fd = 0
-                self.beta
-                
-            if self.softplus:
-                loss_td = softplus(-fx_fake).mean()
-            else:
-                loss_td = -fx_fake.mean()
+                self.beta = 0
+            
+            loss_td = torch.mean(softplus(-fx_fake))
 
             g_loss = (self.alpha * loss_td + self.beta * loss_fd) / (self.alpha + self.beta)
-
-            optim_g.zero_grad()
+            
             self.manual_backward(g_loss)
             optim_g.step()
-
+            optim_g.zero_grad()
+            self.untoggle_optimizer(optim_g)
             self.generator_loss(g_loss)
 
         # Log
@@ -204,8 +202,6 @@ class GAN(LightningModule):
     def gradient_penalty(self, real: Tensor, fake: Tensor, y_fake, critic:Critic) -> Tensor:
         """
         
-        THIS FUNCTION IS NOT USED IN THE CURRENT IMPLEMENTATION
-
 		Improved WGAN gradient penalty from Hartmann et al. (2018)
         https://arxiv.org/abs/1806.01875
 
@@ -235,11 +231,11 @@ class GAN(LightningModule):
         alpha = torch.rand(real.size(0),*((len(real.size())-1)*[1]), device=self.device)
         alpha = alpha.expand(real.size())
 
-        interpolates = alpha * real + ((1 - alpha) * fake)
+        interpolates = alpha * real + ((1 - alpha) * fake).requires_grad_(True)
 
         output_interpolates = critic(interpolates, y_fake)
 
-        ones = torch.ones(output_interpolates.size(), device=self.device)
+        ones = torch.ones(output_interpolates.size(), device=self.device, requires_grad=False)
 
         gradients = autograd.grad(outputs=output_interpolates, inputs=interpolates,
                                     grad_outputs=ones,
@@ -247,7 +243,7 @@ class GAN(LightningModule):
         
         gradients = gradients.view(gradients.size(0), -1)
 
-        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+        gradient_penalty = torch.mean((gradients.norm(2, dim=1) - 1) ** 2)
 
         # just in case:
         del gradients, interpolates, output_interpolates, alpha, ones
@@ -277,12 +273,10 @@ class GAN(LightningModule):
         The function calculates the critic's output for both real and fake samples, 
         computes the gradient penalty and the critic loss, and performs a backward pass and an optimization step.
         """
-
+        self.toggle_optimizer(optim)
         fx_real = critic(X_real, y_real)
         fx_fake = critic(X_fake.detach(), y_fake)
        
-        distance = torch.mean(fx_fake) - torch.mean(fx_real)
-
         # Relaxed gradient penalty following Hartmann et al. (2018)
         # https://arxiv.org/abs/1806.01875
         # gradient pentalty is scaled with the distance between the distrubutions and a lambda hyperparameter
@@ -290,12 +284,12 @@ class GAN(LightningModule):
         # this does not work well so far... (?)
         gp = self.lamda_gp * self.gradient_penalty(X_real, X_fake, y_fake, critic)
 
-        c_loss = (-distance + gp ) #+ (0.001 * torch.mean(fx_real ** 2))
+        c_loss = torch.mean(softplus(-fx_real)) + torch.mean(softplus(fx_fake)) + gp
         
         self.manual_backward(c_loss, retain_graph=True)
         optim.step()
         optim.zero_grad()
-
+        self.untoggle_optimizer(optim)
         return c_loss, gp
     
     def on_train_start(self)-> None:
