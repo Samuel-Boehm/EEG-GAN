@@ -1,0 +1,37 @@
+name: 'baseline'
+
+params: &params
+  n_filter: 120
+  n_stages: 5
+  n_channels: 21
+  n_classes: 2
+  current_stage: 1
+  fading: True
+  freeze: True
+
+generator:
+  _target_: src.models.components.generators.baseline_no_bn.Generator
+  <<: *params
+  latent_dim: 210
+  embedding_dim: 100
+
+critic:
+  _target_: src.models.components.critics.baseline_no_bn.Critic
+  <<: *params
+
+spectral_critic:
+  _target_: src.models.components.SpectralCritic
+  <<: *params
+
+gan:
+  _target_: src.models.GAN
+  n_epochs_critic: 5
+  alpha: 1
+  beta: 0.2
+  lambda_gp: 10
+
+optimizer:
+  name: 'adam'
+  lr_generator: 0.001
+  lr_critic: 0.001
+  betas: [0.5, 0.999]

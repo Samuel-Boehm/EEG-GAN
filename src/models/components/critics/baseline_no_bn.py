@@ -7,7 +7,7 @@ import  numpy as np
 from typing import List
 
 from src.models.components.critic import CriticBlock, Critic
-from src.models.components.modules import PixelNorm, ConvBlockBN, PrintLayer, WS
+from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
 
 
 class Critic(Critic):
@@ -52,14 +52,14 @@ class Critic(Critic):
             _stage =  n_stages - stage
             _kernel_size = int(kernel_size + (_stage*4))
             stage_conv = nn.Sequential(
-                        ConvBlockBN(n_filter, _stage, kernel_size=_kernel_size, is_generator=False),
+                        ConvBlock(n_filter, _stage, kernel_size=_kernel_size, is_generator=False),
                         downsample)
 
             # In sequence is independent of stage
             blocks.append(CriticBlock(stage_conv, critic_in))
 
         final_conv = nn.Sequential(
-            ConvBlockBN(n_filter, 0, kernel_size=kernel_size, is_generator=False),
+            ConvBlock(n_filter, 0, kernel_size=kernel_size, is_generator=False),
             nn.Flatten(),
             nn.Linear(n_filter * n_time_last_stage, 1),
         )

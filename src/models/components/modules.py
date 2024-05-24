@@ -36,7 +36,7 @@ class WeightScale(object):
         return tmp
     
     @staticmethod
-    def apply(module, name:str, gain: int)-> 'WeightScale':
+    def apply(module:nn.Module, name:str, gain: int)-> 'WeightScale':
         fn = WeightScale(name)
         weight = getattr(module, name)
         # remove w from parameter list
@@ -97,6 +97,56 @@ class PixelNorm(nn.Module):
         tmp = torch.sqrt(torch.pow(x, 2).mean(dim=1, keepdim=True) + eps)
         return x / tmp
 
+class ConvBlockBN(nn.Module):
+    '''
+    Description
+    ----------
+    Convolution block for each critic and generator stage. 
+    Since the generator uses pixel norm and the critic does 
+    not, the 'generator' argument can be used to toggle
+    pixel norm on and off. The 'generator' argument also
+    sets if the resampling layer is in the beginning or the end.
+
+    Arguments:
+
+    n_filters: int
+        number of filters (convolution kernels) used
+    stage: int
+        progressive stage for which the block is build
+    generator: bool
+        toggle pixel norm on and off
+
+    '''
+    def __init__(self, n_filters, stage, kernel_size, is_generator=False, stride=1):
+        super(ConvBlockBN, self).__init__()
+        padding = int(stage*2 + stride) # stage0: 1, stage1: 3, stage2, 4 ...
+        stride = stride
+        groups = int(n_filters / ((stage + 1)* 2)) # for n_filters = 120: 60, 30, 20, 15, 12, 10
+
+        self.is_generator = is_generator
+
+        self.conv1 = WS(nn.Conv1d(n_filters, n_filters, groups=groups,
+                                  kernel_size=kernel_size, stride=stride, padding=padding)) 
+        self.conv2 = WS(nn.Conv1d(n_filters, n_filters, groups=groups,
+                                  kernel_size=kernel_size + 2, stride=stride, padding=padding + 1)) 
+        self.conv3 = WS(nn.Conv1d(n_filters, n_filters, groups=n_filters, kernel_size=1, stride=stride, padding=0))
+        self.leaky = nn.LeakyReLU(0.2)
+        self.pn = PixelNorm()
+        self.bn = nn.BatchNorm1d(n_filters)
+
+    
+    def forward(self, x):
+        x = self.conv1(x)        
+        x = self.conv2(x)
+        x = self.leaky(x)
+        x = self.pn(x) if self.is_generator else x
+        x = self.conv3(x)
+        x = self.leaky(x)
+        x = self.pn(x) if self.is_generator else x
+        x = self.bn(x)
+        return x
+
+
 class ConvBlock(nn.Module):
     '''
     Description
@@ -117,21 +167,21 @@ class ConvBlock(nn.Module):
         toggle pixel norm on and off
 
     '''
-    def __init__(self, n_filters, stage, kernel_size, is_generator=False):
+    def __init__(self, n_filters, stage, kernel_size, is_generator=False, stride=1):
         super(ConvBlock, self).__init__()
-        padding = int(stage*2 + 1) # stage0: 1, stage1: 3, stage2, 4 ...
-        stride = 1 # fixed to 1 for now
+        padding = int(stage*2 + stride) # stage0: 1, stage1: 3, stage2, 4 ...
+        stride = stride
         groups = int(n_filters / ((stage + 1)* 2)) # for n_filters = 120: 60, 30, 20, 15, 12, 10
 
         self.is_generator = is_generator
 
-        self.conv1 = WS(nn.Conv1d(n_filters, n_filters, groups=groups, kernel_size=kernel_size, stride=stride, padding=padding)) 
-        self.conv2 = WS(nn.Conv1d(n_filters, n_filters, groups=groups, kernel_size=kernel_size + 2, stride=stride, padding=padding + 1)) 
+        self.conv1 = WS(nn.Conv1d(n_filters, n_filters, groups=groups,
+                                  kernel_size=kernel_size, stride=stride, padding=padding)) 
+        self.conv2 = WS(nn.Conv1d(n_filters, n_filters, groups=groups,
+                                  kernel_size=kernel_size + 2, stride=stride, padding=padding + 1)) 
         self.conv3 = WS(nn.Conv1d(n_filters, n_filters, groups=n_filters, kernel_size=1, stride=stride, padding=0))
         self.leaky = nn.LeakyReLU(0.2)
         self.pn = PixelNorm()
-        self.bn = nn.BatchNorm1d(n_filters)
-
     
     def forward(self, x):
         x = self.conv1(x)        
@@ -141,15 +191,14 @@ class ConvBlock(nn.Module):
         x = self.conv3(x)
         x = self.leaky(x)
         x = self.pn(x) if self.is_generator else x
-        x = self.bn(x)
         return x
-    
 
 class PrintLayer(nn.Module):
     def __init__(self, name:str):
         super(PrintLayer, self,).__init__()
         self.name = name
-    def forward(self, x):
-        print(f"####{self.name}###")
+
+    def forward(self, x:torch.Tensor):
+        print(f"#___{self.name}___#")
         print(x.shape)
         return x

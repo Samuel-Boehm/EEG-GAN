@@ -18,12 +18,15 @@ class Generator(Generator):
                 n_stages:int,
                 n_channels:int,
                 current_stage:int,
+                kernel_size:int,
+                kernel_scale:int,
+                stride:int,
                  **kwargs) -> None:
         
         super().__init__(**kwargs)
         
         self.blocks:List[GeneratorBlock] = self.build(
-            n_filter, n_samples, n_stages, n_channels, self.latent_dim, self.embedding_dim
+            n_filter, n_samples, n_stages, n_channels, self.latent_dim, self.embedding_dim, kernel_size, kernel_scale, stride
             )
         
         # set stage
@@ -34,7 +37,7 @@ class Generator(Generator):
 
 
     def build(self, n_filter, n_samples, n_stages, n_channels,
-                        latent_dim, embedding_dim, kernel_size=3) -> List[GeneratorBlock]:
+                        latent_dim, embedding_dim, kernel_size:int=3, kernel_scale:int=4, stride=1) -> List[GeneratorBlock]:
         
         # Generator:
         n_time_first_layer = int(np.floor(n_samples / 2 ** (n_stages-1)))
@@ -47,7 +50,7 @@ class Generator(Generator):
             nn.Unflatten(1, (n_filter, n_time_first_layer)),
             nn.LeakyReLU(0.2),
             PixelNorm(),
-            ConvBlockBN(n_filter, 0, kernel_size=kernel_size, is_generator=True),
+            ConvBlockBN(n_filter, 0, kernel_size=kernel_size, is_generator=True, stride=stride),
             )
         
         upsample = nn.Sequential(
@@ -60,10 +63,10 @@ class Generator(Generator):
         blocks.append(GeneratorBlock(first_conv, generator_out))
 
         for stage in range(1, n_stages):
-            _kernel_size = int(kernel_size + (stage*4))
+            _kernel_size = int(kernel_size + (stage*kernel_scale))
             stage_conv = nn.Sequential(
                 upsample,
-                ConvBlockBN(n_filter, stage, kernel_size=_kernel_size, is_generator=True),
+                ConvBlockBN(n_filter, stage, kernel_size=_kernel_size, is_generator=True, stride=stride),
             )
 
             # Out sequence is independent of stage
