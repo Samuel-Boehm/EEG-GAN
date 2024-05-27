@@ -34,8 +34,9 @@ class Scheduler(Callback):
         self.progression_epochs = []
 
         if isinstance(epochs_per_stage, int):
-            for i in range(n_stages):
+            for i in range(1, n_stages):
                 self.progression_epochs.append(epochs_per_stage*i)
+                self.max_epochs = epochs_per_stage*n_stages
         
         else:
             # try to convert to list
@@ -46,16 +47,12 @@ class Scheduler(Callback):
             
             if len(epochs_per_stage) != n_stages:
                 raise ValueError (
-                f"""
-                len(epochs_per_stage) != n_stages. Number of stages must be equal to the
-                number of epochs per stage. Got {len(epochs_per_stage)} epochs and {n_stages} stages.
-                {epochs_per_stage}
-                """)
+                f"""len(epochs_per_stage) != n_stages. Number of stages must be equal to the number of epochs per stage. Got {len(epochs_per_stage)} epochs and {n_stages} stages!""")
             else:
                 self.progression_epochs = np.cumsum(epochs_per_stage)
-                # We need to add a 0 to the beginning of the list, in order to trigger the 
-                # 'set_stage' method at the beginning of the training. 
-
+                self.max_epochs = np.sum(epochs_per_stage)
+                self.progression_epochs = self.progression_epochs[:-1]
+                
     def on_train_start(self, trainer: Trainer, model:GAN):
         '''
         Set the current stage to 1 at the beginning of the training.
