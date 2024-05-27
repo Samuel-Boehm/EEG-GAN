@@ -4,7 +4,7 @@
 
 import torch.nn as nn
 import torch
-from src.models.components.modules import PixelNorm, ConvBlockBN, PrintLayer, WS
+from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
 
 
 class SpectralCriticBlock(nn.Module):

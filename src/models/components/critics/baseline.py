@@ -25,10 +25,10 @@ class Critic(Critic):
         
         super().__init__(**kwargs)
 
-        self.blocks = self.build(n_filter, self.n_samples, n_stages, n_channels)
+        self.blocks = self.build(n_filter=n_filter, n_stages=n_stages, n_channels=n_channels, **kwargs)
         self.set_stage(current_stage)
 
-    def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int, kernel_size=3) -> List[CriticBlock]:
+    def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int, kernel_size=3, **kwargs) -> List[CriticBlock]:
         
         n_channels += 1 # Add one channel for embedding
 
@@ -50,14 +50,14 @@ class Critic(Critic):
 
         for stage in range(n_stages, 2, -1):
             stage_conv = nn.Sequential(
-                        ConvBlock(n_filter, stage, kernel_size=kernel_size, is_generator=False),
+                        ConvBlock(n_filter, stage, kernel_size=kernel_size, is_generator=False, **kwargs),
                         downsample)
 
             # In sequence is independent of stage
             blocks.append(CriticBlock(stage_conv, critic_in))
 
         final_conv = nn.Sequential(
-            ConvBlock(n_filter, 1, kernel_size=kernel_size, is_generator=False),
+            ConvBlock(n_filter, 1, kernel_size=kernel_size, is_generator=False, **kwargs),
             nn.Flatten(),
             nn.Linear(n_filter * n_time_last_stage, 1),
         )

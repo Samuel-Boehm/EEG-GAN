@@ -23,7 +23,7 @@ class Generator(Generator):
         super().__init__(**kwargs)
         
         self.blocks:List[GeneratorBlock] = self.build(
-            n_filter, n_samples, n_stages, n_channels, self.latent_dim, self.embedding_dim
+            n_filter, n_samples, n_stages, n_channels, **kwargs
             )
         
         # set stage
@@ -34,7 +34,7 @@ class Generator(Generator):
 
 
     def build(self, n_filter, n_samples, n_stages, n_channels,
-                        latent_dim, embedding_dim, kernel_size=3) -> List[GeneratorBlock]:
+                        latent_dim, embedding_dim, kernel_size=3, **kwargs) -> List[GeneratorBlock]:
         
         # Generator:
         n_time_first_layer = int(np.floor(n_samples / 2 ** (n_stages-1)))
@@ -47,7 +47,7 @@ class Generator(Generator):
             nn.Unflatten(1, (n_filter, n_time_first_layer)),
             nn.LeakyReLU(0.2),
             PixelNorm(),
-            ConvBlock(n_filter, 1, kernel_size=kernel_size, is_generator=True),
+            ConvBlock(n_filter, 1, kernel_size=kernel_size, is_generator=True, **kwargs),
             )
         
         upsample = nn.Sequential(
@@ -62,7 +62,7 @@ class Generator(Generator):
         for stage in range(2, n_stages + 1):
             stage_conv = nn.Sequential(
                 upsample,
-                ConvBlock(n_filter, stage, kernel_size=kernel_size, is_generator=True),
+                ConvBlock(n_filter, stage, kernel_size=kernel_size, is_generator=True, **kwargs),
             )
 
             # Out sequence is independent of stage
