@@ -6,7 +6,7 @@ from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 import numpy as np 
-
+import sys
 import wandb
 
 from src.utils.evaluation_utils import evaluate_model
@@ -133,6 +133,9 @@ def main(cfg: DictConfig) -> Optional[float]:
     # End of training
     wandb.finish()
 
+    log.info(f"Finished Training")
+    sys.exit("Finished Training")
+
     # return optimized metric
     return metric_value
 
@@ -140,7 +143,3 @@ def main(cfg: DictConfig) -> Optional[float]:
 if __name__ == "__main__":
     main()
 
-    
-    # dataloader = trainer.train_dataloader
-    # model = trainer.model
-    # Looger
