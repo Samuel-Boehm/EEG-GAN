@@ -8,7 +8,7 @@ from torch import Tensor
 import numpy as np
 from typing import List
 
-from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
+from src.models.components.modules import PixelNorm, ConvBlockBN, PrintLayer, WS
 
 class GeneratorBlock(nn.Module):
     """

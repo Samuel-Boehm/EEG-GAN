@@ -14,4 +14,5 @@ playground.ipynb
 =======
 .vscode/launch.json
 wandb/
+/sweeps
 >>>>>>> 25a87e01b9f5a343c9503c9932611e09646d0a35

@@ -7,7 +7,7 @@ import  numpy as np
 from typing import List
 
 from src.models.components.critic import CriticBlock, Critic
-from src.models.components.modules import PixelNorm, ConvBlockBN, PrintLayer, WS
+from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
 
 
 class Critic(Critic):
@@ -48,16 +48,18 @@ class Critic(Critic):
                                     WS(nn.Conv1d(n_filter, n_filter, kernel_size=4, stride=2)), #WS()
                                     nn.LeakyReLU(0.2))
 
-        for stage in range(n_stages, 2, -1):
+        for stage in range(1, n_stages):
+            _stage =  n_stages - stage
+            _kernel_size = int(kernel_size + (_stage*4))
             stage_conv = nn.Sequential(
-                        ConvBlock(n_filter, stage, kernel_size=kernel_size, is_generator=False),
+                        ConvBlock(n_filter, _stage, kernel_size=_kernel_size, is_generator=False),
                         downsample)
 
             # In sequence is independent of stage
             blocks.append(CriticBlock(stage_conv, critic_in))
 
         final_conv = nn.Sequential(
-            ConvBlock(n_filter, 1, kernel_size=kernel_size, is_generator=False),
+            ConvBlock(n_filter, 0, kernel_size=kernel_size, is_generator=False),
             nn.Flatten(),
             nn.Linear(n_filter * n_time_last_stage, 1),
         )

@@ -19,16 +19,20 @@ class Critic(Critic):
                 n_filter:int,
                 n_stages:int,
                 n_channels:int,
-                current_stage:int=1,
+                current_stage:int,
+                kernel_size:int,
+                kernel_scale:int,
+                stride:int,
                 **kwargs
                 ) -> None:
         
         super().__init__(**kwargs)
 
-        self.blocks = self.build(n_filter, self.n_samples, n_stages, n_channels)
+        self.blocks = self.build(n_filter, self.n_samples, n_stages, n_channels,
+                                 kernel_size, kernel_scale, stride)
         self.set_stage(current_stage)
 
-    def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int, kernel_size=3) -> List[CriticBlock]:
+    def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int, kernel_size:int=3, kernel_scale:int=4, stride=1) -> List[CriticBlock]:
         
         n_channels += 1 # Add one channel for embedding
 
@@ -48,16 +52,18 @@ class Critic(Critic):
                                     WS(nn.Conv1d(n_filter, n_filter, kernel_size=4, stride=2)), #WS()
                                     nn.LeakyReLU(0.2))
 
-        for stage in range(n_stages, 2, -1):
+        for stage in range(1, n_stages):
+            _stage =  n_stages - stage
+            _kernel_size = int(kernel_size + (_stage*kernel_scale))
             stage_conv = nn.Sequential(
-                        ConvBlock(n_filter, stage, kernel_size=kernel_size, is_generator=False),
+                        ConvBlockBN(n_filter, _stage, kernel_size=_kernel_size, is_generator=False, stride=stride),
                         downsample)
 
             # In sequence is independent of stage
             blocks.append(CriticBlock(stage_conv, critic_in))
 
         final_conv = nn.Sequential(
-            ConvBlock(n_filter, 1, kernel_size=kernel_size, is_generator=False),
+            ConvBlockBN(n_filter, 0, kernel_size=kernel_size, is_generator=False, stride=stride),
             nn.Flatten(),
             nn.Linear(n_filter * n_time_last_stage, 1),
         )

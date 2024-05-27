@@ -36,7 +36,7 @@ class WeightScale(object):
         return tmp
     
     @staticmethod
-    def apply(module, name:str, gain: int)-> 'WeightScale':
+    def apply(module:nn.Module, name:str, gain: int)-> 'WeightScale':
         fn = WeightScale(name)
         weight = getattr(module, name)
         # remove w from parameter list
@@ -97,7 +97,7 @@ class PixelNorm(nn.Module):
         tmp = torch.sqrt(torch.pow(x, 2).mean(dim=1, keepdim=True) + eps)
         return x / tmp
 
-class ConvBlock(nn.Module):
+class ConvBlockBN(nn.Module):
     '''
     Description
     ----------
@@ -161,7 +161,8 @@ class PrintLayer(nn.Module):
     def __init__(self, name:str):
         super(PrintLayer, self,).__init__()
         self.name = name
-    def forward(self, x):
-        print(f"####{self.name}###")
+
+    def forward(self, x:torch.Tensor):
+        print(f"#___{self.name}___#")
         print(x.shape)
         return x

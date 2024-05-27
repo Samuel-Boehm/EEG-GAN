@@ -8,4 +8,4 @@ trainer:
 
 scheduler:
   n_fading_epochs: 25
-  epochs_per_stage: [10, 10, 10, 10, 10]
+  epochs_per_stage: [200, 200, 200, 200, 200]

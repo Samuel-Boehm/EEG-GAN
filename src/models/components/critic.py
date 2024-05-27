@@ -8,7 +8,7 @@ import  numpy as np
 from typing import List
 from mne.filter import resample
 
-from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
+from src.models.components.modules import PixelNorm, ConvBlockBN, PrintLayer, WS
 
 class CriticBlock(nn.Module):
     r"""
