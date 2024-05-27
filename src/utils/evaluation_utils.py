@@ -10,7 +10,7 @@ import hydra
 import matplotlib.pyplot as plt
 
 from src.models import GAN
-from src.visualization.plot import plot_time_domain_by_target, plot_spectrum_by_target
+from src.visualization.plot import plot_spectrum_by_target, plot_time_domain, split_into_labels
 from src.utils.utils import to_numpy
 
 from src.utils import instantiate_model
@@ -43,7 +43,7 @@ def evaluate_model(model:GAN, dataloader:DataLoader, cfg:DictConfig) -> Dict[str
         X_real = torch.cat(X_real, dim=0)
         y_real = torch.cat(y_real, dim=0)
 
-        X_fake, y_fake = model.generator.generate(X_real.shape)
+        X_fake, y_fake = model.generator.generate(X_real.shape[0])
 
         X_real, X_fake, y_real, y_fake = to_numpy((X_real, X_fake, y_real, y_fake))
 
@@ -56,30 +56,32 @@ def evaluate_model(model:GAN, dataloader:DataLoader, cfg:DictConfig) -> Dict[str
     else:
         ncols = nrows = int(np.ceil(np.sqrt(n_channels)))
 
-    fig_td_real, axs_td_real = plt.subplots(nrows, ncols, figsize=(10 * ncols, 5 * nrows))
-    fig_td_fake, axs_td_fake = plt.subplots(nrows, ncols, figsize=(10 * ncols, 5 * nrows))
-
-    axs_td_real = axs_td_real.flat[:n_channels]
-    axs_td_fake = axs_td_fake.flat[:n_channels]
-
     mapping =dict(zip(range(len(cfg.data.classes)), cfg.data.classes))
 
-    for i in range(n_channels):
-        data_real = X_real[:, i, :]
-        data_fake = X_fake[:, i, :]
+    # For each class plot real and fake
+    
+    real_dict = split_into_labels(X_real, y_real, mapping)
+    fake_dict = split_into_labels(X_fake, y_fake, mapping)
 
-        plot_time_domain_by_target(data_real, y_real, show_std=True, ax=axs_td_real[i], mapping=mapping, title=channels[i])
-        plot_time_domain_by_target(data_fake, y_fake, show_std=True, ax=axs_td_fake[i], mapping=mapping, title=channels[i])
+    out_dict = {}
 
+    for key in cfg.data.classes:
+        fig, axs = plt.subplots(nrows, ncols, figsize=(10 * ncols, 5 * nrows))
+        axs = axs.flat[:n_channels]
+        for i in range(n_channels):
+            plot_time_domain(real_dict[key][:, i, :], ax=axs[i], title=channels[i], show_std=True, label='real')
+            plot_time_domain(fake_dict[key][:, i, :], ax=axs[i], title=channels[i], show_std=True, label='fake')
+        
+        out_dict[f'time_domain_{key}'] = fig
     
     pooled_data = np.concatenate((X_real, X_fake), axis=0)
     pooled_labels = np.concatenate((np.zeros(X_real.shape[0]), np.ones(X_fake.shape[0])))
 
     _, fig_frequency_domain = plot_spectrum_by_target(pooled_data, pooled_labels, cfg.data.sfreq, show_std=True, mapping={0: 'real', 1: 'fake'})
 
-    figures = {'time_domain_real': fig_td_real, 'time_domain_fake': fig_td_fake, 'frequency_domain': fig_frequency_domain}
+    out_dict['frequency_domain'] = fig_frequency_domain
 
-    return figures
+    return out_dict
     
     
 if __name__ == "__main__":

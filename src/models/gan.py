@@ -126,7 +126,7 @@ class GAN(LightningModule):
         optim_g, optim_c, optim_spc = self.optimizers()
         
         # 1: Generate fake batch:
-        X_fake, y_fake = self.generator.generate(X_real.shape)
+        X_fake, y_fake = self.generator.generate(X_real.shape[0])
 
         y_fake  = y_fake.type_as(y_real)
         
@@ -143,7 +143,7 @@ class GAN(LightningModule):
             self.toggle_optimizer(optim_g)
 
             # Generate fake data
-            X_fake, y_fake = self.generator.generate(X_real.shape)
+            X_fake, y_fake = self.generator.generate(X_real.shape[0])
 
             ## optimize generator
             fx_fake = self.critic(X_fake, y_fake)
