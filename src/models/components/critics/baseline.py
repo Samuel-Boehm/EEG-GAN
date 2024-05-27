@@ -48,7 +48,7 @@ class Critic(Critic):
                                     WS(nn.Conv1d(n_filter, n_filter, kernel_size=4, stride=2)), #WS()
                                     nn.LeakyReLU(0.2))
 
-        for stage in range(n_stages, 2, -1):
+        for stage in range(n_stages, 1, -1):
             stage_conv = nn.Sequential(
                         ConvBlock(n_filter, stage, kernel_size=kernel_size, is_generator=False, **kwargs),
                         downsample)

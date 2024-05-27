@@ -2,7 +2,7 @@ name: 'baseline'
 
 params: &params
   n_filter: 120
-  n_stages: 5
+  n_stages: ${trainer.scheduler.n_stages}
   n_channels: 21
   n_classes: 2
   current_stage: 1

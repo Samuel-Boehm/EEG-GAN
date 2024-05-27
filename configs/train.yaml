@@ -5,10 +5,10 @@ hydra:
 
 defaults:
   - _self_
+  - trainer: SLURM
   - data: clinical
   - model: baseline
   - callbacks: default
-  - trainer: SLURM
   - logger: wandb
 
 train: True
