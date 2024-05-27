@@ -7,7 +7,7 @@ import  numpy as np
 from typing import List
 
 from src.models.components.critic import CriticBlock, Critic
-from src.models.components.modules import PixelNorm, ConvBlockBN, PrintLayer, WS
+from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
 
 
 class Critic(Critic):

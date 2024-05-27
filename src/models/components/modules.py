@@ -97,7 +97,7 @@ class PixelNorm(nn.Module):
         tmp = torch.sqrt(torch.pow(x, 2).mean(dim=1, keepdim=True) + eps)
         return x / tmp
 
-class ConvBlockBN(nn.Module):
+class ConvBlock(nn.Module):
     '''
     Description
     ----------

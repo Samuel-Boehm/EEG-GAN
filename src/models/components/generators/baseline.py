@@ -6,7 +6,7 @@ import torch.nn as nn
 import numpy as np
 from typing import List
 
-from src.models.components.modules import PixelNorm, ConvBlockBN, PrintLayer, WS
+from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
 from src.models.components.generator import GeneratorBlock, Generator
 
 
