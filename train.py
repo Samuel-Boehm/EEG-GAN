@@ -1,5 +1,4 @@
 from typing import Any, Dict, List, Optional, Tuple
-
 import hydra
 import lightning as L
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
@@ -53,7 +52,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     scheduler = hydra.utils.instantiate(cfg.trainer.scheduler)
     callbacks.append(scheduler)
     
-    max_epochs = scheduler.max_epochs
+    max_epochs = int(scheduler.max_epochs)
 
     log.info(f"Instantiating trainer <{cfg.trainer.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer.trainer, callbacks=callbacks, logger=logger,

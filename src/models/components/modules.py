@@ -119,7 +119,6 @@ class ConvBlock(nn.Module):
     '''
     def __init__(self, n_filters, stage, kernel_size, is_generator=False, **kwargs):
         super(ConvBlock, self).__init__()
-        padding = int(stage*2 + 1) # stage0: 1, stage1: 3, stage2, 4 ...
         stride = 1 # fixed to 1 for now
         groups = int(n_filters / ((stage)* 2)) # for n_filters = 120: 60, 30, 20, 15, 12, 10
 
@@ -134,7 +133,7 @@ class ConvBlock(nn.Module):
                                 groups=groups,
                                 kernel_size=(kernel_size + i*2),
                                 stride=stride,
-                                padding=padding + i))
+                                padding=1 + i))
             self.convolutions.append(conv)
         
         self.convolutions.append(nn.LeakyReLU(0.2))
@@ -152,8 +151,8 @@ class ConvBlock(nn.Module):
     
     def forward(self, x):
         
-        for conv in self.convolutions:
-            x = conv(x)
+        for layer in self.convolutions:
+            x = layer(x)
         return x
     
 
