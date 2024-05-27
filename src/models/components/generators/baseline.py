@@ -47,7 +47,7 @@ class Generator(Generator):
             nn.Unflatten(1, (n_filter, n_time_first_layer)),
             nn.LeakyReLU(0.2),
             PixelNorm(),
-            ConvBlock(n_filter, 0, kernel_size=kernel_size, is_generator=True),
+            ConvBlock(n_filter, 1, kernel_size=kernel_size, is_generator=True),
             )
         
         upsample = nn.Sequential(
@@ -59,11 +59,10 @@ class Generator(Generator):
 
         blocks.append(GeneratorBlock(first_conv, generator_out))
 
-        for stage in range(1, n_stages):
-            _kernel_size = int(kernel_size + (stage*4))
+        for stage in range(2, n_stages + 1):
             stage_conv = nn.Sequential(
                 upsample,
-                ConvBlock(n_filter, stage, kernel_size=_kernel_size, is_generator=True),
+                ConvBlock(n_filter, stage, kernel_size=kernel_size, is_generator=True),
             )
 
             # Out sequence is independent of stage

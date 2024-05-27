@@ -160,12 +160,12 @@ class Generator(nn.Module):
         
         return X
 
-    def generate(self, shapes):
+    def generate(self, n_samples:int):
 
-        z = torch.randn(shapes[0], self.latent_dim)
+        z = torch.randn(n_samples, self.latent_dim)
 
         y_fake = torch.randint(low=0, high=self.n_classes,
-                               size=(shapes[0],), dtype=torch.int32)
+                               size=(n_samples,), dtype=torch.int32)
         
         z, y_fake = self._to_current_device([z, y_fake])
         
