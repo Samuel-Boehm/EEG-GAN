@@ -39,7 +39,7 @@ def instantiate_model(models_cfg: DictConfig, n_samples:int) -> List[Callback]:
         spectral_critic:SpectralCritic = hydra.utils.instantiate(models_cfg.spectral_critic, n_samples=n_samples)
         models['spectral_critic'] = spectral_critic
     
-    return hydra.utils.instantiate(models_cfg.gan, **models , optimizer=models_cfg.optimizer)
+    return hydra.utils.instantiate(models_cfg.gan, **models, optimizer=models_cfg.optimizer)
 
 def instantiate_callbacks(callbacks_cfg: DictConfig) -> List[Callback]:
     """Instantiates callbacks from config.

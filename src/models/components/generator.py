@@ -8,7 +8,7 @@ from torch import Tensor
 import numpy as np
 from typing import List
 
-from src.models.components.modules import PixelNorm, ConvBlockBN, PrintLayer, WS
+from src.models.components.modules import PixelNorm, ConvBlock, PrintLayer, WS
 
 class GeneratorBlock(nn.Module):
     """
@@ -36,7 +36,7 @@ class GeneratorBlock(nn.Module):
     """
 
     def __init__(self, intermediate_sequence:nn.Sequential, out_sequence:nn.Sequential) -> None:
-        super(GeneratorBlock, self).__init__()
+        super().__init__()
         self.intermediate_sequence = intermediate_sequence
         self.out_sequence = out_sequence
 
@@ -77,10 +77,9 @@ class Generator(nn.Module):
                  embedding_dim:int,
                  fading:bool=False,
                  freeze:bool=False,
-                 **kwargs
-                 ) -> None:
+                 **kwargs ) -> None:
         
-        super().__init__(**kwargs)
+        super().__init__()
         
         self.blocks:List[GeneratorBlock] = list()
 

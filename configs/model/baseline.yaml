@@ -8,6 +8,7 @@ params: &params
   current_stage: 1
   fading: True
   freeze: True
+  batch_norm: True
 
 generator:
   _target_: src.models.components.generators.baseline.Generator

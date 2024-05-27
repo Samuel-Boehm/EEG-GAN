@@ -147,7 +147,7 @@ class ConvBlock(nn.Module):
         if is_generator:
             self.convolutions.append(PixelNorm())
 
-        if 'batch_norm' in kwargs:
+        if 'batch_norm' in kwargs and kwargs['batch_norm'] == True:
             self.convolutions.append(nn.BatchNorm1d(n_filters))
     
     def forward(self, x):
