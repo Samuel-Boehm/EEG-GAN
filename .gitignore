@@ -12,3 +12,5 @@ playground.ipynb
 .vscode/launch.json
 /sweeps
 /wandb
+preprocess.sh
+sweep.sh

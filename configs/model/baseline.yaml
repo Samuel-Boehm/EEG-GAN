@@ -35,4 +35,4 @@ optimizer:
   name: 'adam'
   lr_generator: 0.001
   lr_critic: 0.001
-  betas: [0.5, 0.999]
+  betas: [0.0, 0.999]

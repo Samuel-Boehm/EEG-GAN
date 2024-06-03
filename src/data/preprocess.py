@@ -13,11 +13,17 @@ from pathlib import Path
 from joblib import Parallel, delayed
 
 import torch
+import pandas as pd
 
 from braindecode.datasets import MOABBDataset
 from braindecode.preprocessing import preprocess, Preprocessor, create_windows_from_events
 from braindecode.datautil.preprocess import exponential_moving_standardize
 
+def normalize(data:np.ndarray):
+    """
+    Normalize data to zero mean and unit variance
+    """
+    return (data - np.mean(data, axis=1, keepdims=True)) / np.std(data, axis=1, keepdims=True)
 
 
 def  _2D_ZCA_whitening(data:np.ndarray, trial_start_offset_samples:int) -> np.ndarray:
@@ -112,8 +118,12 @@ def preprocess_moabb(cfg: DictConfig) -> None:
         
         # Now sample wise preprocessing
         preprocessors = []
+        
         if hasattr(cfg, 'ZCA_whitening') and cfg.ZCA_whitening:
             preprocessors.append(Preprocessor(ZCA_whitening, trial_start_offset_samples=trial_start_offset_samples))
+        if hasattr(cfg, 'normalized') and cfg.normalized:
+            preprocessors.append(Preprocessor(normalize))
+        
         if len(preprocessors) > 0:
             preprocess(windows_dataset, preprocessors, n_jobs=-1)
 

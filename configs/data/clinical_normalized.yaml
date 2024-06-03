@@ -1,0 +1,12 @@
+_target_: src.data.datamodule.ProgressiveGrowingDataset
+dataset_name: 'clinical_normalized' # How we want to call the data locally
+batch_size: 64
+moabb_name: 'Schirrmeister2017' # Name of the data on MOABB
+subject_id: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+channels: ['Fp1','Fp2','F7','F3','Fz','F4','F8', 'T7','C3','Cz','C4','T8','P7','P3', 'Pz','P4','P8','O1','O2','M1','M2']
+ZCA_whitening: False
+normalized: True
+sfreq: 256  # output sampling frequency
+length_in_seconds: 2.5 # total length of the trial in seconds
+trial_start_offset_seconds: 0.5 
+classes: ['right_hand', 'rest']
