@@ -64,9 +64,9 @@ def ZCA_whitening(data:np.ndarray, trial_start_offset_samples:int) -> np.ndarray
     
     return np.stack(data_whitened, dtype=np.float32)
 
-@hydra.main(config_path="../../configs/data", config_name="clinical")
+@hydra.main(config_path="../../configs", config_name="train")
 def preprocess_moabb(cfg: DictConfig) -> None:
-
+    cfg = cfg.data
     base_dir = Path(__file__).parent.parent.parent
     dataset_dir = Path(base_dir, "datasets", cfg.dataset_name)
     dataset_dir.mkdir(parents=True, exist_ok=True)
