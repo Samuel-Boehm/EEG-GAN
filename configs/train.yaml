@@ -6,7 +6,7 @@ hydra:
 defaults:
   - _self_
   - trainer: SLURM
-  - data: clinical
+  - data: clinical_normalized
   - model: baseline
   - callbacks: default
   - logger: wandb

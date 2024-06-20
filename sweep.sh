@@ -4,7 +4,7 @@
 #SBATCH --partition ml_gpu-rtx2080 # short: -p <partition_name>
 
 # Define a name for your job
-#SBATCH --job-name eeg-gan             # short: -J <job name>
+#SBATCH --job-name eeg-gan 
 
 # Define the files to write the outputs of the job to.
 # Please note the SLURM will not create this directory for you, and if it is missing, no logs will be saved.
@@ -28,7 +28,7 @@ conda activate eeg-gan
 # Running the job
 start=`date +%s`
 
-srun "$@" 
+srun "$@"
 
 end=`date +%s`
 runtime=$((end-start))
