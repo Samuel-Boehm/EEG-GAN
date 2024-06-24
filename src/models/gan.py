@@ -175,7 +175,9 @@ class GAN(LightningModule):
         # Log GPU memory usage
         current_memory = torch.cuda.memory_allocated()
         max_memory = torch.cuda.max_memory_allocated()
-        memory_usage_percentage = (current_memory / max_memory) * 100
+
+
+        memory_usage_percentage = (current_memory / max_memory) * 100 if max_memory != 0 else 0
         self.GPU_memory(memory_usage_percentage)
         #
 

@@ -2,13 +2,13 @@ name: 'baseline'
 
 params: &params
   n_filter: 120
-  n_stages: ${trainer.scheduler.n_stages}
+  n_stages: 6
   n_channels: 21
   n_classes: 2
   current_stage: 1
   fading: True
   freeze: True
-  batch_norm: True
+  batch_norm: False
 
 generator:
   _target_: src.models.components.generators.baseline.Generator

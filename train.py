@@ -17,7 +17,6 @@ from src.utils import (
     instantiate_callbacks,
     instantiate_loggers,
     log_hyperparameters,
-    task_wrapper,
     instantiate_model,
 )
 
