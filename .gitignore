@@ -5,3 +5,4 @@
 /wandb
 *.sh
 __pycache__
+*.ipynb

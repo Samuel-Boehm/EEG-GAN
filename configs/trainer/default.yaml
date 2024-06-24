@@ -1,6 +1,6 @@
 trainer: 
   _target_: lightning.pytorch.trainer.Trainer
-  accelerator: cpu
+  accelerator: gpu
   devices: 1
 
 scheduler:

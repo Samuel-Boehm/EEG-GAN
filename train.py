@@ -118,10 +118,9 @@ def main(cfg: DictConfig) -> Optional[float]:
     model = object_dict["model"]
 
     figures = evaluate_model(model, dataloader, cfg)
-        
-    wandb.log({"time domain real": wandb.Image(figures['time_domain_real']),
-               "time domain fake": wandb.Image(figures['time_domain_fake']),
-               "frequency domain": wandb.Image(figures['frequency_domain'])})
+
+    for key, fig in figures.items():
+        wandb.log({key: wandb.Image(fig)})
    
     # safely retrieve metric value for hydra-based hyperparameter optimization
     metric_value = get_metric_value(
