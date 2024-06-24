@@ -39,10 +39,10 @@ class CriticBlock(nn.Module):
         self.intermediate_sequence = intermediate_sequence
         self.in_sequence = in_sequence    
 
-    def forward(self, X, first=False, **kwargs) -> torch.Tensor:
+    def forward(self, x, first=False, **kwargs) -> torch.Tensor:
         if first:
-            X = self.in_sequence(X, **kwargs)
-        out = self.intermediate_sequence(X, **kwargs)
+            x = self.in_sequence(x, **kwargs)
+        out = self.intermediate_sequence(x, **kwargs)
         return out
     
     def stage_requires_grad(self, requires_grad:bool) -> None:
@@ -113,12 +113,12 @@ class Critic(nn.Module):
         else:
             self.alpha = 0
 
-    def forward(self, X:torch.Tensor, y:torch.Tensor, **kwargs):
+    def forward(self, x:torch.Tensor, y:torch.Tensor, **kwargs):
         
         embedding:torch.Tensor = self.label_embedding(y).view(y.shape[0], 1, self.n_samples)
-        embedding = self.resample(embedding, X.shape[-1])
+        embedding = self.resample(embedding, x.shape[-1])
         
-        X = torch.cat([X, embedding], 1) # batch_size x (n_channels + 1) x n_time 
+        x = torch.cat([x, embedding], 1) # batch_size x (n_channels + 1) x n_time 
 
         for i in range(self._stage, len(self.blocks)):
             first = (i == self._stage)
@@ -127,18 +127,18 @@ class Critic(nn.Module):
                 # we take the current input, downsample it for the next block
                 # match dimensions by using in_sequence and interpolate with
                 # the current bock output with the downsampled input. 
-                X_ = self.resample(X, X.shape[-1] // 2)
-                X_ = self.blocks[i-1].in_sequence(X_, **kwargs)
+                x_ = self.resample(x, x.shape[-1] // 2)
+                x_ = self.blocks[i-1].in_sequence(x_, **kwargs)
 
                 # pass x through new (current) block
-                X = self.blocks[i](X, first=first,  **kwargs)
+                x = self.blocks[i](x, first=first,  **kwargs)
                 # interpolate X_ and X
-                X = self.alpha * X + (1 - self.alpha) * X_  
+                x = self.alpha * x + (1 - self.alpha) * x_  
             else:
-                X = self.blocks[i](X,  first=first, **kwargs)
-        return X
+                x = self.blocks[i](x,  first=first, **kwargs)
+        return x
     
-    def resample(self, X:torch.Tensor, out_size:int):
+    def resample(self, x:torch.Tensor, out_size:int):
         """
         rescale input. Using bicubic interpolation.
 
@@ -154,12 +154,12 @@ class Critic(nn.Module):
         X : tensor
             resampled data
         """
-        size = (X.shape[-2], out_size)
-        X = torch.unsqueeze(X, 1)
-        X = nn.functional.interpolate(X, size=size, mode='bicubic')
-        X = torch.squeeze(X, 1)
+        size = (x.shape[-2], out_size)
+        x = torch.unsqueeze(x, 1)
+        x = nn.functional.interpolate(x, size=size, mode='bicubic')
+        x = torch.squeeze(x, 1)
 
-        return X
+        return x
     
     def build(self, n_filter:int, n_samples:int, n_stages:int, n_channels:int, kernel_size=3) -> List[CriticBlock]:
         

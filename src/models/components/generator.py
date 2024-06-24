@@ -112,10 +112,10 @@ class Generator(nn.Module):
             self.alpha = 0
 
 
-    def forward(self, X, y, **kwargs):
+    def forward(self, x, y, **kwargs):
         embedding = self.label_embedding(y)
         #embedding shape: batch_size x 10
-        X = torch.cat([X, embedding], dim=1)
+        x = torch.cat([x, embedding], dim=1)
 
         for i in range(0, self.cur_stage):
             last = (i == self._stage)
@@ -123,41 +123,41 @@ class Generator(nn.Module):
                 # if this is the last stage, fading is active and alpha < 1
                 # we copy the output of the previous stage, upsample it
                 # and interpolate it with the output of the current stage.
-                X_ = self.blocks[i-1].out_sequence(X, **kwargs)
-                X_ = self.resample(X_, X.shape[-1]*2)
+                x_ = self.blocks[i-1].out_sequence(x, **kwargs)
+                x_ = self.resample(x_, x.shape[-1]*2)
 
                 # pass X through last stage
-                X = self.blocks[i](X, last=last, **kwargs)
+                x = self.blocks[i](x, last=last, **kwargs)
 
                 # interpolate
-                X = self.alpha * X + (1 - self.alpha) * X_
+                x = self.alpha * x + (1 - self.alpha) * x_
             else:
-                X = self.blocks[i](X, last=last, **kwargs)
-        return X
+                x = self.blocks[i](x, last=last, **kwargs)
+        return x
 
 
-    def resample(self, X:torch.Tensor, out_size:int):
+    def resample(self, x:torch.Tensor, out_size:int):
         """
         rescale input. Using bicubic interpolation.
 
         Parameters
         ----------
-        X : tensor
+        x : tensor
             Input data
         
         out_size : tuple
 
         Returns
         -------
-        X : tensor
+        x : tensor
             resampled data
         """
-        size = (X.shape[-2], out_size)
-        X = torch.unsqueeze(X, 1)
-        X = nn.functional.interpolate(X, size=size, mode='bicubic')
-        X = torch.squeeze(X, 1)
+        size = (x.shape[-2], out_size)
+        x = torch.unsqueeze(x, 1)
+        x = nn.functional.interpolate(x, size=size, mode='bicubic')
+        x = torch.squeeze(x, 1)
         
-        return X
+        return x
 
     def generate(self, n_samples:int):
 
