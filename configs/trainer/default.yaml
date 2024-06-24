@@ -6,5 +6,5 @@ trainer:
 scheduler:
   _target_: src.callbacks.scheduler.Scheduler
   n_fading_epochs: 10
-  epochs_per_stage: [25, 25, 25, 25, 25]
-  n_stages: 5
+  epochs_per_stage: 20
+  n_stages: ${model.params.n_stages}
