@@ -1,6 +1,8 @@
 {
     "version": "0.2.0",
     "configurations": [
+        
+
         {
             "name": "Python Debugger: Current File",
             "type": "debugpy",
@@ -9,7 +11,9 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
-            "justMyCode": true
+            "justMyCode": true,
+            "args": ["2024-06-24-17-25-42", "6"
+                    ]
         }
     ]
 }

@@ -384,9 +384,6 @@ def plot_bin_stats(real_X: np.ndarray, fake_X, fs, channels:list, path:str=None,
         path_real = None
         path_fake = None
                           
-
-
-
     fig_stats, _ = plot_stft(
             color_grid, t, f, f'{title} {fs} Hz - p value > 0.3', 'log10 rel. power mean', channel_names=channels,
             upper=5, lower = -5, path=path_stats,
