@@ -36,7 +36,7 @@ def main(model_path:str, stage:int) -> None:
     model = GAN.load_from_checkpoint(checkpoint, **models, **cfg.model.gan, optimizer=cfg.model.optimizer, strict=False)
     model.generator.set_stage(stage)
 
-    ds = ProgressiveGrowingDataset('clinical', batch_size=512, n_stages=cfg.trainer.scheduler.n_stages)
+    ds = ProgressiveGrowingDataset(cfg.data.dataset_name, batch_size=512, n_stages=cfg.trainer.scheduler.n_stages)
     ds.set_stage(stage)
 
     dl = ds.train_dataloader()
