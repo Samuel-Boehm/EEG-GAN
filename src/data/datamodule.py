@@ -89,7 +89,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
         super().__init__()
 
     def setup(self, stage: str) -> None:
-        self.set_stage(1)
+        return None
 
     def train_dataloader(self) -> DataLoader:
         dl = ThrowAwayIndexLoader(self.data, batch_size=self.batch_size,
@@ -114,10 +114,10 @@ class ProgressiveGrowingDataset(LightningDataModule):
             if current_sfreq == base_sfreq:
                 return
 
-            preprocessors = [Preprocessor(change_type, out_type='float64')]
+            preprocessors = [Preprocessor(change_type, out_type='float64', picks='all')]
             preprocessors.append(Preprocessor(
                 'resample', sfreq=current_sfreq, npad=0))
-            preprocessors.append(Preprocessor(change_type, out_type='float32'))
+            preprocessors.append(Preprocessor(change_type, out_type='float32', picks='all'))
             self.data = preprocess(self.data, preprocessors, n_jobs=-1)
             return
 
