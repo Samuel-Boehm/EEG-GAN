@@ -1,39 +1,37 @@
-import torch 
-
-import mne
-mne.set_log_level('ERROR')
-
-d_ = torch.load('/home/samuelboehm/EEG-GAN/datasets/clinical/S1.pt')
-
-from braindecode.datasets.base import BaseConcatDataset
-from braindecode.preprocessing import preprocess, Preprocessor
+from src.data.datamodule import ProgressiveGrowingDataset
+from src.visualization.plot import plot_time_domain_by_target, plot_spectrum, compute_stft, plot_stft
+import matplotlib.pyplot as plt
 import numpy as np
+from src.utils.utils import to_numpy
 
+plt.style.use('ggplot')
 
+ds = ProgressiveGrowingDataset('dummy_data', batch_size=200, n_stages=1)
 
-def change_type(X: np.ndarray, out_type: str) -> np.ndarray:
-    # MNE expects the data to be of type float64. This helper function changes the type of the input data to float64.
-    if out_type == 'float64':
-        return X.astype('float64')
-    elif out_type == 'float32':
-        return X.astype('float32')
-    else:
-        raise ValueError(f"Unknown type {out_type}")
+ds.set_stage(1)
 
-base_sfreq = 256
-sfreq = int(base_sfreq // 2**5)
+dl = ds.train_dataloader()
 
-print(sfreq)
+X, y = next(iter(dl))
 
-preprocessors = [Preprocessor(change_type, out_type='float64')]
-data = preprocess(d_, preprocessors, n_jobs=1)
+X, y = to_numpy([X, y])
 
-preprocessors = [Preprocessor('resample', sfreq=sfreq, npad=0)]
-data = preprocess(data, preprocessors, n_jobs=1)
+n_channels = X.shape[1]
 
-print(data.datasets[0][0][0].shape)
+if n_channels <= 3:
+        nrows = 1
+        ncols = n_channels
+else:
+    ncols = nrows = int(np.ceil(np.sqrt(n_channels)))
 
+fig, axs = plt.subplots(nrows, ncols, figsize=(10 * ncols, 5 * nrows))
 
-def _resamp_ratio_len(up, down, n):
-    ratio = float(up) / down
-    return ratio, max(int(round(ratio * n)), 1)
+axs = axs.flat[:n_channels]
+for i in range(n_channels):
+    plot_time_domain_by_target(X[:, i, :], y,  ax=axs[i], mapping={0: 'class_0', 1: 'class_1'},)
+
+plt.show()
+
+# Plot Spectrum
+fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+# mapping_split

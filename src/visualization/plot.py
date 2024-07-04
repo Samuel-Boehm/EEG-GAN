@@ -230,7 +230,7 @@ def compute_stft(batch: np.ndarray, fs: float, wsize: int):
 
 def plot_stft(stft_power: np.ndarray, t: np.ndarray, f: np.ndarray, title: str, 
             cbar_label: str, channel_names: list=None, upper = 5, lower = -5, 
-            cmap = 'RdBu_r', path:str = None):
+            cmap = 'RdBu_r', path:str=None):
     
     """
     Plot multi channel time-frequency-power spectrum from stft for 21 channels.
@@ -332,7 +332,7 @@ def plot_stft(stft_power: np.ndarray, t: np.ndarray, f: np.ndarray, title: str,
     return fig, axs
     
 
-def calc_bin_stats(real_X: np.ndarray, fake_X: np.ndarray, fs: int,):
+def calc_bin_stats(real_X: np.ndarray, fake_X: np.ndarray, fs: int, wsize=None):
     '''
     Calculates the p-values for each bin of the stft and corrects them for multiple comparisons.
     Returns the corrected p-values reshaped to the shape of the stft. Bins are considered to be 
@@ -365,7 +365,8 @@ def calc_bin_stats(real_X: np.ndarray, fake_X: np.ndarray, fs: int,):
     '''
 
     # Setting window size
-    wsize = fs/2
+    if wsize is None:
+        wsize = fs/2
     # calculate short time fourier transform
     real_stft, _ ,_ = compute_stft(real_X, fs, wsize)
     fake_stft, f, t = compute_stft(fake_X, fs, wsize)
@@ -393,7 +394,7 @@ def calc_bin_stats(real_X: np.ndarray, fake_X: np.ndarray, fs: int,):
     return real_stft, fake_stft, corr_pval, f, t
 
 def plot_bin_stats(real_X: np.ndarray, fake_X, fs, channels:list, path:str=None,
-                   title:str='plot', show_fig:bool=False):
+                   title:str='plot', show_fig:bool=False, wsize=None):
     '''
     Plots the bin statistics of the real and fake data.
 
@@ -420,7 +421,7 @@ def plot_bin_stats(real_X: np.ndarray, fake_X, fs, channels:list, path:str=None,
 
     '''
     
-    real_stft, fake_stft, pvals, f, t = calc_bin_stats(real_X, fake_X, fs)
+    real_stft, fake_stft, pvals, f, t = calc_bin_stats(real_X, fake_X, fs, wsize)
 
     color_grid = np.zeros_like(pvals)
 
@@ -442,17 +443,17 @@ def plot_bin_stats(real_X: np.ndarray, fake_X, fs, channels:list, path:str=None,
                           
     fig_stats, _ = plot_stft(
             color_grid, t, f, f'{title} {fs} Hz - p value > 0.3', 'log10 rel. power mean', channel_names=channels,
-            upper=5, lower = -5, path=path_stats,
+            upper=5, lower = -5, path=path_stats, 
             )
 
     fig_real, _ = plot_stft(
             real_stft, t, f, f'{title} real {fs} Hz ', 'log10 rel. power mean',
-            channel_names=channels, upper=5, lower = -5, path=path_real,
+            channel_names=channels, upper=5, lower = -5, path=path_real, 
             )
 
     fig_fake, _ = plot_stft(
             fake_stft, t, f, f'{title} fake {fs} Hz ', 'log10 rel. power mean',
-            channel_names=channels, upper=5, lower = -5, path=path_fake,
+            channel_names=channels, upper=5, lower = -5, path=path_fake, 
             )
     
     return fig_stats, fig_real, fig_fake
