@@ -1,20 +1,16 @@
 from hydra import compose, initialize
-import hydra
-from src.models.gan import GAN
-from legacy_code.visualization.stft_plots import plot_bin_stats
-from src.data.datamodule import ProgressiveGrowingDataset
-import torch
-from src.utils.utils import to_numpy
-from src.utils.evaluation_utils import evaluate_model
+from src.visualization.plot import plot_spectrum_by_target, plot_bin_stats, multi_class_time_domain, mapping_split
+import numpy as np
 
+from utils import return_real_and_fake
 
 def main(model_path:str, stage:int) -> None:
     
-    checkpoint = list(model_path.glob('*.ckpt'))[0]
-
+    # Load config
     with initialize(version_base=None, config_path=str(model_path)):
         cfg = compose(config_name="config")
 
+<<<<<<< HEAD
     n_samples = int(cfg.data.sfreq * cfg.data.length_in_seconds)
 
     models = dict()
@@ -54,6 +50,10 @@ def main(model_path:str, stage:int) -> None:
     y_fake = y_fake[:y_real.shape[0]]
 
     X_real, X_fake, y_real, y_fake = to_numpy([X_real, X_fake, y_real, y_fake])
+=======
+    # Load real data and generate data
+    X_real, X_fake, y_real, y_fake = return_real_and_fake(model_path, cfg, stage)
+>>>>>>> cf53a381b6af548491bccd9db3412d10972931df
 
     print(f'X_real shape: {X_real.shape} X_fake shape: {X_fake.shape}')
 
@@ -61,13 +61,39 @@ def main(model_path:str, stage:int) -> None:
     _stage = cfg.trainer.scheduler.n_stages - stage
     current_sfreq = int(base_sfreq // 2**_stage)
 
-    bin_stats, stft_real, stft_fake = plot_bin_stats(X_real, X_fake, fs=current_sfreq, channels=cfg.data.channels)
+    class_mapping = dict(zip(range(len(cfg.data.classes)), cfg.data.classes))
 
-    figures = evaluate_model(model, dl, cfg)
+     # Plot Time domain
+    
+    figures = multi_class_time_domain(X_real, X_fake, y_real, y_fake, class_mapping,
+                                      cfg.data.channels)
+    
+    # Plots bin statistics
 
-    figures['bin_stats'] = bin_stats
-    figures['stft_real'] = stft_real
-    figures['stft_fake'] = stft_fake
+    ## split real and fake into labels
+    X_real_split = mapping_split(X_real, y_real, class_mapping)
+    X_fake_split = mapping_split(X_fake, y_fake, class_mapping)
+
+    ## for each label create a real and fake plot
+    for label in class_mapping.values():
+        bin_stats, stft_real, stft_fake = plot_bin_stats(X_real_split[label], X_fake_split[label],
+                                                        fs=current_sfreq, channels=cfg.data.channels)
+        ## add plots to figures
+        figures[f'bin_stats_{label}'] = bin_stats
+        figures[f'stft_real_{label}'] = stft_real
+        figures[f'stft_fake_{label}'] = stft_fake
+    
+   
+
+    # Plot spectrum
+    pooled_data = np.concatenate((X_real, X_fake), axis=0)
+    pooled_labels = np.concatenate((np.zeros(X_real.shape[0]), np.ones(X_fake.shape[0])))
+    
+    _, fig_frequency_domain = plot_spectrum_by_target(pooled_data, pooled_labels,
+                                                      cfg.data.sfreq, show_std=True,
+                                                      mapping={0: 'real', 1: 'fake'})
+
+    figures['frequency_domain'] = fig_frequency_domain
 
     for key, fig in figures.items():
         fig.savefig(f'{model_path}/{key}_stage{stage}.png')

@@ -10,7 +10,7 @@ import hydra
 import matplotlib.pyplot as plt
 
 from src.models import GAN
-from src.visualization.plot import plot_spectrum_by_target, plot_time_domain, split_into_labels
+from src.visualization.plot import plot_spectrum_by_target, plot_time_domain, mapping_split
 from src.utils.utils import to_numpy
 
 from src.utils import instantiate_model
@@ -60,8 +60,8 @@ def evaluate_model(model:GAN, dataloader:DataLoader, cfg:DictConfig) -> Dict[str
 
     # For each class plot real and fake
     
-    real_dict = split_into_labels(X_real, y_real, mapping)
-    fake_dict = split_into_labels(X_fake, y_fake, mapping)
+    real_dict = mapping_split(X_real, y_real, mapping)
+    fake_dict = mapping_split(X_fake, y_fake, mapping)
 
     out_dict = {}
 

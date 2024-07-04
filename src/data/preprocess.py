@@ -128,7 +128,7 @@ def preprocess_moabb(cfg: DictConfig) -> None:
             preprocess(windows_dataset, preprocessors, n_jobs=-1)
 
         # Not the most elegant way to add the sampling frequency to the description  but it works
-        windows_dataset.set_description({'fs': [256] * len(windows_dataset.datasets)})    
+        windows_dataset.set_description({'fs': [cfg.sfreq] * len(windows_dataset.datasets)})
 
         dataset_path = Path(dataset_dir, f"S{subject}.pt")
         with open(dataset_path, 'wb') as f:
