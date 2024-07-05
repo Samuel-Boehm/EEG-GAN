@@ -89,7 +89,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
         super().__init__()
 
     def setup(self, stage: str) -> None:
-        return None
+        self.set_stage(1)
 
     def train_dataloader(self) -> DataLoader:
         dl = ThrowAwayIndexLoader(self.data, batch_size=self.batch_size,
