@@ -13,7 +13,7 @@ def generate_tone_burst(frequency, sampling_rate, duration, signal_duration, shi
     
     # Generate tone burst
     t_burst = np.arange(n_samples_burst) / sampling_rate
-    sine_wave = np.sin(2 * np.pi * frequency * t_burst)
+    sine_wave = np.sin(frequency * t_burst)
     envelope = np.hanning(n_samples_burst)
     tone_burst = sine_wave * envelope
     
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     N_CHANNELS = 21
     CH_NAMES = [f'ch_{i}' for i in range(N_CHANNELS)]
 
-    X, y = create_dummy_data(256, N_CHANNELS, 2, SFREQ, 2.5)
+    X, y = create_dummy_data(800, N_CHANNELS, 2, SFREQ, 2.5)
 
     dummy_ds = create_from_X_y(X, y, drop_last_window=False, sfreq=SFREQ, ch_names=CH_NAMES,)
     
