@@ -1,0 +1,11 @@
+_target_: src.data.datamodule.ProgressiveGrowingDataset
+dataset_name: 'dummy_data' # How we want to call the data locally
+batch_size: 64
+moabb_name: False # Name of the data on MOABB
+subject_id: [1]
+channels: ['ch_0', 'ch_1', 'ch_2', 'ch_3', 'ch_4', 'ch_5', 'ch_6', 'ch_7', 'ch_8', 'ch_9', 'ch_10', 'ch_11', 'ch_12', 'ch_13', 'ch_14', 'ch_15', 'ch_16', 'ch_17', 'ch_18', 'ch_19', 'ch_20']
+ZCA_whitening: False
+sfreq: 256  # output sampling frequency
+length_in_seconds: 2.5 # total length of the trial in seconds
+trial_start_offset_seconds: False
+classes: ['dummy1', 'dummy2']

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the partition on which the job shall run.
-#SBATCH --partition ml_gpu-rtx2080 # short: -p <partition_name>
+#SBATCH -p ml_gpu-rtx2080 # short: -p <partition_name>
 
 # Define a name for your job
 #SBATCH --job-name eeg-gan 
@@ -15,7 +15,7 @@
 
 # Define the amount of memory required per node
 #SBATCH --mem 32GB
-#SBATCH --time 1-10:00:00
+#SBATCH --time 1-12:00:00
 echo "Workingdir: $PWD";
 echo "Started at $(date)";
 
@@ -28,7 +28,7 @@ conda activate eeg-gan
 # Running the job
 start=`date +%s`
 
-srun "$@"
+srun wandb agent --count 1 $1
 
 end=`date +%s`
 runtime=$((end-start))

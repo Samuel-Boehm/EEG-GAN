@@ -96,7 +96,8 @@ def create_dummy_data(n_samples:int, n_channels:int, n_classes:int,
 
         # Normalize Amplitude
         X = X / np.max(X)
-    
+        
+    y = y.astype(int)
     
     return X, y
 

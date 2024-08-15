@@ -8,5 +8,5 @@ trainer:
 
 scheduler:
   n_fading_epochs: 25
-  epochs_per_stage: 200
+  epochs_per_stage: 250
   n_stages: ${model.params.n_stages}
