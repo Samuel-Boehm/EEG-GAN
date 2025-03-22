@@ -12,8 +12,7 @@
             "cwd": "${workspaceFolder}",
             "env": {"PYTHONPATH": "${workspaceFolder}"},
             "justMyCode": true,
-            "args": ["2024-06-24-17-25-42", "6"
-                    ]
+            "args": []
         }
     ]
 }

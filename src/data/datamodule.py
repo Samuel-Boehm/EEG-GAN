@@ -4,61 +4,23 @@
 from lightning import LightningDataModule
 import torch
 from torch.utils.data import DataLoader
+from torch.utils.data import TensorDataset
+import yaml
 
-import os
 import numpy as np
+from scipy import signal
 
 from pathlib import Path
 
 import yaml
 
-from braindecode.datasets.base import BaseConcatDataset
-from braindecode.datasets import create_from_X_y
-from braindecode.preprocessing import preprocess, Preprocessor
 
-# Mute braindecode and MNE
-import logging
-logging.getLogger('mne').setLevel(logging.ERROR)
-logging.getLogger('braindecode').setLevel(logging.ERROR)
-
-
-def change_type(X: np.ndarray, out_type: str) -> np.ndarray:
-    # MNE expects the data to be of type float64. This helper function changes the type of the input data to float64.
-    if out_type == 'float64':
-        return X.astype('float64')
-    elif out_type == 'float32':
-        return X.astype('float32')
-    else:
-        raise ValueError(f"Unknown type {out_type}")
-
-
-class ThrowAwayIndexLoader(DataLoader):
-    '''
-    The BaseConcatDataset returns a tuple of (X, y, i) where i is the index of the trial.
-    This loader only returns the X and y.
-    '''
-
-    def __init__(self, data, *args, **kwargs):
-        self.dataset = data
-        super().__init__(data, *args, **kwargs)
-
-    def __iter__(self):
-        for X, y, _ in super().__iter__():
-            yield X, y
-
-    def __len__(self):
-        return len(self.dataset)
 
 
 class ProgressiveGrowingDataset(LightningDataModule):
     '''
     This class is a LightningDataModule that is used to train the GAN in a progressive growing manner.
     It loads all datasets from the data_dir and resamples them to the correct frequency for the current stage.
-
-    Parameters:
-    ----------
-    data_dir (str): path to the directory containing the datasets
-    batch_size (int): batch size for the DataLoader
 
     Methods:
     ----------
@@ -67,10 +29,10 @@ class ProgressiveGrowingDataset(LightningDataModule):
     set_stage(stage: int): reloads the data and resamples it to the correct frequency for the current stage
     '''
 
-    def __init__(self, dataset_name: str, batch_size: int, n_stages: int, **kwargs) -> None:
+    def __init__(self, folder_name:str, batch_size:int, n_stages:int, sfreq:int, **kwargs) -> None:
 
         self.debug = False
-        if dataset_name == 'debug':
+        if folder_name == 'debug':
             print('Dataloader entering debug mode, only using dummy data.')
             self.debug = True
 
@@ -83,43 +45,53 @@ class ProgressiveGrowingDataset(LightningDataModule):
             with open(path, 'r') as file:
                 self.data_dict = yaml.safe_load(file)
 
-        self.data_dir = Path.cwd() / 'datasets' / dataset_name
+        self.data_dir = Path.cwd() / 'datasets' / folder_name
         self.batch_size = batch_size
         self.n_stages = n_stages
+        self.base_sfreq = sfreq
         super().__init__()
 
     def setup(self, stage: str) -> None:
         self.set_stage(1)
+        # Load metadata 
+        self.metadata = yaml.safe_load(open(self.data_dir / 'config.yaml', 'r'))
 
     def train_dataloader(self) -> DataLoader:
-        dl = ThrowAwayIndexLoader(self.data, batch_size=self.batch_size,
-                                  shuffle=True, num_workers=2)
+        ds = TensorDataset(self.X[self.split == 'train'], self.y[self.split == 'train'])
+        dl = DataLoader(ds, batch_size=self.batch_size, shuffle=True)
         return dl
 
-    def test_dataloader(self) -> None:
-        return None
+    def val_dataloader(self) -> None:
+        ds = TensorDataset(self.X[self.split == 'test'], self.y[self.split == 'test'])
+        dl = DataLoader(ds, batch_size=self.batch_size, shuffle=False)
+        return dl
 
     def set_stage(self, stage: int):
         stage = self.n_stages - stage  # override external with internal stage vatiable
         if not self.debug:
-            ds_list = []
+            self.X = []
+            self.y = []
+            self.split = []
             for ds in Path(self.data_dir).rglob('S*.pt'):
-                ds_list.append(torch.load(ds))
-            self.data = BaseConcatDataset(ds_list)
+                data_dict = torch.load(ds)
 
-            base_sfreq = self.data.description['fs'][0]
-            current_sfreq = int(base_sfreq // 2**stage)
+                self.X.append(data_dict['X'])
+                self.y.append(data_dict['y'])
+                self.split.append(data_dict['split'])
+            
+            self.X = torch.cat(self.X)
+            self.y = torch.cat(self.y)
+            self.split = np.concatenate(self.split)
+            
+            current_sfreq = int(self.base_sfreq // 2**stage)
 
             # If the data is already at the correct frequency, we don't need to resample it.
-            if current_sfreq == base_sfreq:
+            if current_sfreq == self.base_sfreq:
                 return
 
-            preprocessors = [Preprocessor(change_type, out_type='float64', picks='all')]
-            preprocessors.append(Preprocessor(
-                'resample', sfreq=current_sfreq, npad=0))
-            preprocessors.append(Preprocessor(change_type, out_type='float32', picks='all'))
-            self.data = preprocess(self.data, preprocessors, n_jobs=-1)
-            return
+            # Resample the data
+            self.X = self.resample(self.X.numpy(), self.base_sfreq, current_sfreq)
+            self.X = torch.tensor(self.X)
 
         else:
             time_in_seconds = self.data_dict['length_in_seconds']
@@ -131,6 +103,51 @@ class ProgressiveGrowingDataset(LightningDataModule):
                                 n_channels, n_samples_curent_stage)
             y = np.random.randint(0, n_classes, 4*self.batch_size)
 
-            windows_dataset = create_from_X_y(
-                X, y, drop_last_window=False, sfreq=sfreq, ch_names=self.data_dict['channels'])
-            self.data = BaseConcatDataset([windows_dataset])
+
+    def resample(self,
+            x: np.ndarray,
+             old_sfreq: float,
+             new_sfreq: float,
+             axis: int = -1,
+             npad: int = 100,
+             pad_mode: str = "reflect",
+             window: str = "boxcar") -> np.ndarray:
+
+        # Determine target length for the original, unpadded signal
+        orig_len = x.shape[axis]
+        target_len = int(round(orig_len * new_sfreq / old_sfreq))
+        
+        # Pad along the resampling axis if requested
+        if npad > 0:
+            pad_width = [(0, 0)] * x.ndim
+            pad_width[axis] = (npad, npad)
+            x = np.pad(x, pad_width, mode=pad_mode)
+        
+        # The new length for the padded signal:
+        padded_len = x.shape[axis]
+        new_padded_len = int(round(padded_len * new_sfreq / old_sfreq))
+        
+        # Optionally apply a window to taper the padded edges
+        if window != "boxcar":
+            win = signal.get_window(window, padded_len)
+            # Reshape the window so it can be broadcast along the correct axis
+            shape = [1] * x.ndim
+            shape[axis] = padded_len
+            win = win.reshape(shape)
+            x = x * win
+
+        # Resample the padded signal
+        x_resampled = signal.resample(x, new_padded_len, axis=axis)
+        
+        # Remove the padded segments from the resampled data.
+        # Compute the resampled padding length:
+        new_npad = int(round(npad * new_sfreq / old_sfreq))
+        slicer = [slice(None)] * x.ndim
+        slicer[axis] = slice(new_npad, -new_npad)
+        x_resampled = x_resampled[tuple(slicer)]
+        
+        # Ensure the resampled data has the expected target length.
+        if x_resampled.shape[axis] != target_len:
+            x_resampled = signal.resample(x_resampled, target_len, axis=axis)
+        
+        return x_resampled

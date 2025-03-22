@@ -21,7 +21,6 @@ from src.metrics import SWD
 from src.models.components import Critic, Generator, SpectralCritic
 
 
-
 class GAN(LightningModule):
     """
     Class for Generative Adversarial Network (GAN) for EEG data. This inherits from the
@@ -172,15 +171,6 @@ class GAN(LightningModule):
         
         self.sliced_wasserstein_distance.update(X_real, X_fake)
         
-        # Log GPU memory usage
-        current_memory = torch.cuda.memory_allocated()
-        max_memory = torch.cuda.max_memory_allocated()
-
-
-        memory_usage_percentage = (current_memory / max_memory) * 100 if max_memory != 0 else 0
-        self.GPU_memory(memory_usage_percentage)
-        #
-
         self.log_metrics()
 
     def configure_optimizers(self):
@@ -304,7 +294,6 @@ class GAN(LightningModule):
             self.log('spectral critic loss', self.sp_critic_loss, prog_bar=False, on_step=False, on_epoch=True)
         self.log('gradient penalty', self.gp, prog_bar=False,  on_step=False, on_epoch=True)
         self.log('slice wasserstein distance', self.sliced_wasserstein_distance, prog_bar=False, on_step=False, on_epoch=True)
-        self.log('GPU memory usage', self.GPU_memory, prog_bar=False, on_step=False, on_epoch=True)
 
     def reset_metrics(self) -> None:
         self.generator_loss.reset()

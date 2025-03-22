@@ -37,7 +37,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.get("data"), n_stages=cfg.trainer.scheduler.n_stages)
 
-    n_samples = int(cfg.data.sfreq * cfg.data.length_in_seconds)
+    n_samples = int(cfg.data.sfreq * (cfg.data.tmax - cfg.data.tmin))
     log.info(f"Instantiating model <{cfg.model.gan._target_}>")
     model: LightningModule = instantiate_model(models_cfg=cfg.get("model"), n_samples=n_samples)
 
@@ -93,7 +93,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     return metric_dict, object_dict
 
 
-@hydra.main(version_base="1.3", config_path="./configs", config_name="train.yaml")
+@hydra.main(version_base="1.3", config_path="../configs", config_name="train.yaml")
 def main(cfg: DictConfig) -> Optional[float]:
     """Main entry point for training.
 

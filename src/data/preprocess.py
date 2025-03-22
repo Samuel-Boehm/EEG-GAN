@@ -4,20 +4,65 @@
 
 import numpy as np
 from numpy import multiply, clip
-import numpy.linalg as linalg
-
-import hydra
-import omegaconf
-from omegaconf import DictConfig
-from pathlib import Path
-from joblib import Parallel, delayed
 
 import torch
-import pandas as pd
+import mne 
+import numpy.linalg as linalg
+
+
+from pathlib import Path
+from joblib import Parallel, delayed
 
 from braindecode.datasets import MOABBDataset
 from braindecode.preprocessing import preprocess, Preprocessor, create_windows_from_events
 from braindecode.datautil.preprocess import exponential_moving_standardize
+
+def get_dataset_info(dataset_name: str) -> tuple:
+    """
+    Helper function that returns the interval, event_id and subject_list for a given dataset.
+    """
+    from moabb.datasets.utils import dataset_list
+    for dataset in dataset_list:
+        if dataset_name == dataset.__name__:
+            return dataset().event_id, dataset().subject_list
+    raise ValueError(f"{dataset_name} not found in moabb datasets")
+
+def extract_data(
+    dataset: MOABBDataset,
+    preprocessors: list,
+    tmin: float,
+    tmax: float,
+    event_map: dict,
+    sfreq: float ) -> tuple[torch.Tensor, torch.Tensor]:
+
+    """
+    Applies preprocessing to the dataset and extracts the data, labels and metadata.
+    """
+
+    X, y, split = [], [], []
+    preprocess(dataset, preprocessors)
+    assert all([ds.raw.info['sfreq'] == sfreq for ds in dataset.datasets])
+    
+    n_samples = int((tmax - tmin) * dataset.datasets[0].raw.info['sfreq'])
+    
+    for i, ds in enumerate(dataset.datasets):
+        events, event_ids = mne.events_from_annotations(ds.raw, event_id=event_map)
+        epochs = mne.Epochs(ds.raw, events, event_id=event_ids, tmin=tmin, tmax=tmax, baseline=None, event_repeated='drop')
+
+        X_ = epochs.get_data()[:, :, :-1]
+        y_ = epochs.events[:, 2]
+        assert X_.shape[-1] == n_samples, f"Expected {n_samples} samples, got {X_.shape[-1]}. Total shape: {X_.shape}"
+
+        X.append(X_)
+        y.append(y_)
+
+        split.append([ds.description['run'][1:]] * len(y_))
+
+    X = torch.tensor(np.concatenate(X))
+    y = torch.tensor(np.concatenate(y))
+    split = np.concatenate(split, dtype=object)
+
+    return X, y, split
 
 def normalize(data:np.ndarray):
     """
@@ -44,7 +89,7 @@ def  _2D_ZCA_whitening(data:np.ndarray, trial_start_offset_samples:int) -> np.nd
     # Whitening transform using ZCA (Zero Component Analysis)
     return np.dot(np.dot(np.dot(v, diagw), v.T), xc)
 
-def ZCA_whitening(data:np.ndarray, trial_start_offset_samples:int) -> np.ndarray:
+def apply_zca_whitening(data:np.ndarray, trial_start_offset_samples:int) -> np.ndarray:
     r"""
     Perform zero component analysis whitening.
    
@@ -64,16 +109,17 @@ def ZCA_whitening(data:np.ndarray, trial_start_offset_samples:int) -> np.ndarray
     
     return np.stack(data_whitened, dtype=np.float32)
 
-@hydra.main(config_path="../../configs", config_name="train")
-def preprocess_moabb(cfg: DictConfig) -> None:
-    cfg = cfg.data
-    base_dir = Path(__file__).parent.parent.parent
-    dataset_dir = Path(base_dir, "datasets", cfg.dataset_name)
-    dataset_dir.mkdir(parents=True, exist_ok=True)
+def preprocess_moabb(dataset_name: str, dataset_dir:str, channels: list, tmin: float, tmax:float, sfreq:float,
+                    classes:list, ZCA_whitening: bool=False, normalize:bool=False, *args, **kwargs) -> None:
 
-    for subject in cfg.subject_id:
+    _, subject_list = get_dataset_info(dataset_name)
+
+    # create mapping from event to class
+    label_mapping = {event: i for i, event in enumerate(classes)}
+
+    for subject in subject_list:
            
-        dataset = MOABBDataset(dataset_name=cfg.moabb_name, subject_ids=[subject])
+        dataset = MOABBDataset(dataset_name=dataset_name, subject_ids=[subject])
         
         # Parameters for exponential moving standardization
         factor_new = 1e-3
@@ -85,62 +131,38 @@ def preprocess_moabb(cfg: DictConfig) -> None:
         # First we apply global preprocessing steps
         preprocessors = []
 
-        preprocessors.append(Preprocessor('pick', picks=cfg.channels))
+        preprocessors.append(Preprocessor('pick', picks=channels))
         preprocessors.append(Preprocessor('pick_types', eeg=True, meg=False, stim=False))
         preprocessors.append(Preprocessor('set_eeg_reference', ref_channels='average'))
         preprocessors.append(Preprocessor(lambda data: multiply(data, factor)))
         preprocessors.append(Preprocessor(lambda data: clip(data, a_min=-800., a_max=800.), channel_wise=True))
-        if hasattr(cfg, 'sfreq'):
-            preprocessors.append(Preprocessor('resample', sfreq=cfg.sfreq, npad=0))
+        preprocessors.append(Preprocessor('resample', sfreq=sfreq, npad=0))  
         preprocessors.append(Preprocessor(exponential_moving_standardize, factor_new=factor_new, init_block_size=init_block_size))
         
-        # Transform the data
-        preprocess(dataset, preprocessors, n_jobs=-1)
+        # Extract data
+        X, y, split = extract_data(dataset, preprocessors, tmin, tmax, label_mapping, sfreq)
 
-        # Create windows from events
-        total_samples = dataset.datasets[0].raw.annotations[0]['duration'] * cfg.sfreq
-        out_length = cfg.length_in_seconds
-        trial_length_samples = int(out_length * cfg.sfreq)
-        trial_start_offset_samples = -int(cfg.trial_start_offset_seconds * cfg.sfreq)
-        trial_stop_offset_samples = -int(total_samples - trial_length_samples - trial_start_offset_samples)
-
-        numerical_label = np.arange(len(cfg.classes))
-        mapping = dict(zip(cfg.classes, numerical_label))
-
-        windows_dataset = create_windows_from_events(
-            dataset,
-            trial_start_offset_samples=trial_start_offset_samples,
-            trial_stop_offset_samples=trial_stop_offset_samples,
-            mapping=mapping,
-            preload=True,
-            drop_bad_windows=True,
-            verbose=False)
-        
         # Now sample wise preprocessing
-        preprocessors = []
         
-        if hasattr(cfg, 'ZCA_whitening') and cfg.ZCA_whitening:
-            preprocessors.append(Preprocessor(ZCA_whitening, trial_start_offset_samples=trial_start_offset_samples))
-        if hasattr(cfg, 'normalized') and cfg.normalized:
-            preprocessors.append(Preprocessor(normalize))
+        if ZCA_whitening:
+            trial_start_offset_samples = int(0.5 * sfreq)
+            X_np = X.numpy()
+            X_np = apply_zca_whitening(X_np, trial_start_offset_samples=trial_start_offset_samples)
+            X = torch.tensor(X_np)
+            
+        if normalize:
+            # Convert X to numpy array, apply normalization, then convert back to tensor
+            X_np = X.numpy()
+            X_np = normalize(X_np)
+            X = torch.tensor(X_np)
         
-        if len(preprocessors) > 0:
-            preprocess(windows_dataset, preprocessors, n_jobs=-1)
+        # Save data
+        subject_data = {"X": X, "y": y, "split": split}
+        subject_path = Path(dataset_dir, f"S{subject}.pt")
+        torch.save(subject_data, subject_path)
 
-        # Not the most elegant way to add the sampling frequency to the description  but it works
-        windows_dataset.set_description({'fs': [cfg.sfreq] * len(windows_dataset.datasets)})
+    return label_mapping
 
-        dataset_path = Path(dataset_dir, f"S{subject}.pt")
-        with open(dataset_path, 'wb') as f:
-            torch.save(windows_dataset, f)
-        
-
-    config_path = Path(dataset_dir, "config.yaml")
-    with open(config_path, 'w') as f:
-        f.write(omegaconf.OmegaConf.to_yaml(cfg))
-
-if __name__ == "__main__":
-    preprocess_moabb()
 
 
 
