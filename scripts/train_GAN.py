@@ -1,14 +1,12 @@
+import sys
 from typing import Any, Dict, List, Optional, Tuple
+
 import hydra
 import lightning as L
+import wandb
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
-import numpy as np 
-import sys
-import wandb
-
-from src.utils.evaluation_utils import evaluate_model
 
 from src.utils import (
     RankedLogger,
@@ -16,9 +14,10 @@ from src.utils import (
     get_metric_value,
     instantiate_callbacks,
     instantiate_loggers,
-    log_hyperparameters,
     instantiate_model,
+    log_hyperparameters,
 )
+from src.utils.evaluation_utils import evaluate_model
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
@@ -33,13 +32,17 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
-    
+
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.get("data"), n_stages=cfg.trainer.scheduler.n_stages)
+    datamodule: LightningDataModule = hydra.utils.instantiate(
+        cfg.get("data"), n_stages=cfg.trainer.scheduler.n_stages
+    )
 
     n_samples = int(cfg.data.sfreq * (cfg.data.tmax - cfg.data.tmin))
     log.info(f"Instantiating model <{cfg.model.gan._target_}>")
-    model: LightningModule = instantiate_model(models_cfg=cfg.get("model"), n_samples=n_samples)
+    model: LightningModule = instantiate_model(
+        models_cfg=cfg.get("model"), n_samples=n_samples
+    )
 
     log.info("Instantiating training scheduler...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
@@ -50,13 +53,18 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating training scheduler <{cfg.trainer.scheduler._target_}>")
     scheduler = hydra.utils.instantiate(cfg.trainer.scheduler)
     callbacks.append(scheduler)
-    
+
     max_epochs = int(scheduler.max_epochs)
 
     log.info(f"Instantiating trainer <{cfg.trainer.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(cfg.trainer.trainer, callbacks=callbacks, logger=logger,
-                                              reload_dataloaders_every_n_epochs=1, max_epochs=max_epochs,)
-    
+    trainer: Trainer = hydra.utils.instantiate(
+        cfg.trainer.trainer,
+        callbacks=callbacks,
+        logger=logger,
+        reload_dataloaders_every_n_epochs=1,
+        max_epochs=max_epochs,
+    )
+
     object_dict = {
         "cfg": cfg,
         "datamodule": datamodule,
@@ -100,8 +108,12 @@ def main(cfg: DictConfig) -> Optional[float]:
     :param cfg: DictConfig configuration composed by Hydra.
     :return: Optional[float] with optimized metric value.
     """
-    assert cfg.model.params.n_classes == len(cfg.data.classes), "Number of classes must match!"
-    assert cfg.model.params.n_channels == len(cfg.data.channels), "Number of channels must match!"
+    assert cfg.model.params.n_classes == len(cfg.data.classes), (
+        "Number of classes must match!"
+    )
+    assert cfg.model.params.n_channels == len(cfg.data.channels), (
+        "Number of channels must match!"
+    )
 
     # apply extra utilities
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
@@ -114,14 +126,14 @@ def main(cfg: DictConfig) -> Optional[float]:
     dm = object_dict["datamodule"]
     dm.set_stage(cfg.trainer.scheduler.n_stages)
     dataloader = dm.train_dataloader()
-    
+
     model = object_dict["model"]
 
     figures = evaluate_model(model, dataloader, cfg)
 
     for key, fig in figures.items():
         wandb.log({key: wandb.Image(fig)})
-   
+
     # safely retrieve metric value for hydra-based hyperparameter optimization
     metric_value = get_metric_value(
         metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")
@@ -130,7 +142,7 @@ def main(cfg: DictConfig) -> Optional[float]:
     # End of training
     wandb.finish()
 
-    log.info(f"Finished Training")
+    log.info("Finished Training")
     sys.exit("Finished Training")
 
     # return optimized metric
@@ -139,4 +151,3 @@ def main(cfg: DictConfig) -> Optional[float]:
 
 if __name__ == "__main__":
     main()
-

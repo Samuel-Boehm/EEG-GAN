@@ -1,88 +1,169 @@
-# Project: EEG-GAN
-# Author: Samuel Boehm
-# E-Mail: <samuel-boehm@web.de>
-from lightning import LightningDataModule
-import torch
-from torch.utils.data import DataLoader
-from torch.utils.data import TensorDataset
-import yaml
+import json
+from pathlib import Path
+from typing import List, Optional
 
 import numpy as np
-from scipy import signal
-
-from pathlib import Path
-
+import torch
 import yaml
-
-
+from lightning import LightningDataModule
+from scipy import signal
+from torch.utils.data import DataLoader, TensorDataset
 
 
 class ProgressiveGrowingDataset(LightningDataModule):
-    '''
+    """
     This class is a LightningDataModule that is used to train the GAN in a progressive growing manner.
-    It loads all datasets from the data_dir and resamples them to the correct frequency for the current stage.
+    It loads metadata, selectively loads EEG trials, applies optional preprocessing,
+    and provides DataLoaders based on the specified mode.
 
     Methods:
     ----------
-    setup(): loads all datasets from the data_dir
-    train_dataloader(): returns a DataLoader for the training data
-    set_stage(stage: int): reloads the data and resamples it to the correct frequency for the current stage
-    '''
+    load_metadata(): Loads metadata from all .json files.
+    load_tensors(classes: Optional[List[str]] = None): Loads .pt tensors based on optional label filtering.
+    preprocess(): Applies optional preprocessing to the loaded data.
+    setup(stage: str): Sets up the dataset for a given stage (currently resamples).
+    train_dataloader(): Returns a DataLoader for the training data (if mode is 'classification').
+    val_dataloader(): Returns a DataLoader for the validation data (if mode is 'classification').
+    dataloader(): Returns a DataLoader for all data (if mode is 'gan').
+    set_stage(stage: int): Reloads and resamples the data for the current stage.
+    """
 
-    def __init__(self, folder_name:str, batch_size:int, n_stages:int, sfreq:int, **kwargs) -> None:
-
+    def __init__(
+        self,
+        folder_name: str,
+        batch_size: int,
+        n_stages: int,
+        sfreq: int,
+        mode: str = "gan",
+        classes: Optional[List[str]] = None,
+        **kwargs,
+    ) -> None:
         self.debug = False
-        if folder_name == 'debug':
-            print('Dataloader entering debug mode, only using dummy data.')
+        if folder_name == "debug":
+            print("Dataloader entering debug mode, only using dummy data.")
             self.debug = True
-
-            path = Path.cwd() / 'configs' / 'data' / 'debug.yaml'
-
+            path = Path.cwd() / "configs" / "data" / "debug.yaml"
             if not path.exists():
-                raise FileNotFoundError(f'''Could not find the file {path}. The dataloader is in debug mode and requires a
-                                        debug.yaml file in the configs/data directory to generate dummy data.''')
-
-            with open(path, 'r') as file:
+                raise FileNotFoundError(f"""Could not find the file {path}. The dataloader is in debug mode and requires a
+                                        debug.yaml file in the configs/data directory to generate dummy data.""")
+            with open(path, "r") as file:
                 self.data_dict = yaml.safe_load(file)
 
-        self.data_dir = Path.cwd() / 'datasets' / folder_name
+        self.data_dir = Path.cwd() / "datasets" / folder_name
         self.batch_size = batch_size
         self.n_stages = n_stages
         self.base_sfreq = sfreq
+        self.mode = mode
+        self.classes = classes
+        self.metadata = {}
+        self.X = None
+        self.y = None
+        self.split = None
         super().__init__()
 
-    def setup(self, stage: str) -> None:
-        self.set_stage(1)
-        # Load metadata 
-        self.metadata = yaml.safe_load(open(self.data_dir / 'config.yaml', 'r'))
+    def load_metadata(self):
+        self.metadata = {}
+        for metadata_path in self.data_dir.rglob("*.json"):
+            with open(metadata_path, "r") as f:
+                try:
+                    data = json.load(f)
+                    filename_base = metadata_path.stem
+                    self.metadata[filename_base] = data
+                except json.JSONDecodeError as e:
+                    print(f"Error decoding JSON in {metadata_path}: {e}")
 
-    def train_dataloader(self) -> DataLoader:
-        ds = TensorDataset(self.X[self.split == 'train'], self.y[self.split == 'train'])
-        dl = DataLoader(ds, batch_size=self.batch_size, shuffle=True)
-        return dl
+    def load_tensors(self, classes: Optional[List[str]] = None):
+        self.X = []
+        self.y = []
+        self.split = []
+        for tensor_path in self.data_dir.rglob("*.pt"):
+            filename_base = tensor_path.stem
+            if filename_base in self.metadata:
+                metadata = self.metadata[filename_base]
+                if classes is None or metadata.get("class_name") in classes:
+                    tensor = torch.load(tensor_path)
+                    self.X.append(tensor)
+                    self.y.append(metadata.get("label"))
+                    self.split.append(metadata.get("split"))
 
-    def val_dataloader(self) -> None:
-        ds = TensorDataset(self.X[self.split == 'test'], self.y[self.split == 'test'])
-        dl = DataLoader(ds, batch_size=self.batch_size, shuffle=False)
-        return dl
+        if self.X:
+            self.X = torch.stack(self.X).float()
+            if self.split:
+                self.split = np.array(self.split)
+        else:
+            print("No tensors loaded based on the criteria.")
+
+        # Make y to be consistent between 0 and n_classes
+        if self.y:
+            self.y = np.array(self.y)
+            unique_classes = np.unique(self.y)
+            class_mapping = {cls: i for i, cls in enumerate(unique_classes)}
+            self.y = np.vectorize(class_mapping.get)(self.y)
+        else:
+            print("No labels loaded based on the criteria.")
+
+    def setup(self, stage: Optional[str] = None) -> None:
+        if not self.debug:
+            self.load_metadata()
+            self.set_stage(1)  # Initial resampling to the smallest frequency
+        else:
+            self.set_stage(self.n_stages)  # Still need to set stage for dummy data
+
+    def train_dataloader(self) -> Optional[DataLoader]:
+        if (
+            self.mode == "classification"
+            and self.X is not None
+            and self.y is not None
+            and self.split is not None
+        ):
+            train_dataset = TensorDataset(
+                self.X[self.split == "train"], self.y[self.split == "train"]
+            )
+            return DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
+        elif self.mode == "classification":
+            print(
+                "Warning: Train split not available or data not loaded for classification."
+            )
+            return None
+        elif self.mode == "gan" and self.X is not None and self.y is not None:
+            return DataLoader(
+                TensorDataset(self.X, torch.Tensor(self.y)),
+                batch_size=self.batch_size,
+                shuffle=True,
+            )
+        return None
+
+    def val_dataloader(self) -> Optional[DataLoader]:
+        if (
+            self.mode == "classification"
+            and self.X is not None
+            and self.y is not None
+            and self.split is not None
+        ):
+            val_dataset = TensorDataset(
+                self.X[self.split == "test"], self.y[self.split == "test"]
+            )
+            return DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
+        elif self.mode == "classification":
+            print(
+                "Warning: Test/validation split not available or data not loaded for classification."
+            )
+            return None
+        return None
+
+    def dataloader(self) -> Optional[DataLoader]:
+        if self.mode == "gan" and self.X is not None:
+            gan_dataset = TensorDataset(self.X)
+            return DataLoader(gan_dataset, batch_size=self.batch_size, shuffle=True)
+        elif self.mode == "gan":
+            print("Warning: Data not loaded for GAN mode.")
+            return None
+        return None
 
     def set_stage(self, stage: int):
-        stage = self.n_stages - stage  # override external with internal stage vatiable
-        if not self.debug:
-            self.X = []
-            self.y = []
-            self.split = []
-            for ds in Path(self.data_dir).rglob('S*.pt'):
-                data_dict = torch.load(ds)
-
-                self.X.append(data_dict['X'])
-                self.y.append(data_dict['y'])
-                self.split.append(data_dict['split'])
-            
-            self.X = torch.cat(self.X)
-            self.y = torch.cat(self.y)
-            self.split = np.concatenate(self.split)
-            
+        self.load_tensors(classes=self.classes)
+        stage = self.n_stages - stage  # override external with internal stage variable
+        if not self.debug and self.X is not None:
             current_sfreq = int(self.base_sfreq // 2**stage)
 
             # If the data is already at the correct frequency, we don't need to resample it.
@@ -90,43 +171,50 @@ class ProgressiveGrowingDataset(LightningDataModule):
                 return
 
             # Resample the data
-            self.X = self.resample(self.X.numpy(), self.base_sfreq, current_sfreq)
-            self.X = torch.tensor(self.X)
+            original_sfreq = (
+                self.base_sfreq
+            )  # Assuming base_sfreq is the original frequency
+            self.X = self.resample(self.X.numpy(), original_sfreq, current_sfreq)
+            self.X = torch.tensor(self.X).float()
 
-        else:
-            time_in_seconds = self.data_dict['length_in_seconds']
-            sfreq = self.data_dict['sfreq']
+        elif self.debug:
+            time_in_seconds = self.data_dict["length_in_seconds"]
+            sfreq = self.data_dict["sfreq"]
             n_samples_curent_stage = int(time_in_seconds * (sfreq // 2**stage))
-            n_channels = len(self.data_dict['channels'])
-            n_classes = len(self.data_dict['classes'])
-            X = np.random.randn(4*self.batch_size,
-                                n_channels, n_samples_curent_stage)
-            y = np.random.randint(0, n_classes, 4*self.batch_size)
+            n_channels = len(self.data_dict["channels"])
+            n_classes = len(self.data_dict["classes"])
+            self.X = torch.randn(
+                4 * self.batch_size, n_channels, n_samples_curent_stage
+            ).float()
+            self.y = np.random.randint(0, n_classes, 4 * self.batch_size)
+            self.split = np.random.choice(
+                ["train", "test"], 4 * self.batch_size
+            )  # Add split for debug mode
 
-
-    def resample(self,
-            x: np.ndarray,
-             old_sfreq: float,
-             new_sfreq: float,
-             axis: int = -1,
-             npad: int = 100,
-             pad_mode: str = "reflect",
-             window: str = "boxcar") -> np.ndarray:
-
+    def resample(
+        self,
+        x: np.ndarray,
+        old_sfreq: float,
+        new_sfreq: float,
+        axis: int = -1,
+        npad: int = 100,
+        pad_mode: str = "reflect",
+        window: str = "boxcar",
+    ) -> np.ndarray:
         # Determine target length for the original, unpadded signal
         orig_len = x.shape[axis]
         target_len = int(round(orig_len * new_sfreq / old_sfreq))
-        
+
         # Pad along the resampling axis if requested
         if npad > 0:
             pad_width = [(0, 0)] * x.ndim
             pad_width[axis] = (npad, npad)
             x = np.pad(x, pad_width, mode=pad_mode)
-        
+
         # The new length for the padded signal:
         padded_len = x.shape[axis]
         new_padded_len = int(round(padded_len * new_sfreq / old_sfreq))
-        
+
         # Optionally apply a window to taper the padded edges
         if window != "boxcar":
             win = signal.get_window(window, padded_len)
@@ -138,16 +226,35 @@ class ProgressiveGrowingDataset(LightningDataModule):
 
         # Resample the padded signal
         x_resampled = signal.resample(x, new_padded_len, axis=axis)
-        
+
         # Remove the padded segments from the resampled data.
         # Compute the resampled padding length:
         new_npad = int(round(npad * new_sfreq / old_sfreq))
         slicer = [slice(None)] * x.ndim
         slicer[axis] = slice(new_npad, -new_npad)
         x_resampled = x_resampled[tuple(slicer)]
-        
+
         # Ensure the resampled data has the expected target length.
         if x_resampled.shape[axis] != target_len:
             x_resampled = signal.resample(x_resampled, target_len, axis=axis)
-        
+
         return x_resampled
+
+
+if __name__ == "__main__":
+    # Example usage
+    datamodule = ProgressiveGrowingDataset(
+        folder_name="HGD_clinical_normalized",
+        batch_size=32,
+        n_stages=5,
+        sfreq=256,
+        mode="classification",
+        classes=["rest", "right_hand"],
+    )
+    datamodule.setup()
+    train_loader = datamodule.train_dataloader()
+    # val_loader = datamodule.val_dataloader()
+    # gan_loader = datamodule.dataloader()
+
+    for batch in train_loader:
+        print(batch)

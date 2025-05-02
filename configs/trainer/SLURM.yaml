@@ -1,8 +1,8 @@
 defaults:
- - default
+  - default
 
 trainer:
-  accelerator: gpu
+  accelerator: cpu
   devices: 1
   enable_progress_bar: False
 

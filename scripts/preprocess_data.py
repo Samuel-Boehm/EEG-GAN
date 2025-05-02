@@ -1,8 +1,11 @@
-import hydra
 from pathlib import Path
-from omegaconf import DictConfig
+
+import hydra
 import omegaconf
+from omegaconf import DictConfig
+
 from src.data.preprocess import preprocess_moabb
+
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="train.yaml")
 def main(cfg: DictConfig):
@@ -13,14 +16,14 @@ def main(cfg: DictConfig):
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
     label_map = preprocess_moabb(**cfg, dataset_dir=dataset_dir)
-    
+
     # add label map to config - there is no existing field fo it:
     # Disable strict mode to allow new keys.
     omegaconf.OmegaConf.set_struct(cfg, False)
     cfg.label_map = label_map
 
     config_path = Path(dataset_dir, "config.yaml")
-    with open(config_path, 'w') as f:
+    with open(config_path, "w") as f:
         f.write(omegaconf.OmegaConf.to_yaml(cfg))
 
 
