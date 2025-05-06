@@ -165,7 +165,16 @@ def preprocess_moabb(
             Preprocessor("pick_types", eeg=True, meg=False, stim=False),
             Preprocessor("set_eeg_reference", ref_channels="average"),
             Preprocessor(lambda data: multiply(data, factor)),
-            Preprocessor("filter", l_freq=highpass, h_freq=lowpass),
+        ]
+
+        # Add the filter preprocessor conditionally
+        if lowpass < 250.0:
+            print(
+                f"Applying lowpass filter with cutoff frequency {lowpass} Hz"
+                )
+            preprocessors.append(Preprocessor("filter", l_freq=highpass, h_freq=lowpass))
+
+        preprocessors.extend([
             Preprocessor(
                 lambda data: clip(data, a_min=-800.0, a_max=800.0), channel_wise=True
             ),
@@ -175,7 +184,7 @@ def preprocess_moabb(
                 factor_new=factor_new,
                 init_block_size=init_block_size,
             ),
-        ]
+        ])
 
         # Apply preprocessing
         preprocess(dataset, preprocessors)
