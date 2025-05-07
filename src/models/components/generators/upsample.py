@@ -2,6 +2,7 @@
 # Author: Samuel Boehm
 # E-Mail: <samuel-boehm@web.de>
 
+import math
 from typing import List
 
 import numpy as np
@@ -61,19 +62,62 @@ class Generator(Generator):
             )
         )  # WS()
 
-        # Note that the first conv stage in the generator differs from the others
-        # because it takes the latent vector as input
-        first_conv = nn.Sequential(
-            WS(nn.Linear(latent_dim + embedding_dim, n_filter * n_time_first_layer)),
-            nn.Unflatten(1, (n_filter, n_time_first_layer)),
+        n_time_first_layer_downsampled = int(np.floor(n_samples / 2 ** (n_stages + 1)))
+
+        head_layers = [
+            WS(
+                nn.Linear(
+                    latent_dim + embedding_dim,
+                    n_filter * n_time_first_layer_downsampled,
+                )
+            ),
+            nn.Unflatten(1, (n_filter, n_time_first_layer_downsampled)),
             nn.LeakyReLU(0.2),
             PixelNorm(),
-            create_multiconv_for_stage(n_filter, 1),
+        ]
+
+        # Part 2: Convolutional Upsampling
+        upsampling_layers_list = []
+        current_time_steps = n_time_first_layer_downsampled
+        num_upsample_blocks = int(
+            math.log2(n_time_first_layer / n_time_first_layer_downsampled)
+        )
+
+        if (
+            n_time_first_layer / n_time_first_layer_downsampled
+            != 2**num_upsample_blocks
+        ):
+            raise ValueError(
+                "n_time_first_layer / initial_time_steps must be a power of 2 for this simple stride=2 upsampling."
+            )
+
+        for i in range(num_upsample_blocks):
+            # Each block doubles the time steps
+            upsampling_layers_list.extend(
+                [
+                    WS(
+                        nn.ConvTranspose1d(
+                            n_filter, n_filter, kernel_size=4, stride=2, padding=1
+                        )
+                    ),
+                    nn.LeakyReLU(0.2),
+                    PixelNorm(),
+                ]
+            )
+            current_time_steps *= 2
+
+        # The rest of the original first_conv block
+        tail_layers = [
+            create_multiconv_for_stage(n_filter, 1),  # Assuming stage_idx=1 or similar
             nn.LeakyReLU(0.2),
             PixelNorm(),
             WS(nn.Conv1d(n_filter, n_filter, kernel_size=1, padding=0)),
             nn.LeakyReLU(0.2),
             PixelNorm(),
+        ]
+
+        first_conv = nn.Sequential(
+            *(head_layers + upsampling_layers_list + tail_layers)
         )
 
         if "batch_norm" in kwargs and kwargs["batch_norm"] == True:

@@ -2,18 +2,17 @@ from typing import List
 
 import hydra
 from lightning import Callback
+from lightning.pytorch import LightningModule
 from lightning.pytorch.loggers import Logger
-from omegaconf import DictConfig, OmegaConf
-from hydra.core.hydra_config import HydraConfig
-import wandb
+from omegaconf import DictConfig
 
+from src.models import Critic, Generator, SpectralCritic
 from src.utils import pylogger
-from src.models import GAN, Generator, Critic, SpectralCritic
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
 
-def instantiate_model(models_cfg: DictConfig, n_samples:int) -> List[Callback]:
+def instantiate_model(models_cfg: DictConfig, n_samples: int) -> LightningModule:
     """
     Function to instantiate the GAN model from the configuration file
 
@@ -29,17 +28,24 @@ def instantiate_model(models_cfg: DictConfig, n_samples:int) -> List[Callback]:
     """
     models = dict()
 
-    generator:Generator = hydra.utils.instantiate(models_cfg.generator, n_samples=n_samples)
-    models['generator'] = generator
-    
-    critic:Critic = hydra.utils.instantiate(models_cfg.critic, n_samples=n_samples)
-    models['critic'] = critic
+    generator: Generator = hydra.utils.instantiate(
+        models_cfg.generator, n_samples=n_samples
+    )
+    models["generator"] = generator
 
-    if hasattr(models_cfg, 'spectral_critic'):
-        spectral_critic:SpectralCritic = hydra.utils.instantiate(models_cfg.spectral_critic, n_samples=n_samples)
-        models['spectral_critic'] = spectral_critic
-    
-    return hydra.utils.instantiate(models_cfg.gan, **models, optimizer=models_cfg.optimizer)
+    critic: Critic = hydra.utils.instantiate(models_cfg.critic, n_samples=n_samples)
+    models["critic"] = critic
+
+    if hasattr(models_cfg, "spectral_critic"):
+        spectral_critic: SpectralCritic = hydra.utils.instantiate(
+            models_cfg.spectral_critic, n_samples=n_samples
+        )
+        models["spectral_critic"] = spectral_critic
+
+    return hydra.utils.instantiate(
+        models_cfg.gan, **models, optimizer=models_cfg.optimizer
+    )
+
 
 def instantiate_callbacks(callbacks_cfg: DictConfig) -> List[Callback]:
     """Instantiates callbacks from config.
