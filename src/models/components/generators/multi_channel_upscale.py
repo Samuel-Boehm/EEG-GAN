@@ -64,8 +64,9 @@ class Generator(Generator):
         # Note that the first conv stage in the generator differs from the others
         # because it takes the latent vector as input
         first_conv = nn.Sequential(
-            WS(nn.Linear(latent_dim + embedding_dim, n_filter * n_time_first_layer)),
-            nn.Unflatten(1, (n_filter, n_time_first_layer)),
+            WS(nn.Linear(latent_dim + embedding_dim, n_channels * n_time_first_layer)),
+            nn.Unflatten(1, (n_channels, n_time_first_layer)),
+            nn.Conv1d(n_channels, n_filter, kernel_size=1),
             nn.LeakyReLU(0.2),
             PixelNorm(),
             create_multiconv_for_stage(n_filter, 1),

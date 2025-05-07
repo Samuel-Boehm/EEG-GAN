@@ -1,4 +1,4 @@
-name: 'baseline'
+name: "baseline"
 
 params: &params
   n_filter: 120
@@ -32,7 +32,7 @@ gan:
   lambda_gp: 10
 
 optimizer:
-  name: 'adam'
+  name: "adam"
   lr_generator: 0.001
   lr_critic: 0.001
   betas: [0.0, 0.999]
