@@ -4,7 +4,6 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-import yaml
 from lightning import LightningDataModule
 from scipy import signal
 from torch.utils.data import DataLoader, TensorDataset
@@ -42,14 +41,9 @@ class ProgressiveGrowingDataset(LightningDataModule):
         if folder_name == "debug":
             print("Dataloader entering debug mode, only using dummy data.")
             self.debug = True
-            path = Path.cwd() / "configs" / "data" / "debug.yaml"
-            if not path.exists():
-                raise FileNotFoundError(f"""Could not find the file {path}. The dataloader is in debug mode and requires a
-                                        debug.yaml file in the configs/data directory to generate dummy data.""")
-            with open(path, "r") as file:
-                self.data_dict = yaml.safe_load(file)
 
-        self.data_dir = Path.cwd() / "datasets" / folder_name
+        else:
+            self.data_dir = Path.cwd() / "datasets" / folder_name
         self.batch_size = batch_size
         self.n_stages = n_stages
         self.base_sfreq = sfreq
@@ -76,6 +70,9 @@ class ProgressiveGrowingDataset(LightningDataModule):
         self.X = []
         self.y = []
         self.split = []
+        print(
+            f"Found {len(list(self.data_dir.rglob('*.pt')))} tensors in {self.data_dir}."
+        )
         for tensor_path in self.data_dir.rglob("*.pt"):
             filename_base = tensor_path.stem
             if filename_base in self.metadata:
@@ -107,7 +104,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
             self.load_metadata()
             self.set_stage(1)  # Initial resampling to the smallest frequency
         else:
-            self.set_stage(self.n_stages)  # Still need to set stage for dummy data
+            self.set_stage(1)  # Still need to set stage for dummy data
 
     def train_dataloader(self) -> Optional[DataLoader]:
         if (
@@ -161,35 +158,36 @@ class ProgressiveGrowingDataset(LightningDataModule):
         return None
 
     def set_stage(self, stage: int):
-        self.load_tensors(classes=self.classes)
         stage = self.n_stages - stage  # override external with internal stage variable
-        if not self.debug and self.X is not None:
-            current_sfreq = int(self.base_sfreq // 2**stage)
+        current_sfreq = int(self.base_sfreq // 2**stage)
+        if not self.debug:
+            self.load_tensors(classes=self.classes)
 
             # If the data is already at the correct frequency, we don't need to resample it.
             if current_sfreq == self.base_sfreq:
                 return
 
             # Resample the data
-            original_sfreq = (
-                self.base_sfreq
-            )  # Assuming base_sfreq is the original frequency
-            self.X = self.resample(self.X.numpy(), original_sfreq, current_sfreq)
+            self.X = self.resample(self.X.numpy(), self.base_sfreq, current_sfreq)
             self.X = torch.tensor(self.X).float()
 
         elif self.debug:
-            time_in_seconds = self.data_dict["length_in_seconds"]
-            sfreq = self.data_dict["sfreq"]
-            n_samples_curent_stage = int(time_in_seconds * (sfreq // 2**stage))
-            n_channels = len(self.data_dict["channels"])
-            n_classes = len(self.data_dict["classes"])
-            self.X = torch.randn(
-                4 * self.batch_size, n_channels, n_samples_curent_stage
-            ).float()
-            self.y = np.random.randint(0, n_classes, 4 * self.batch_size)
-            self.split = np.random.choice(
-                ["train", "test"], 4 * self.batch_size
-            )  # Add split for debug mode
+            self.X, self.y = self.generate_fake_eeg(
+                n_seconds=2.5,
+                sfreq=self.base_sfreq,
+                num_channels=21,
+                num_trials_per_class=50,
+                differing_channels=[3, 7, 8, 9, 18],
+            )
+            self.X = torch.tensor(self.X).float()
+            self.y = torch.tensor(self.y).int()
+
+            if current_sfreq == self.base_sfreq:
+                return
+
+            # Resample the data
+            self.X = self.resample(self.X.numpy(), self.base_sfreq, current_sfreq)
+            self.X = torch.tensor(self.X).float()
 
     def resample(
         self,
@@ -239,6 +237,53 @@ class ProgressiveGrowingDataset(LightningDataModule):
             x_resampled = signal.resample(x_resampled, target_len, axis=axis)
 
         return x_resampled
+
+    def generate_fake_eeg(
+        self,
+        n_seconds,
+        sfreq,
+        num_channels=21,
+        num_trials_per_class=50,
+        differing_channels=[3, 7, 8, 9, 18],
+    ):
+        """
+        Generate fake EEG data with two classes.
+
+        Returns:
+        --------
+        X : ndarray
+            EEG data with shape (num_trials, num_channels, num_samples)
+        y : ndarray
+            Class labels (0 or 1)
+        """
+
+        X = np.zeros((num_trials_per_class * 2, num_channels, int(n_seconds * sfreq)))
+        y = np.zeros((num_trials_per_class * 2,), dtype=int)
+
+        freqs = np.linspace(0.5, sfreq / 2, num_channels)
+        time = np.arange(n_seconds * sfreq) / sfreq
+
+        for i in range(num_channels):
+            signal = np.sin(2 * np.pi * freqs[i] * time)
+            X[:, i, :] = signal
+
+        # Add noise
+        noise = np.random.normal(0, 0.5, X.shape)
+        X += noise
+
+        # Create class different channels for class 1
+        for ch in differing_channels:
+            X[num_trials_per_class:, ch, :] = np.sin(2 * np.pi * 2 * time + np.pi / 4)
+
+        y[:num_trials_per_class] = 0
+        y[num_trials_per_class:] = 1
+
+        # Shuffle the data
+        shuffled_indices = np.random.permutation(X.shape[0])
+        X = X[shuffled_indices]
+        y = y[shuffled_indices]
+
+        return X, y
 
 
 if __name__ == "__main__":
