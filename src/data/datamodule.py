@@ -35,6 +35,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
         sfreq: int,
         mode: str = "gan",
         classes: Optional[List[str]] = None,
+        dummy_mode: str = "individual_sines",
         **kwargs,
     ) -> None:
         self.debug = False
@@ -44,6 +45,8 @@ class ProgressiveGrowingDataset(LightningDataModule):
 
         else:
             self.data_dir = Path.cwd() / "datasets" / folder_name
+
+        self.dummy_mode = dummy_mode
         self.batch_size = batch_size
         self.n_stages = n_stages
         self.base_sfreq = sfreq
@@ -172,13 +175,35 @@ class ProgressiveGrowingDataset(LightningDataModule):
             self.X = torch.tensor(self.X).float()
 
         elif self.debug:
-            self.X, self.y = self.generate_fake_eeg(
-                n_seconds=2.5,
-                sfreq=self.base_sfreq,
-                num_channels=21,
-                num_trials_per_class=int(self.batch_size / 2),
-                differing_channels=[3, 7, 8, 9, 18],
-            )
+            from src.utils.dummy_data import individual_sines, sines, single_event
+
+            if self.dummy_mode == "sines":
+                self.X, self.y = sines(
+                    n_seconds=2.5,
+                    sfreq=self.base_sfreq,
+                    num_channels=21,
+                    n_trials=int(self.batch_size * 500),
+                    differing_channels=[3, 7, 8, 9, 18],
+                )
+            elif self.dummy_mode == "individual_sines":
+                self.X, self.y = individual_sines(
+                    n_seconds=2.5,
+                    sfreq=self.base_sfreq,
+                    num_channels=21,
+                    n_trials=int(self.batch_size * 500),
+                    differing_channels=[3, 7, 8, 9, 18],
+                )
+            elif self.dummy_mode == "single_event":
+                self.X, self.y = single_event(
+                    n_seconds=2.5,
+                    sfreq=self.base_sfreq,
+                    num_channels=21,
+                    n_trials=int(self.batch_size * 500),
+                    differing_channels=[3, 7, 8, 9, 18],
+                    event_amplitude=1,
+                    noise_amplitude=5,
+                )
+
             self.X = torch.tensor(self.X).float()
             self.y = torch.tensor(self.y).int()
 
@@ -237,112 +262,6 @@ class ProgressiveGrowingDataset(LightningDataModule):
             x_resampled = signal.resample(x_resampled, target_len, axis=axis)
 
         return x_resampled
-
-    def generate_fake_eeg(
-        self,
-        n_seconds,
-        sfreq,
-        num_channels=21,
-        num_trials_per_class=50,
-        differing_channels=[3, 7, 8, 9, 18],
-        event_amplitude=1,  # Amplitude of the event
-        noise_amplitude=5,  # Amplitude of the noise
-    ):
-        """
-        Generate fake EEG data with two classes.
-
-        Parameters:
-        ----------
-        n_seconds : float
-            Duration of each trial in seconds.
-        sfreq : int
-            Sampling frequency in Hz.
-        num_channels : int, optional
-            Number of EEG channels. Defaults to 21.
-        num_trials_per_class : int, optional
-            Number of trials for each class. Defaults to 50.
-        differing_channels : list of int, optional
-            List of channel indices where the event will differ between classes.
-            Defaults to [3, 7, 8, 9, 18].
-        event_amplitude : float, optional
-            Amplitude of the event waveform. Defaults to 5.
-        noise_amplitude : float, optional
-            Standard deviation of the noise. Defaults to 100.
-
-        Returns:
-        --------
-        X : ndarray
-            EEG data with shape (num_trials, num_channels, num_samples)
-        y : ndarray
-            Class labels (0 or 1)
-        """
-        num_samples = int(n_seconds * sfreq)
-        num_trials = int(num_trials_per_class * 2)
-
-        y = np.ones(num_trials, dtype=int)
-        y[:num_trials_per_class] = 0  # First half are class 0, second half are class 1
-
-        # Create a EEG-like event:
-        event_duration = 0.2  # seconds
-        event_start_time = 0.5  # seconds into the trial
-        event_samples = int(event_duration * sfreq)
-        event_start_idx = int(event_start_time * sfreq)
-
-        # Ensure event fits within the trial
-        if event_start_idx + event_samples > num_samples:
-            event_samples = num_samples - event_start_idx
-            if event_samples <= 0:
-                raise ValueError(
-                    "Event start time is too late for the given n_seconds and event_duration."
-                )
-            print(
-                f"Warning: Event duration adjusted to {event_samples / sfreq:.2f}s to fit within trial."
-            )
-
-        # Time vector for the event waveform
-        event_time_vector = np.linspace(
-            0, event_duration, event_samples, endpoint=False
-        )
-
-        # Define Event Waveforms for Each Class
-        # Event for Class 0: A positive sine wave pulse
-        event_class0_waveform = event_amplitude * np.sin(
-            2 * np.pi * 10 * event_time_vector
-        )  # 10 Hz sine wave
-
-        # Event for Class 1: A negative sine wave pulse (inverted phase or frequency)
-        event_class1_waveform = -event_amplitude * np.sin(
-            2 * np.pi * 10 * event_time_vector
-        )  # 10 Hz inverted sine wave
-
-        # Generate Noise (this will be added to all channels and trials)
-        overall_noise = np.random.normal(
-            0, noise_amplitude, size=(num_trials, num_channels, num_samples)
-        )
-
-        # Add initial noise to X
-        X = overall_noise.copy()  # Start with pure noise
-
-        # Insert Events into Specific Channels
-        for trial_idx in range(num_trials):
-            current_class = y[trial_idx]
-
-            for channel_idx in range(num_channels):
-                if channel_idx in differing_channels and current_class == 0:
-                    # Add event for Class 0
-                    X[
-                        trial_idx,
-                        channel_idx,
-                        event_start_idx : event_start_idx + event_samples,
-                    ] += event_class0_waveform
-                else:
-                    # Add event for Class 1
-                    X[
-                        trial_idx,
-                        channel_idx,
-                        event_start_idx : event_start_idx + event_samples,
-                    ] += event_class1_waveform
-        return X, y
 
 
 if __name__ == "__main__":
