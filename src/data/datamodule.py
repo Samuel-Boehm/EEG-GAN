@@ -176,7 +176,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
                 n_seconds=2.5,
                 sfreq=self.base_sfreq,
                 num_channels=21,
-                num_trials_per_class=50,
+                num_trials_per_class=int(self.batch_size / 2),
                 differing_channels=[3, 7, 8, 9, 18],
             )
             self.X = torch.tensor(self.X).float()
@@ -256,32 +256,32 @@ class ProgressiveGrowingDataset(LightningDataModule):
         y : ndarray
             Class labels (0 or 1)
         """
-
-        X = np.zeros((num_trials_per_class * 2, num_channels, int(n_seconds * sfreq)))
-        y = np.zeros((num_trials_per_class * 2,), dtype=int)
-
-        freqs = np.linspace(0.5, sfreq / 2, num_channels)
-        time = np.arange(n_seconds * sfreq) / sfreq
-
-        for i in range(num_channels):
-            signal = np.sin(2 * np.pi * freqs[i] * time)
-            X[:, i, :] = signal
-
-        # Add noise
-        noise = np.random.normal(0, 0.5, X.shape)
-        X += noise
-
-        # Create class different channels for class 1
-        for ch in differing_channels:
-            X[num_trials_per_class:, ch, :] = np.sin(2 * np.pi * 2 * time + np.pi / 4)
-
+        X = np.zeros(
+            int(num_trials_per_class * 2), num_channels, int(n_seconds * sfreq)
+        )
+        y = np.ones(int(num_trials_per_class * 2))
         y[:num_trials_per_class] = 0
-        y[num_trials_per_class:] = 1
 
-        # Shuffle the data
-        shuffled_indices = np.random.permutation(X.shape[0])
-        X = X[shuffled_indices]
-        y = y[shuffled_indices]
+        # Create a EEG-like event:
+        event_duration = 0.2
+        event_samples = int(event_duration * sfreq)
+        event_start_time = 0.5
+        event_frequency = 1 / event_duration
+
+        event = 1 * np.sin(2 * np.pi, *event_frequency * event_samples)
+
+        X[
+            :,
+            :,
+            int(event_start_time * sfreq) : int(
+                (event_start_time + event_duration) * sfreq
+            ),
+        ] = event
+
+        X = +np.random.normal(0, 1, shape=X.shape)
+
+        # Shuffle:
+        shuffle_index = np.permut
 
         return X, y
 
