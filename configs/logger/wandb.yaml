@@ -5,4 +5,4 @@ wandb:
   id: null # pass correct id to resume experiment!
   project: "EEG-GAN"
   log_model: False # upload lightning ckpts
-  save_dir: ${hydra:run.dir}
+  save_dir: ${output_dir/wandb_logs}

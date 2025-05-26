@@ -128,7 +128,7 @@ def sines(n_seconds, sfreq, num_channels, n_trials, differing_channels=None):
 def individual_sines(n_seconds, sfreq, num_channels, n_trials, differing_channels=None):
     X = np.zeros((n_trials, num_channels, int(n_seconds * sfreq)))
     y = np.zeros((n_trials,), dtype=int)
-    freqs = np.linspace(0.5, sfreq / 2, num_channels)
+    freqs = np.linspace(0.25, 64, num_channels)
     time = np.arange(n_seconds * sfreq) / sfreq
     for i in range(num_channels):
         signal = np.sin(2 * np.pi * freqs[i] * time)

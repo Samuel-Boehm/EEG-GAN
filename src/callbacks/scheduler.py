@@ -56,7 +56,6 @@ class Scheduler(Callback):
         """
         Set the current stage to 1 at the beginning of the training.
         """
-        model.current_stage = 1
         trainer.datamodule.set_stage(model.current_stage)
         model.generator.set_stage(model.current_stage)
         model.critic.set_stage(model.current_stage)

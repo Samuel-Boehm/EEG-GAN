@@ -105,9 +105,8 @@ class ProgressiveGrowingDataset(LightningDataModule):
     def setup(self, stage: Optional[str] = None) -> None:
         if not self.debug:
             self.load_metadata()
-            self.set_stage(1)  # Initial resampling to the smallest frequency
         else:
-            self.set_stage(1)  # Still need to set stage for dummy data
+            self.set_stage(1)  # Still need to set stage for dummy dataself.set_stage
 
     def train_dataloader(self) -> Optional[DataLoader]:
         if (
@@ -182,7 +181,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
                     n_seconds=2.5,
                     sfreq=self.base_sfreq,
                     num_channels=21,
-                    n_trials=int(self.batch_size * 500),
+                    n_trials=int(self.batch_size * 50),
                     differing_channels=[3, 7, 8, 9, 18],
                 )
             elif self.dummy_mode == "individual_sines":
@@ -190,7 +189,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
                     n_seconds=2.5,
                     sfreq=self.base_sfreq,
                     num_channels=21,
-                    n_trials=int(self.batch_size * 500),
+                    n_trials=int(self.batch_size * 50),
                     differing_channels=[3, 7, 8, 9, 18],
                 )
             elif self.dummy_mode == "single_event":
@@ -198,7 +197,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
                     n_seconds=2.5,
                     sfreq=self.base_sfreq,
                     num_channels=21,
-                    n_trials=int(self.batch_size * 500),
+                    n_trials=int(self.batch_size * 50),
                     differing_channels=[3, 7, 8, 9, 18],
                     event_amplitude=1,
                     noise_amplitude=5,
