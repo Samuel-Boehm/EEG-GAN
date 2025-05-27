@@ -82,7 +82,7 @@ class GAN(LightningModule):
         self.sp_critic = spectral_critic
         self.optimizer_dict = optimizer
         self.automatic_optimization = False
-        self.cur_stage = 1
+        self.current_stage = 1
         self.lamda_gp = lambda_gp
         self.n_epochs_critics = n_epochs_critic
         self.alpha = alpha

@@ -3,15 +3,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import hydra
 import lightning as L
-import wandb
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
+import wandb
 from src.utils import (
     RankedLogger,
     extras,
-    get_metric_value,
     instantiate_callbacks,
     instantiate_loggers,
     instantiate_model,
@@ -44,7 +43,6 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         models_cfg=cfg.get("model"), n_samples=n_samples
     )
 
-    log.info("Instantiating training scheduler...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
     log.info("Instantiating loggers...")
@@ -115,14 +113,13 @@ def main(cfg: DictConfig) -> Optional[float]:
         "Number of channels must match!"
     )
 
-    # apply extra utilities
-    # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
+    # Apply extra utilities
     extras(cfg)
 
-    # train the model
+    # Train the model
     metric_dict, object_dict = train(cfg)
 
-    # evaluate the model
+    # Evaluate the model
     dm = object_dict["datamodule"]
     dm.set_stage(cfg.trainer.scheduler.n_stages)
     dataloader = dm.train_dataloader()
@@ -134,20 +131,18 @@ def main(cfg: DictConfig) -> Optional[float]:
     for key, fig in figures.items():
         wandb.log({key: wandb.Image(fig)})
 
-    # safely retrieve metric value for hydra-based hyperparameter optimization
-    metric_value = get_metric_value(
-        metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")
-    )
-
     # End of training
     wandb.finish()
 
     log.info("Finished Training")
     sys.exit("Finished Training")
 
-    # return optimized metric
-    return metric_value
-
 
 if __name__ == "__main__":
+    wandb.init(
+        project="EEG-GAN",
+    )
+    sys.argv.append(f"hydra.run.dir={wandb.run.dir}")
+    print(f"Run dir: {wandb.run.dir}")
+
     main()

@@ -11,7 +11,7 @@ params: &params
   batch_norm: False
 
 generator:
-  _target_: src.models.components.generators.baseline.Generator
+  _target_: src.models.components.generators.multi_channel_upscale.Generator
   <<: *params
   latent_dim: 210
   embedding_dim: 100

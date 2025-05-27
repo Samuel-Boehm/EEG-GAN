@@ -1,10 +1,16 @@
+hydra:
+  run:
+    dir: "trained_models/${now:%Y-%m-%d-%H-%M-%S}"
+  output_subdir: "."
+
 defaults:
   - _self_
   - trainer: SLURM
-  - data: dummy
+  - data: HGD_clinical
   - model: baseline
   - callbacks: default
   - logger: wandb
+
 train: True
 
 record_memory: False
