@@ -1,28 +1,54 @@
 name: "baseline"
 
-params: &params
-  n_filter: 120
-  n_stages: 6
-  n_channels: 21
-  n_classes: 2
-  current_stage: 1
-  fading: True
-  freeze: True
-  batch_norm: False
+defaults:
+  - _self_
+
+# Global settings that can be overridden from command line
+freeze: true
+batch_norm: false
+current_stage: 1
+fading: true
+
+# Static architectural parameters
+n_filter: 120
+n_stages: 6
+n_channels: 21
+n_classes: 2
 
 generator:
   _target_: src.models.components.generators.multi_channel_upscale.Generator
-  <<: *params
+  n_filter: ${model.n_filter}
+  n_stages: ${model.n_stages}
+  n_channels: ${model.n_channels}
+  n_classes: ${model.n_classes}
+  freeze: ${model.freeze}
+  batch_norm: ${model.batch_norm}
+  current_stage: ${model.current_stage}
+  fading: ${model.fading}
   latent_dim: 210
   embedding_dim: 100
 
 critic:
   _target_: src.models.components.critics.baseline.Critic
-  <<: *params
+  n_filter: ${model.n_filter}
+  n_stages: ${model.n_stages}
+  n_channels: ${model.n_channels}
+  n_classes: ${model.n_classes}
+  freeze: ${model.freeze}
+  batch_norm: ${model.batch_norm}
+  current_stage: ${model.current_stage}
+  fading: ${model.fading}
 
 spectral_critic:
   _target_: src.models.components.SpectralCritic
-  <<: *params
+  n_filter: ${model.n_filter}
+  n_stages: ${model.n_stages}
+  n_channels: ${model.n_channels}
+  n_classes: ${model.n_classes}
+  freeze: ${model.freeze}
+  batch_norm: ${model.batch_norm}
+  current_stage: ${model.current_stage}
+  fading: ${model.fading}
 
 gan:
   _target_: src.models.GAN

@@ -106,10 +106,14 @@ def main(cfg: DictConfig) -> Optional[float]:
     :param cfg: DictConfig configuration composed by Hydra.
     :return: Optional[float] with optimized metric value.
     """
-    assert cfg.model.params.n_classes == len(cfg.data.classes), (
-        "Number of classes must match!"
-    )
-    assert cfg.model.params.n_channels == len(cfg.data.channels), (
+
+    # Access the global wandb 'run'
+    global run
+    if run:
+        run.name = cfg.run_name
+
+    assert cfg.model.n_classes == len(cfg.data.classes), "Number of classes must match!"
+    assert cfg.model.n_channels == len(cfg.data.channels), (
         "Number of channels must match!"
     )
 
@@ -118,6 +122,9 @@ def main(cfg: DictConfig) -> Optional[float]:
 
     # Train the model
     metric_dict, object_dict = train(cfg)
+
+    # Rename the run
+    run.name = cfg.run_name
 
     # Evaluate the model
     dm = object_dict["datamodule"]
@@ -139,7 +146,7 @@ def main(cfg: DictConfig) -> Optional[float]:
 
 
 if __name__ == "__main__":
-    wandb.init(
+    run = wandb.init(
         project="EEG-GAN",
     )
     sys.argv.append(f"hydra.run.dir={wandb.run.dir}")

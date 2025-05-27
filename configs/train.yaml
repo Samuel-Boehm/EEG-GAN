@@ -5,6 +5,7 @@ defaults:
   - model: baseline
   - callbacks: default
   - logger: wandb
-train: True
 
+train: True
+run_name: null
 record_memory: False
