@@ -8,6 +8,10 @@ from lightning import LightningDataModule
 from scipy import signal
 from torch.utils.data import DataLoader, TensorDataset
 
+from src.utils import RankedLogger
+
+log = RankedLogger(__name__, rank_zero_only=True)
+
 
 class ProgressiveGrowingDataset(LightningDataModule):
     """
@@ -161,6 +165,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
         return None
 
     def set_stage(self, stage: int):
+        log.info(f"Datamodule is setting stage {stage}")
         stage = self.n_stages - stage  # override external with internal stage variable
         current_sfreq = int(self.base_sfreq // 2**stage)
         if not self.debug:
@@ -173,6 +178,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
             # Resample the data
             self.X = self.resample(self.X.numpy(), self.base_sfreq, current_sfreq)
             self.X = torch.tensor(self.X).float()
+            log.info(f"stage set, new sfreq {current_sfreq} new X shape {self.X.shape}")
 
         elif self.debug:
             from src.utils.dummy_data import individual_sines, sines, single_event
@@ -213,6 +219,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
             # Resample the data
             self.X = self.resample(self.X.numpy(), self.base_sfreq, current_sfreq)
             self.X = torch.tensor(self.X).float()
+            log.info(f"stage set, new sfreq {current_sfreq} new X shape {self.X.shape}")
 
     def resample(
         self,

@@ -37,6 +37,48 @@ def plot_spectrum(data, sfreq, ax=None, title=None, label=None, show_std=False):
     return ax
 
 
+def plot_spectrum_per_channel(
+    data: np.ndarray,
+    sfreq: float,
+    channels: list,
+    show_std: bool = False,
+    label: str = None,
+    nrows: int = 1,
+    ncols: int = 1,
+    title_prefix: str = "",
+):
+    """
+    Plot the spectrum per channel.
+
+    Args:
+        data: ndarray (batch, channel, samples)
+        sfreq: sampling frequency
+        channels: list of channel names
+        show_std: bool, whether to show std fill
+        label: label for legend
+        nrows, ncols: shape of subplot grid
+        title_prefix: string to prefix each subplot title
+    Returns:
+        fig, axs: matplotlib figure and axes
+    """
+    import matplotlib.pyplot as plt
+
+    n_channels = data.shape[1]
+    fig, axs = plt.subplots(nrows, ncols, figsize=(10 * ncols, 5 * nrows))
+    axs = axs.flat[:n_channels] if hasattr(axs, "flat") else [axs]
+    for i in range(n_channels):
+        plot_spectrum(
+            data[:, i, :],
+            sfreq=sfreq,
+            ax=axs[i],
+            title=f"{title_prefix}{channels[i]}",
+            label=label,
+            show_std=show_std,
+        )
+    fig.tight_layout()
+    return fig, axs
+
+
 def plot_time_domain(data, ax=None, title=None, label=None, show_std=False):
     if len(data.shape) != 2:
         raise ValueError(
