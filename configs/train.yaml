@@ -1,11 +1,10 @@
 defaults:
   - _self_
   - trainer: SLURM
-  - data: dummy
+  - data: HGD_clinical
   - model: baseline
   - callbacks: default
   - logger: wandb
 
 train: True
 run_name: null
-record_memory: False
