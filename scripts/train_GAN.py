@@ -133,6 +133,7 @@ def main(cfg: DictConfig) -> Optional[float]:
 
     model = object_dict["model"]
 
+    model.eval()
     figures = evaluate_model(model, dataloader, cfg)
 
     for key, fig in figures.items():
