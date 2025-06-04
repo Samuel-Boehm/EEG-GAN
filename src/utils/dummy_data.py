@@ -134,7 +134,7 @@ def individual_sines(n_seconds, sfreq, num_channels, n_trials, differing_channel
         signal = np.sin(2 * np.pi * freqs[i] * time)
         X[:, i, :] = signal
     # Add noise
-    noise = np.random.normal(0, 0.5, X.shape)
+    noise = np.random.normal(0, 0.01, X.shape)
     X += noise
     if differing_channels is not None:
         for ch in differing_channels:

@@ -72,7 +72,7 @@ class GAN(LightningModule):
         beta: float,
         lambda_gp: float,
         optimizer: DictConfig,
-        spectral_critic: Optional[SpectralCritic] = False,
+        spectral_critic: Optional[SpectralCritic] = None,
         softplus: Optional[bool] = True,
         **kwargs,
     ):
@@ -83,7 +83,7 @@ class GAN(LightningModule):
         self.optimizer_dict = optimizer
         self.automatic_optimization = False
         self.current_stage = 1
-        self.lamda_gp = lambda_gp
+        self.lambda_gp = lambda_gp
         self.n_epochs_critics = n_epochs_critic
         self.alpha = alpha
         self.beta = beta
@@ -97,7 +97,6 @@ class GAN(LightningModule):
         self.gp = MeanMetric()
         # self.generator_alpha = MeanMetric()
         # self.critic_alpha = MeanMetric()
-        self.GPU_memory = MeanMetric()
 
     def forward(self, z, y):
         return self.generator(z, y)
@@ -121,42 +120,40 @@ class GAN(LightningModule):
 
         # 1: Generate fake batch:
         X_fake, y_fake = self.generator.generate(X_real.shape[0])
-
         y_fake = y_fake.type_as(y_real)
 
         # 2: Train critic:
-        ## optimize time domain critic
         c_loss, gp = self.train_critic(
             X_real, y_real, X_fake, y_fake, self.critic, optim_c
         )
-        ## optional: optimize frequency domain critic
+
+        spc_loss = None
         if self.sp_critic:
             spc_loss, _ = self.train_critic(
                 X_real, y_real, X_fake, y_fake, self.sp_critic, optim_spc
             )
 
-        # 3: Train generator:
-        # If n_critic =! 1 we train the generator only every n_th step
+        # 3: Train generator (every n_critic steps)
         if (batch_idx + 1) % self.n_epochs_critics == 0:
             self.toggle_optimizer(optim_g)
 
-            # Generate fake data
-            X_fake, y_fake = self.generator.generate(X_real.shape[0])
-
-            ## optimize generator
+            # Reuse the same fake batch for generator update
             fx_fake = self.critic(X_fake, y_fake)
             if self.sp_critic:
                 fx_spc = self.sp_critic(X_fake, y_fake)
                 loss_fd = torch.mean(softplus(-fx_spc))
+                beta = self.beta
             else:
                 loss_fd = 0
-                self.beta = 0
+                beta = 0
 
             loss_td = torch.mean(softplus(-fx_fake))
 
-            g_loss = (self.alpha * loss_td + self.beta * loss_fd) / (
-                self.alpha + self.beta
-            )
+            # Avoid division by zero if both alpha and beta are zero
+            alpha_beta_sum = self.alpha + beta
+            if alpha_beta_sum == 0:
+                raise ValueError("Sum of alpha and beta for generator loss is zero!")
+            g_loss = (self.alpha * loss_td + beta * loss_fd) / alpha_beta_sum
 
             self.manual_backward(g_loss)
             optim_g.step()
@@ -166,7 +163,7 @@ class GAN(LightningModule):
 
         # Log
         self.critic_loss(c_loss.item())
-        if self.sp_critic:
+        if self.sp_critic and spc_loss is not None:
             self.sp_critic_loss(spc_loss.item())
         self.gp(gp.item())
 
@@ -297,7 +294,7 @@ class GAN(LightningModule):
         # gradient pentalty is scaled with the distance between the distrubutions and a lambda hyperparameter
         # Note: Hartmann et al suggest to scale the gradient penalty with the distance between the distributions
         # this does not work well so far... (?)
-        gp = self.lamda_gp * self.gradient_penalty(X_real, X_fake, y_fake, critic)
+        gp = self.lambda_gp * self.gradient_penalty(X_real, X_fake, y_fake, critic)
 
         c_loss = torch.mean(softplus(-fx_real)) + torch.mean(softplus(fx_fake)) + gp
 
