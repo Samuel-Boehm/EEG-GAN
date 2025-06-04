@@ -99,45 +99,57 @@ class GAN(LightningModule):
         # self.critic_alpha = MeanMetric()
         self.GPU_memory = MeanMetric()
 
-    def forward(self, z, y):
-        return self.generator(z, y)
+    def forward(self, n_samples: int = 1) -> Tuple[Tensor, Tensor]:
+        return self.generator.generate(n_samples=n_samples)
 
     def training_step(self, batch_real: Tuple[Tensor, Tensor], batch_idx: int):
         """
         The training step for the GAN. This is called by the Lightning Trainer framework.
         Here we define a single training step for the GAN. This includes the forward pass,
         the calculation of the loss and the backward pass.
-
         Steps
         ----------
         1: Generate a batch of fake data
         2: In each epoch train critic
         3: In each n_critic epochs train generator
-
         """
+        import time
+
+        timings = {}
+
+        start = time.time()
         X_real, y_real = batch_real
+        timings["unpack_batch"] = time.time() - start
 
         optim_g, optim_c, optim_spc = self.optimizers()
+        timings["get_optimizers"] = time.time() - start
 
         # 1: Generate fake batch:
+        t0 = time.time()
         X_fake, y_fake = self.generator.generate(X_real.shape[0])
+        timings["generate_fake"] = time.time() - t0
 
         y_fake = y_fake.type_as(y_real)
 
         # 2: Train critic:
-        ## optimize time domain critic
+        t0 = time.time()
         c_loss, gp = self.train_critic(
             X_real, y_real, X_fake, y_fake, self.critic, optim_c
         )
-        ## optional: optimize frequency domain critic
+        timings["train_critic"] = time.time() - t0
+
+        # optional: optimize frequency domain critic
         if self.sp_critic:
+            t0 = time.time()
             spc_loss, _ = self.train_critic(
                 X_real, y_real, X_fake, y_fake, self.sp_critic, optim_spc
             )
+            timings["train_sp_critic"] = time.time() - t0
 
         # 3: Train generator:
         # If n_critic =! 1 we train the generator only every n_th step
         if (batch_idx + 1) % self.n_epochs_critics == 0:
+            t0 = time.time()
             self.toggle_optimizer(optim_g)
 
             # Generate fake data
@@ -163,8 +175,10 @@ class GAN(LightningModule):
             optim_g.zero_grad()
             self.untoggle_optimizer(optim_g)
             self.generator_loss(g_loss)
+            timings["train_generator"] = time.time() - t0
 
         # Log
+        t0 = time.time()
         self.critic_loss(c_loss.item())
         if self.sp_critic:
             self.sp_critic_loss(spc_loss.item())
@@ -173,6 +187,11 @@ class GAN(LightningModule):
         self.sliced_wasserstein_distance.update(X_real, X_fake)
 
         self.log_metrics()
+        timings["logging"] = time.time() - t0
+
+        # Log timings for this step
+        for k, v in timings.items():
+            self.log(f"time/{k}", v, prog_bar=False, on_step=True, on_epoch=False)
 
     def configure_optimizers(self):
         lr_generator = self.optimizer_dict.lr_generator

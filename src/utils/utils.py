@@ -2,11 +2,10 @@ import warnings
 from importlib.util import find_spec
 from typing import Any, Callable, Dict, Optional, Tuple
 
+import numpy as np
 from omegaconf import DictConfig
 
 from src.utils import pylogger, rich_utils
-import numpy as np
-from torch import Tensor
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
@@ -97,7 +96,9 @@ def task_wrapper(task_func: Callable) -> Callable:
     return wrap
 
 
-def get_metric_value(metric_dict: Dict[str, Any], metric_name: Optional[str]) -> Optional[float]:
+def get_metric_value(
+    metric_dict: Dict[str, Any], metric_name: Optional[str]
+) -> Optional[float]:
     """Safely retrieves value of the metric logged in LightningModule.
 
     :param metric_dict: A dict containing metric values.
@@ -120,7 +121,8 @@ def get_metric_value(metric_dict: Dict[str, Any], metric_name: Optional[str]) ->
 
     return metric_value
 
-def to_numpy(x: Tensor) -> np.ndarray:
+
+def to_numpy(x: Any) -> np.ndarray:
     """
     Converts a tensor, list or tuple of tensors to numpy.
     """
@@ -129,10 +131,10 @@ def to_numpy(x: Tensor) -> np.ndarray:
         x = x.detach()
 
     if isinstance(x, (list, tuple)):
-        return [to_numpy(i) for i in x]
+        return np.array([to_numpy(i) for i in x])
     elif isinstance(x, dict):
-        return {k: to_numpy(v) for k, v in x.items()}
+        raise TypeError("Input dict cannot be converted to a single np.ndarray.")
     elif hasattr(x, "cpu"):
         return x.cpu().numpy()
     else:
-        return x
+        return np.array(x)

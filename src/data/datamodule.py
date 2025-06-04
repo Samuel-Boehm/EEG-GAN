@@ -121,7 +121,8 @@ class ProgressiveGrowingDataset(LightningDataModule):
             and self.split is not None
         ):
             train_dataset = TensorDataset(
-                self.X[self.split == "train"], self.y[self.split == "train"]
+                self.X[self.split == "train"],
+                torch.Tensor(self.y[self.split == "train"]),
             )
             return DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         elif self.mode == "classification":
@@ -145,7 +146,7 @@ class ProgressiveGrowingDataset(LightningDataModule):
             and self.split is not None
         ):
             val_dataset = TensorDataset(
-                self.X[self.split == "test"], self.y[self.split == "test"]
+                self.X[self.split == "test"], torch.Tensor(self.y[self.split == "test"])
             )
             return DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
         elif self.mode == "classification":

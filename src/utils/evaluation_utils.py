@@ -14,6 +14,7 @@ from src.utils.utils import to_numpy
 from src.visualization.plot import (
     mapping_split,
     plot_spectrum_by_target,
+    plot_spectrum_per_channel,
     plot_time_domain,
 )
 
@@ -22,7 +23,7 @@ def evaluate_model(
     model: GAN, dataloader: DataLoader, cfg: DictConfig
 ) -> Dict[str, plt.Figure]:
     n_samples = 280
-    batch_size = dataloader.batch_size
+    batch_size = int(dataloader.batch_size)
 
     model.eval()
     with torch.no_grad():
@@ -57,6 +58,7 @@ def evaluate_model(
         ncols = n_channels
     else:
         ncols = nrows = int(np.ceil(np.sqrt(n_channels)))
+        print(f"Using {nrows} rows and {ncols} columns for plotting.")
 
     mapping = dict(zip(range(len(cfg.data.classes)), cfg.data.classes))
 
@@ -68,6 +70,7 @@ def evaluate_model(
     out_dict = {}
 
     for key in cfg.data.classes:
+        # --- Time domain ---
         fig, axs = plt.subplots(nrows, ncols, figsize=(10 * ncols, 5 * nrows))
         axs = axs.flat[:n_channels]
         for i in range(n_channels):
@@ -85,9 +88,21 @@ def evaluate_model(
                 show_std=True,
                 label="fake",
             )
-
         out_dict[f"time_domain_{key}"] = fig
 
+        # --- Frequency domain, per channel ---
+        fig_spectrum = plot_spectrum_per_channel(
+            real_dict[key],
+            fake_dict[key],
+            cfg.data.sfreq,
+            channels,
+            nrows,
+            ncols,
+            key,
+        )
+        out_dict[f"spectrum_{key}"] = fig_spectrum
+
+    # --- Global frequency domain (pooled real/fake) ---
     pooled_data = np.concatenate((X_real, X_fake), axis=0)
     pooled_labels = np.concatenate(
         (np.zeros(X_real.shape[0]), np.ones(X_fake.shape[0]))
