@@ -56,4 +56,3 @@ for key, fig in figures.items():
     fig.savefig(fig_path)
     print(f"Saved {fig_path}")
     fig.clf()  # release memory if running interactively
-
