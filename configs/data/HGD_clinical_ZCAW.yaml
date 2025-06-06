@@ -46,7 +46,6 @@ batch_size: 64
 classes:
 - right_hand
 - rest
-normalize: true
 label_map:
   right_hand: 0
   rest: 1

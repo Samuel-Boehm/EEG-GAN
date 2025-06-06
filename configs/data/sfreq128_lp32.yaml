@@ -1,5 +1,5 @@
 _target_: src.data.datamodule.ProgressiveGrowingDataset
-folder_name: HGD_clinical_ZCAW_normalized
+folder_name: sfreq128_lp32
 dataset_name: Schirrmeister2017
 subject_id:
 - 1
@@ -38,15 +38,14 @@ channels:
 - O2
 - M1
 - M2
-ZCA_whitening: true
-sfreq: 256
+ZCA_whitening: false
+sfreq: 128
+highpass: 0.1
+lowpass: 32
 tmin: -0.5
 tmax: 2.0
 batch_size: 64
 classes:
-- right_hand
 - rest
-normalize: true
-label_map:
-  right_hand: 0
-  rest: 1
+- right_hand
+label_map: null

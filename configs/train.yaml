@@ -1,7 +1,7 @@
 defaults:
   - _self_
   - trainer: SLURM
-  - data: HGD_clinical
+  - data: 512_no_zca
   - model: baseline
   - callbacks: default
   - logger: wandb
