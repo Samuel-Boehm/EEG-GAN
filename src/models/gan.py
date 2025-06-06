@@ -83,7 +83,7 @@ class GAN(LightningModule):
         self.optimizer_dict = optimizer
         self.automatic_optimization = False
         self.current_stage = 1
-        self.lamda_gp = lambda_gp
+        self.lambda_gp = lambda_gp
         self.n_epochs_critics = n_epochs_critic
         self.alpha = alpha
         self.beta = beta
@@ -133,19 +133,20 @@ class GAN(LightningModule):
 
         # 2: Train critic:
         t0 = time.time()
-        c_loss, gp = self.train_critic(
-            X_real, y_real, X_fake, y_fake, self.critic, optim_c
+        c_loss, gp, critic_timings = self.train_critic(
+            X_real, y_real, X_fake, y_fake, self.critic, optim_c, retain_graph=True
         )
         timings["train_critic"] = time.time() - t0
-
+        for k, v in critic_timings.items():
+            self.log(f"time/critic/{k}", v, prog_bar=False, on_step=True, on_epoch=False)
         # optional: optimize frequency domain critic
         if self.sp_critic:
-            t0 = time.time()
-            spc_loss, _ = self.train_critic(
+            spc_loss, _, spc_timings = self.train_critic(
                 X_real, y_real, X_fake, y_fake, self.sp_critic, optim_spc
             )
-            timings["train_sp_critic"] = time.time() - t0
-
+            timings["train_sp_critic"] = sum(spc_timings.values())
+            for k, v in spc_timings.items():
+                self.log(f"time/sp_critic/{k}", v, prog_bar=False, on_step=True, on_epoch=False)
         # 3: Train generator:
         # If n_critic =! 1 we train the generator only every n_th step
         if (batch_idx + 1) % self.n_epochs_critics == 0:
@@ -265,7 +266,6 @@ class GAN(LightningModule):
             inputs=interpolates,
             grad_outputs=ones,
             create_graph=True,
-            retain_graph=True,
             only_inputs=True,
         )[0]
 
@@ -286,45 +286,57 @@ class GAN(LightningModule):
         y_fake: Tensor,
         critic: nn.Module,
         optim: torch.optim.Optimizer,
-    ) -> Tuple[Tensor, Tensor]:
+        retain_graph=False
+        ) -> Tuple[Tensor, Tensor, dict]:
         """
         Trains the critic (discriminator) part of the GAN.
-
-        Parameters
-        ----------
-        X_real (Tensor): Real samples.
-        y_real (Tensor): Labels for the real samples.
-        X_fake (Tensor): Generated (fake) samples.
-        y_fake (Tensor): Labels for the fake samples.
-        critic (nn.Module): The critic model.
-        optim (Optimizer): The optimizer for the critic.
 
         Returns
         ----------
         c_loss (Tensor): The critic loss.
         gp (Tensor): The gradient penalty.
-
-        The function calculates the critic's output for both real and fake samples,
-        computes the gradient penalty and the critic loss, and performs a backward pass and an optimization step.
+        timings (dict): Timing information for each step.
         """
+        import time
+        timings = {}
+
+        t0 = time.time()
         self.toggle_optimizer(optim)
+        timings["toggle_optimizer"] = time.time() - t0
+
+        t1 = time.time()
         fx_real = critic(X_real, y_real)
+        timings["critic_real_forward"] = time.time() - t1
+
+        t2 = time.time()
         fx_fake = critic(X_fake.detach(), y_fake)
+        timings["critic_fake_forward"] = time.time() - t2
 
-        # Relaxed gradient penalty following Hartmann et al. (2018)
-        # https://arxiv.org/abs/1806.01875
-        # gradient pentalty is scaled with the distance between the distrubutions and a lambda hyperparameter
-        # Note: Hartmann et al suggest to scale the gradient penalty with the distance between the distributions
-        # this does not work well so far... (?)
-        gp = self.lamda_gp * self.gradient_penalty(X_real, X_fake, y_fake, critic)
+        t3 = time.time()
+        gp = self.lambda_gp * self.gradient_penalty(X_real, X_fake, y_fake, critic)
+        timings["gradient_penalty"] = time.time() - t3
 
+        t4 = time.time()
         c_loss = torch.mean(softplus(-fx_real)) + torch.mean(softplus(fx_fake)) + gp
+        timings["loss_calc"] = time.time() - t4
 
-        self.manual_backward(c_loss, retain_graph=True)
+        t5 = time.time()
+        self.manual_backward(c_loss, retain_graph=retain_graph)
+        timings["backward"] = time.time() - t5
+
+        t6 = time.time()
         optim.step()
+        timings["optim_step"] = time.time() - t6
+
+        t7 = time.time()
         optim.zero_grad()
+        timings["zero_grad"] = time.time() - t7
+
+        t8 = time.time()
         self.untoggle_optimizer(optim)
-        return c_loss, gp
+        timings["untoggle_optimizer"] = time.time() - t8
+
+        return c_loss, gp, timings
 
     def on_train_start(self) -> None:
         self.reset_metrics()
